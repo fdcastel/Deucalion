@@ -4,9 +4,9 @@ using System.Text.RegularExpressions;
 
 namespace Deucalion.Monitors
 {
-    public class HttpMonitor : IMonitor
+    public class HttpMonitor : IMonitor<HttpMonitorOptions>
     {
-        private static readonly int DefaultTimeout = 1000;
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
 
         private static readonly HttpClient? _httpClient = null;
         private static readonly HttpClient? _httpClientIgnoreCertificate = null;

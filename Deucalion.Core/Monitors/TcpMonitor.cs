@@ -3,9 +3,9 @@ using System.Net.Sockets;
 
 namespace Deucalion.Monitors
 {
-    public class TcpMonitor : IMonitor
+    public class TcpMonitor : IMonitor<TcpMonitorOptions>
     {
-        private static readonly int DefaultTimeout = 500;
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMilliseconds(500);
 
         public required TcpMonitorOptions Options { get; init; }
 

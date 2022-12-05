@@ -2,7 +2,7 @@
 
 namespace Deucalion.Monitors.Options
 {
-    public class HttpMonitorOptions : CommonMonitorOptions
+    public class HttpMonitorOptions : MonitorOptions
     {
         public Uri Url { get; set; } = default!;
 

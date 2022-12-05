@@ -1,7 +1,11 @@
-﻿namespace Deucalion.Monitors
+﻿using Deucalion.Monitors.Options;
+
+namespace Deucalion.Monitors
 {
-    public interface IMonitor
+    public interface IMonitor<out T> where T : MonitorOptions
     {
-        Task<bool> IsUpAsync();
+        public T Options { get; }
+
+        public Task<bool> IsUpAsync();
     }
 }

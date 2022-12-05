@@ -16,7 +16,7 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public async Task TcpMonitor_ReturnsFalse_WhenUnreachable()
         {
-            TcpMonitor tcpMonitor = new() { Options = new() { Host = "192.168.10.15", Port = 32401, Timeout = 200 } };
+            TcpMonitor tcpMonitor = new() { Options = new() { Host = "192.168.10.15", Port = 32401, Timeout = TimeSpan.FromMilliseconds(200) } };
             bool result = await tcpMonitor.IsUpAsync();
             Assert.False(result);
         }

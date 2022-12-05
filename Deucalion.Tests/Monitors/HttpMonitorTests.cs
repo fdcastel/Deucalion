@@ -16,7 +16,7 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public async Task HttpMonitor_ReturnsFalse_WhenUnreachable()
         {
-            HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://google.com:12345"), Timeout = 200 } };
+            HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://google.com:12345"), Timeout = TimeSpan.FromMilliseconds(200) } };
             bool result = await httpMonitor.IsUpAsync();
             Assert.False(result);
         }

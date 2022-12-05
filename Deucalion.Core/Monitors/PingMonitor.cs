@@ -3,9 +3,9 @@ using System.Net.NetworkInformation;
 
 namespace Deucalion.Monitors
 {
-    public class PingMonitor : IMonitor
+    public class PingMonitor : IMonitor<PingMonitorOptions>
     {
-        private static readonly int DefaultTimeout = 1000;
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
 
         public required PingMonitorOptions Options { get; init; }
 
@@ -14,7 +14,8 @@ namespace Deucalion.Monitors
             try
             {
                 using Ping pinger = new();
-                PingReply reply = await pinger.SendPingAsync(Options.Host, Options.Timeout ?? DefaultTimeout);
+                double timeout = (Options.Timeout ?? DefaultTimeout).TotalMilliseconds;
+                PingReply reply = await pinger.SendPingAsync(Options.Host, (int)timeout);
                 return reply.Status == IPStatus.Success;
             }
             catch (PingException)

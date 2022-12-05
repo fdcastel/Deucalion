@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Monitors.Options
 {
-    public class PingMonitorOptions : CommonMonitorOptions
+    public class PingMonitorOptions : MonitorOptions
     {
         public string Host { get; set; } = default!;
     }

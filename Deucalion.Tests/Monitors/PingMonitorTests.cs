@@ -16,7 +16,7 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public async Task PingMonitor_ReturnsFalse_WhenUnreachable()
         {
-            PingMonitor pingMonitor = new() { Options = new() { Host = "192.168.1.1", Timeout = 200 } };
+            PingMonitor pingMonitor = new() { Options = new() { Host = "192.168.1.1", Timeout = TimeSpan.FromMilliseconds(200) } };
             bool result = await pingMonitor.IsUpAsync();
             Assert.False(result);
         }
