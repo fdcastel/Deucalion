@@ -1,4 +1,4 @@
-using Deucalion.Monitors;
+﻿using Deucalion.Monitors;
 using Xunit;
 
 namespace Deucalion.Tests.Monitors
@@ -24,11 +24,11 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public async Task HttpMonitor_WorksWith_ExpectedStatusCode()
         {
-            HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://api.github.com/user") } };
+            HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://api.google.com/") } };
             var result = await httpMonitor.IsUpAsync();
             Assert.False(result);
 
-            httpMonitor = new() { Options = new() { Url = new Uri("https://api.github.com/user"), ExpectedStatusCode = System.Net.HttpStatusCode.Unauthorized } };
+            httpMonitor = new() { Options = new() { Url = new Uri("https://api.google.com/"), ExpectedStatusCode = System.Net.HttpStatusCode.NotFound } };
             result = await httpMonitor.IsUpAsync();
             Assert.True(result);
         }
