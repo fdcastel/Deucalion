@@ -1,6 +1,6 @@
-﻿using Deucalion.Monitors.Options;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
+using Deucalion.Monitors.Options;
 
 namespace Deucalion.Monitors
 {
@@ -27,12 +27,12 @@ namespace Deucalion.Monitors
                 ProductInfoHeaderValue userAgentValue = new("Deucalion", "1.0");
                 request.Headers.UserAgent.Add(userAgentValue);
 
-                HttpClient httpClient = Options.IgnoreCertificateErrors ?? false
+                var httpClient = Options.IgnoreCertificateErrors ?? false
                     ? CachedHttpClientIgnoreCertificate
                     : CachedHttpClient;
 
                 using CancellationTokenSource cts = new(Options.Timeout ?? DefaultTimeout);
-                using HttpResponseMessage response = await httpClient.SendAsync(request, cts.Token);
+                using var response = await httpClient.SendAsync(request, cts.Token);
 
                 if (Options.ExpectedStatusCode is not null)
                 {
@@ -51,7 +51,7 @@ namespace Deucalion.Monitors
 
                 if (Options.ExpectedResponseBodyPattern is not null)
                 {
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    var responseBody = await response.Content.ReadAsStringAsync();
                     if (!Regex.IsMatch(responseBody, Options.ExpectedResponseBodyPattern))
                     {
                         return false;

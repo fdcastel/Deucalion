@@ -1,5 +1,5 @@
-using Deucalion.Monitors;
 using System.Net;
+using Deucalion.Monitors;
 using Xunit;
 
 namespace Deucalion.Tests.Monitors
@@ -10,7 +10,7 @@ namespace Deucalion.Tests.Monitors
         public async Task DnsMonitor_ReturnsTrue_WhenReachable()
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com" } };
-            bool result = await dnsMonitor.IsUpAsync();
+            var result = await dnsMonitor.IsUpAsync();
             Assert.True(result);
         }
 
@@ -18,7 +18,7 @@ namespace Deucalion.Tests.Monitors
         public async Task DnsMonitor_ReturnsFalse_WhenUnreachable()
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com.fake" } };
-            bool result = await dnsMonitor.IsUpAsync();
+            var result = await dnsMonitor.IsUpAsync();
             Assert.False(result);
         }
 
@@ -26,7 +26,7 @@ namespace Deucalion.Tests.Monitors
         public async Task DnsMonitor_WorksWith_Resolver()
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com" } };
-            bool result = await dnsMonitor.IsUpAsync();
+            var result = await dnsMonitor.IsUpAsync();
             Assert.True(result);
 
             dnsMonitor = new() { Options = new() { HostName = "google.com", Resolver = new IPEndPoint(IPAddress.Parse("1.2.3.4"), 99) } };
@@ -38,7 +38,7 @@ namespace Deucalion.Tests.Monitors
         public async Task DnsMonitor_WorksWith_RecordType()
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com", RecordType = DnsClient.QueryType.AAAA } };
-            bool result = await dnsMonitor.IsUpAsync();
+            var result = await dnsMonitor.IsUpAsync();
             Assert.True(result);
         }
     }

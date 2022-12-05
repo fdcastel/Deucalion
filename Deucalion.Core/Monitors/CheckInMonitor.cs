@@ -11,13 +11,13 @@ namespace Deucalion.Monitors
 
         public Task<bool> IsUpAsync()
         {
-            bool result = _checkInEvent.WaitOne(TimeSpan.Zero);
+            var result = _checkInEvent.WaitOne(TimeSpan.Zero);
             return Task.FromResult(result);
         }
 
         public void CheckIn()
         {
-            _ = _checkInEvent.Set();
+            _checkInEvent.Set();
 
             if (_resetTimer is null)
             {
@@ -25,13 +25,13 @@ namespace Deucalion.Monitors
             }
             else
             {
-                _ = _resetTimer.Change(Options.IntervalWhenUpOrDefault, Timeout.InfiniteTimeSpan);
+                _resetTimer.Change(Options.IntervalWhenUpOrDefault, Timeout.InfiniteTimeSpan);
             }
         }
 
         private void Reset(object? state)
         {
-            _ = _checkInEvent.Reset();
+            _checkInEvent.Reset();
         }
     }
 }

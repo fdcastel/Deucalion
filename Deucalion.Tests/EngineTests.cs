@@ -41,7 +41,7 @@ namespace Deucalion.Tests
                 },
             };
 
-            int responseCount = 0;
+            var responseCount = 0;
 
             void callback(MonitorResponse response)
             {

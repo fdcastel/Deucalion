@@ -1,5 +1,5 @@
-﻿using DnsClient;
-using System.Net;
+﻿using System.Net;
+using DnsClient;
 
 namespace Deucalion.Monitors.Options
 {

@@ -1,5 +1,5 @@
-﻿using Deucalion.Monitors.Options;
-using System.Net.NetworkInformation;
+﻿using System.Net.NetworkInformation;
+using Deucalion.Monitors.Options;
 
 namespace Deucalion.Monitors
 {
@@ -14,8 +14,8 @@ namespace Deucalion.Monitors
             try
             {
                 using Ping pinger = new();
-                double timeout = (Options.Timeout ?? DefaultTimeout).TotalMilliseconds;
-                PingReply reply = await pinger.SendPingAsync(Options.Host, (int)timeout);
+                var timeout = (Options.Timeout ?? DefaultTimeout).TotalMilliseconds;
+                var reply = await pinger.SendPingAsync(Options.Host, (int)timeout);
                 return reply.Status == IPStatus.Success;
             }
             catch (PingException)

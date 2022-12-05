@@ -1,7 +1,7 @@
-﻿using Deucalion.Monitors;
+﻿using System.Diagnostics;
+using Deucalion.Monitors;
 using Deucalion.Monitors.Options;
 using Deucalion.Options;
-using System.Diagnostics;
 
 namespace Deucalion
 {
@@ -13,13 +13,13 @@ namespace Deucalion
         {
             while (!stopToken.IsCancellationRequested)
             {
-                Task[] tasks = monitors.Select(async monitor =>
+                var tasks = monitors.Select(async monitor =>
                 {
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-                    bool isUp = await monitor.IsUpAsync();
+                    var stopwatch = Stopwatch.StartNew();
+                    var isUp = await monitor.IsUpAsync();
                     stopwatch.Stop();
 
-                    string name = monitor.Options.Name;
+                    var name = monitor.Options.Name;
                     callback(new MonitorResponse(name, isUp, stopwatch.Elapsed));
                 }).ToArray();
 

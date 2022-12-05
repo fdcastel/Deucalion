@@ -1,4 +1,4 @@
-using Deucalion.Monitors;
+﻿using Deucalion.Monitors;
 using Xunit;
 
 namespace Deucalion.Tests.Monitors
@@ -9,7 +9,7 @@ namespace Deucalion.Tests.Monitors
         public async Task CheckInMonitor_ReturnsFalse_WhenInitialized()
         {
             CheckInMonitor checkInMonitor = new() { Options = new() };
-            bool result = await checkInMonitor.IsUpAsync();
+            var result = await checkInMonitor.IsUpAsync();
             Assert.False(result);
         }
 
@@ -18,7 +18,7 @@ namespace Deucalion.Tests.Monitors
         {
             CheckInMonitor checkInMonitor = new() { Options = new() };
             checkInMonitor.CheckIn();
-            bool result = await checkInMonitor.IsUpAsync();
+            var result = await checkInMonitor.IsUpAsync();
             Assert.True(result);
         }
 
@@ -27,7 +27,7 @@ namespace Deucalion.Tests.Monitors
         {
             CheckInMonitor checkInMonitor = new() { Options = new() { IntervalWhenUp = TimeSpan.FromMilliseconds(500) } };
             checkInMonitor.CheckIn();
-            bool result = await checkInMonitor.IsUpAsync();
+            var result = await checkInMonitor.IsUpAsync();
             Assert.True(result);
 
             await Task.Delay(checkInMonitor.Options.IntervalWhenUpOrDefault * 2);

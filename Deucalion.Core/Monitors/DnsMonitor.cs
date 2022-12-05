@@ -20,7 +20,7 @@ namespace Deucalion.Monitors
                 options.Timeout = Options.Timeout ?? DefaultTimeout;
 
                 LookupClient lookup = new(options);
-                IDnsQueryResponse result = await lookup.QueryAsync(Options.HostName, Options.RecordType ?? QueryType.A);
+                var result = await lookup.QueryAsync(Options.HostName, Options.RecordType ?? QueryType.A);
                 return result.Answers.Any();
             }
             catch (DnsResponseException)

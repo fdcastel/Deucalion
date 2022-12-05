@@ -1,5 +1,5 @@
-﻿using Deucalion.Monitors.Options;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
+using Deucalion.Monitors.Options;
 
 namespace Deucalion.Monitors
 {
