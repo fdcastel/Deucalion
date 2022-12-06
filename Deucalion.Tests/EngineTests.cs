@@ -78,7 +78,7 @@ namespace Deucalion.Tests
                 // NOP
             }
 
-            Assert.Equal(10, responseCount);
+            Assert.Equal(8, responseCount);
             Assert.Equal(4, changeCount);
         }
     }

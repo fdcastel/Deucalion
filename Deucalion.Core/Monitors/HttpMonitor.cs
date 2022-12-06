@@ -8,8 +8,8 @@ namespace Deucalion.Monitors
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
 
-        private static readonly HttpClient? _httpClient = null;
-        private static readonly HttpClient? _httpClientIgnoreCertificate = null;
+        private static readonly HttpClient? _httpClient;
+        private static readonly HttpClient? _httpClientIgnoreCertificate;
 
         private static HttpClient CachedHttpClient => _httpClient ?? new();
         private static HttpClient CachedHttpClientIgnoreCertificate => _httpClientIgnoreCertificate ?? new(new HttpClientHandler()

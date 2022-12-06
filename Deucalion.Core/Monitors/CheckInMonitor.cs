@@ -5,38 +5,42 @@ namespace Deucalion.Monitors
     public class CheckInMonitor : IPushMonitor<CheckInMonitorOptions>
     {
         private readonly ManualResetEvent _checkInEvent = new(false);
-        private Timer? _resetTimer = null;
+        private Timer? _resetTimer;
 
         public required CheckInMonitorOptions Options { get; init; }
 
-        public Task<MonitorState> QueryAsync()
-        {
-            if (_resetTimer is null)
-                // Never checked in.
-                return Task.FromResult(MonitorState.Unknown);
-
-            var result = _checkInEvent.WaitOne(TimeSpan.Zero);
-            return Task.FromResult(MonitorState.FromBool(result));
-        }
+        public event EventHandler? CheckedInEvent;
+        public event EventHandler? TimedOutEvent;
 
         public void CheckIn()
         {
             _checkInEvent.Set();
+            OnCheckedInEvent();
 
             var resetIn = Options.IntervalToDownOrDefault;
             if (_resetTimer is null)
-            {
                 _resetTimer = new(Reset, null, resetIn, Timeout.InfiniteTimeSpan);
-            }
             else
-            {
                 _resetTimer.Change(resetIn, Timeout.InfiniteTimeSpan);
-            }
         }
 
-        private void Reset(object? state)
+        protected virtual void OnCheckedInEvent()
+        {
+            // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-publish-events-that-conform-to-net-framework-guidelines#example
+            var checkedInEvent = CheckedInEvent;
+            checkedInEvent?.Invoke(this, EventArgs.Empty);
+        }
+
+        protected virtual void OnTimedOutEvent()
+        {
+            var timedOutEvent = TimedOutEvent;
+            timedOutEvent?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void Reset(object? _)
         {
             _checkInEvent.Reset();
+            OnTimedOutEvent();
         }
     }
 }

@@ -6,19 +6,24 @@ namespace Deucalion.Tests.Monitors
     public class CheckInMonitorTests
     {
         [Fact]
-        public async Task CheckInMonitor_ReturnsUnknown_WhenInitialized()
+        public void CheckInMonitor_ReturnsUnknown_WhenInitialized()
         {
             CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
-            var result = await checkInMonitor.QueryAsync();
+            var result = MonitorState.Unknown;
+            checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
+            checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
             Assert.Equal(MonitorState.Unknown, result);
         }
 
         [Fact]
-        public async Task CheckInMonitor_ReturnsUp_WhenCheckedIn()
+        public void CheckInMonitor_ReturnsUp_WhenCheckedIn()
         {
             CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
+            var result = MonitorState.Unknown;
+            checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
+            checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
+
             checkInMonitor.CheckIn();
-            var result = await checkInMonitor.QueryAsync();
             Assert.Equal(MonitorState.Up, result);
         }
 
@@ -26,13 +31,15 @@ namespace Deucalion.Tests.Monitors
         public async Task CheckInMonitor_ReturnsDown_WhenNotCheckedIn()
         {
             CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
+            var result = MonitorState.Unknown;
+            checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
+            checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
+
             checkInMonitor.CheckIn();
-            var result = await checkInMonitor.QueryAsync();
             Assert.Equal(MonitorState.Up, result);
 
             await Task.Delay(checkInMonitor.Options.IntervalToDownOrDefault * 2);
 
-            result = await checkInMonitor.QueryAsync();
             Assert.Equal(MonitorState.Down, result);
         }
     }

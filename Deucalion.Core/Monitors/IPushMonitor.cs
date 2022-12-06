@@ -2,7 +2,7 @@
 
 namespace Deucalion.Monitors
 {
-    public interface IPushMonitor<out TOptions> : IPullMonitor<TOptions> where TOptions : MonitorOptions
+    public interface IPushMonitor<out TOptions> : IMonitor<TOptions> where TOptions : MonitorOptions
     {
         public void CheckIn();
     }
