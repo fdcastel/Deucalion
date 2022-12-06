@@ -3,7 +3,7 @@ using DnsClient;
 
 namespace Deucalion.Monitors
 {
-    public class DnsMonitor : IMonitor<DnsMonitorOptions>
+    public class DnsMonitor : IPullMonitor<DnsMonitorOptions>
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMilliseconds(500);
 

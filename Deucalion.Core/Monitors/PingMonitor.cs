@@ -3,7 +3,7 @@ using Deucalion.Monitors.Options;
 
 namespace Deucalion.Monitors
 {
-    public class PingMonitor : IMonitor<PingMonitorOptions>
+    public class PingMonitor : IPullMonitor<PingMonitorOptions>
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
 

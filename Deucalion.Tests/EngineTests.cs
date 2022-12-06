@@ -16,31 +16,21 @@ namespace Deucalion.Tests
         }
 
         [Fact]
-        public async Task Engine_Works()
+        public void Engine_Works()
         {
             var pulse = TimeSpan.FromMilliseconds(500);
 
-            Engine engine = new()
-            {
-                Options = new() { Interval = pulse }
-            };
+            Engine engine = new();
 
-            var m1 = new CheckInMonitor()
-            {
-                Options = new() { Name = "m1", IntervalWhenUp = pulse }
-            };
-
-            var m2 = new CheckInMonitor()
-            {
-                Options = new() { Name = "m2", IntervalWhenUp = pulse }
-            };
+            CheckInMonitor m1 = new() { Options = new() { Name = "m1", IntervalToDown = pulse * 1.1 } };
+            CheckInMonitor m2 = new() { Options = new() { Name = "m2", IntervalToDown = pulse * 1.1 } };
 
             List<IMonitor<MonitorOptions>> monitors = new() { m1, m2 };
 
             var responseCount = 0;
             var changeCount = 0;
 
-            void callback(MonitorEvent monitorEvent)
+            void MonitorCallback(MonitorEvent monitorEvent)
             {
                 _output.WriteLine(monitorEvent.ToString());
 
@@ -54,26 +44,34 @@ namespace Deucalion.Tests
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () =>
             {
-                await Task.Delay(pulse);
-                m1.CheckIn();
-                m2.CheckIn();
+                var start = DateTime.Now;
+
+                void CheckIn(CheckInMonitor monitor)
+                {
+                    monitor.CheckIn();
+                    _output.WriteLine($"        Checkin {{ Name = {monitor.Options.Name}, At = {DateTime.Now - start} }}");
+                }
+
+                await Task.Delay(pulse / 2);
+                CheckIn(m1);
+                CheckIn(m2);
 
                 await Task.Delay(pulse);
-                m2.CheckIn();
+                CheckIn(m1);
 
                 await Task.Delay(pulse);
-                m1.CheckIn();
+                CheckIn(m2);
 
                 await Task.Delay(pulse);
-                m1.CheckIn();
-                m2.CheckIn();
+                CheckIn(m1);
+                CheckIn(m2);
             });
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             try
             {
-                using CancellationTokenSource cts = new(pulse * 5);
-                await engine.RunAsync(monitors, callback, cts.Token);
+                using CancellationTokenSource cts = new(pulse * 4.5);
+                engine.Run(monitors, MonitorCallback, cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -81,6 +79,7 @@ namespace Deucalion.Tests
             }
 
             Assert.Equal(10, responseCount);
+            Assert.Equal(4, changeCount);
         }
     }
 }

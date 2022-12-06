@@ -2,12 +2,12 @@
 
 namespace Deucalion.Monitors
 {
-    public class CheckInMonitor : IMonitor<MonitorOptions>
+    public class CheckInMonitor : IPushMonitor<CheckInMonitorOptions>
     {
         private readonly ManualResetEvent _checkInEvent = new(false);
         private Timer? _resetTimer = null;
 
-        public required MonitorOptions Options { get; init; }
+        public required CheckInMonitorOptions Options { get; init; }
 
         public Task<MonitorState> QueryAsync()
         {
@@ -23,13 +23,14 @@ namespace Deucalion.Monitors
         {
             _checkInEvent.Set();
 
+            var resetIn = Options.IntervalToDownOrDefault;
             if (_resetTimer is null)
             {
-                _resetTimer = new(Reset, null, Options.IntervalWhenUpOrDefault, Timeout.InfiniteTimeSpan);
+                _resetTimer = new(Reset, null, resetIn, Timeout.InfiniteTimeSpan);
             }
             else
             {
-                _resetTimer.Change(Options.IntervalWhenUpOrDefault, Timeout.InfiniteTimeSpan);
+                _resetTimer.Change(resetIn, Timeout.InfiniteTimeSpan);
             }
         }
 

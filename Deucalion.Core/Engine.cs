@@ -2,53 +2,75 @@
 using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
 using Deucalion.Monitors.Options;
-using Deucalion.Options;
 
 namespace Deucalion
 {
     public class Engine
     {
-        public EngineOptions Options { get; set; } = new();
-
-        public async Task RunAsync(IEnumerable<IMonitor<MonitorOptions>> monitors, Action<MonitorEvent> callback, CancellationToken stopToken)
+        public void Run(IEnumerable<IMonitor<MonitorOptions>> monitors, Action<MonitorEvent> callback, CancellationToken stopToken)
         {
             var start = DateTime.Now;
 
-            var monitorList = monitors.ToList();
-            var lastMonitorStates = new Dictionary<IMonitor<MonitorOptions>, MonitorState>(monitorList.Select(m => KeyValuePair.Create(m, MonitorState.Unknown)));
+            var catalog = monitors
+                .Select(monitor => new MonitorStatus() { Monitor = monitor })
+                .ToDictionary(ms => ms.Monitor);
 
-            while (!stopToken.IsCancellationRequested)
+            foreach (var (monitor, status) in catalog)
             {
-                var tasks = monitorList.Select(async monitor =>
+                var period = monitor is CheckInMonitor checkInMonitor
+                    ? checkInMonitor.Options.IntervalToDownOrDefault
+                    : monitor.Options.IntervalWhenUpOrDefault;
+
+                status.QueryTimer = new Timer(QueryMonitor, monitor, TimeSpan.Zero, period);
+            }
+
+            stopToken.WaitHandle.WaitOne();
+
+            async void QueryMonitor(object? mon)
+            {
+                if (mon is IMonitor<MonitorOptions> monitor)
                 {
-                    var stopwatch = Stopwatch.StartNew();
-                    var newState = await monitor.QueryAsync();
-                    stopwatch.Stop();
-
                     var name = monitor.Options.Name;
-                    callback(new MonitorResponse(name, DateTime.Now - start, newState, stopwatch.Elapsed));
 
-                    if (lastMonitorStates.TryGetValue(monitor, out var previousState))
+                    MonitorState newState;
+                    TimeSpan elapsed;
+                    if (monitor is IPushMonitor<MonitorOptions> pushMonitor)
                     {
-                        if (previousState != MonitorState.Unknown && previousState != newState)
+                        newState = await pushMonitor.QueryAsync();
+                        elapsed = TimeSpan.Zero;
+                    }
+                    else if (monitor is IPullMonitor<MonitorOptions> pullMonitor)
+                    {
+                        var stopwatch = Stopwatch.StartNew();
+                        newState = await pullMonitor.QueryAsync();
+                        stopwatch.Stop();
+                        elapsed = stopwatch.Elapsed;
+                    }
+                    else
+                    {
+                        throw new Exception("Unknown monitor type");
+                    }
+
+                    if (catalog.TryGetValue(monitor, out var status))
+                    {
+                        if (status.LastState != MonitorState.Unknown && status.LastState != newState)
                         {
                             callback(new MonitorChange(name, DateTime.Now - start, newState));
-                            lastMonitorStates[monitor] = newState;
                         }
+                        status.LastState = newState;
                     }
-                }).ToArray();
 
-                try
-                {
-                    Task.WaitAll(tasks, stopToken);
+                    callback(new MonitorResponse(name, DateTime.Now - start, newState, elapsed));
                 }
-                catch (OperationCanceledException)
-                {
-                    // Cancelled. Nothing to do.
-                }
-
-                await Task.Delay(Options.IntervalOrDefault, stopToken);
             }
+        }
+
+        internal class MonitorStatus
+        {
+            internal required IMonitor<MonitorOptions> Monitor { get; init; }
+            internal Timer QueryTimer { get; set; } = default!;
+
+            internal MonitorState LastState { get; set; } = MonitorState.Unknown;
         }
     }
 }

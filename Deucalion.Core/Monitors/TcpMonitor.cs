@@ -3,7 +3,7 @@ using Deucalion.Monitors.Options;
 
 namespace Deucalion.Monitors
 {
-    public class TcpMonitor : IMonitor<TcpMonitorOptions>
+    public class TcpMonitor : IPullMonitor<TcpMonitorOptions>
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMilliseconds(500);
 

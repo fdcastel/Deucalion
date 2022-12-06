@@ -4,7 +4,7 @@ using Deucalion.Monitors.Options;
 
 namespace Deucalion.Monitors
 {
-    public class HttpMonitor : IMonitor<HttpMonitorOptions>
+    public class HttpMonitor : IPullMonitor<HttpMonitorOptions>
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
 
