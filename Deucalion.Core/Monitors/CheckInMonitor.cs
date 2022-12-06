@@ -9,10 +9,14 @@ namespace Deucalion.Monitors
 
         public required MonitorOptions Options { get; init; }
 
-        public Task<bool> IsUpAsync()
+        public Task<MonitorState> QueryAsync()
         {
+            if (_resetTimer is null)
+                // Never checked in.
+                return Task.FromResult(MonitorState.Unknown);
+
             var result = _checkInEvent.WaitOne(TimeSpan.Zero);
-            return Task.FromResult(result);
+            return Task.FromResult(MonitorState.FromBool(result));
         }
 
         public void CheckIn()

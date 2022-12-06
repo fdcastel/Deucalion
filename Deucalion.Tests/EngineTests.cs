@@ -1,7 +1,6 @@
-using Deucalion.Monitors;
+﻿using Deucalion.Monitors;
+using Deucalion.Monitors.Events;
 using Deucalion.Monitors.Options;
-using Deucalion.Tests.Monitors;
-using Deucalion.Tests.Monitors.Options;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,57 +18,69 @@ namespace Deucalion.Tests
         [Fact]
         public async Task Engine_Works()
         {
+            var pulse = TimeSpan.FromMilliseconds(500);
+
             Engine engine = new()
             {
-                Options = new() { Interval = TimeSpan.FromMilliseconds(500) }
+                Options = new() { Interval = pulse }
             };
 
-            List<IMonitor<MonitorOptions>> monitors = new()
+            var m1 = new CheckInMonitor()
             {
-                new FakeMonitor() {
-                    Options = new FakeMonitorOptions() {
-                        Name = "d0",
-                        Delay = TimeSpan.FromSeconds(0)
-                    }
-                },
-
-                new FakeMonitor() {
-                    Options = new FakeMonitorOptions() {
-                        Name = "d500",
-                        Delay = TimeSpan.FromMilliseconds(500)
-                    }
-                },
+                Options = new() { Name = "m1", IntervalWhenUp = pulse }
             };
+
+            var m2 = new CheckInMonitor()
+            {
+                Options = new() { Name = "m2", IntervalWhenUp = pulse }
+            };
+
+            List<IMonitor<MonitorOptions>> monitors = new() { m1, m2 };
 
             var responseCount = 0;
+            var changeCount = 0;
 
-            void callback(MonitorResponse response)
+            void callback(MonitorEvent monitorEvent)
             {
-                _output.WriteLine($"{response.Name}: {response.IsUp} ({response.ResponseTime})");
-                responseCount++;
+                _output.WriteLine(monitorEvent.ToString());
 
-                if (response.Name == "d0")
+                switch (monitorEvent)
                 {
-                    Assert.True(response.ResponseTime < TimeSpan.FromMilliseconds(10));
-                }
-                else
-                {
-                    Assert.True(response.ResponseTime > TimeSpan.FromMilliseconds(500));
+                    case MonitorResponse _: responseCount++; break;
+                    case MonitorChange _: changeCount++; break;
                 }
             }
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            Task.Run(async () =>
+            {
+                await Task.Delay(pulse);
+                m1.CheckIn();
+                m2.CheckIn();
+
+                await Task.Delay(pulse);
+                m2.CheckIn();
+
+                await Task.Delay(pulse);
+                m1.CheckIn();
+
+                await Task.Delay(pulse);
+                m1.CheckIn();
+                m2.CheckIn();
+            });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
             try
             {
-                using CancellationTokenSource cts = new(2000);
+                using CancellationTokenSource cts = new(pulse * 5);
                 await engine.RunAsync(monitors, callback, cts.Token);
-
             }
             catch (OperationCanceledException)
             {
                 // NOP
             }
 
-            Assert.Equal(4, responseCount);
+            Assert.Equal(10, responseCount);
         }
     }
 }

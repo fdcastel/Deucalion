@@ -9,7 +9,7 @@ namespace Deucalion.Monitors
 
         public required DnsMonitorOptions Options { get; init; }
 
-        public async Task<bool> IsUpAsync()
+        public async Task<MonitorState> QueryAsync()
         {
             try
             {
@@ -21,11 +21,12 @@ namespace Deucalion.Monitors
 
                 LookupClient lookup = new(options);
                 var result = await lookup.QueryAsync(Options.HostName, Options.RecordType ?? QueryType.A);
-                return result.Answers.Any();
+
+                return MonitorState.FromBool(result.Answers.Any());
             }
             catch (DnsResponseException)
             {
-                return false;
+                return MonitorState.Down;
             }
         }
     }

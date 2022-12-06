@@ -2,10 +2,10 @@
 
 namespace Deucalion.Monitors
 {
-    public interface IMonitor<out T> where T : MonitorOptions
+    public interface IMonitor<out TOptions> where TOptions : MonitorOptions
     {
-        public T Options { get; }
+        public TOptions Options { get; }
 
-        public Task<bool> IsUpAsync();
+        public Task<MonitorState> QueryAsync();
     }
 }
