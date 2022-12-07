@@ -8,11 +8,11 @@ namespace Deucalion.Monitors
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
 
-        private static readonly HttpClient? _httpClient;
-        private static readonly HttpClient? _httpClientIgnoreCertificate;
+        private static HttpClient? _httpClient;
+        private static HttpClient? _httpClientIgnoreCertificate;
 
-        private static HttpClient CachedHttpClient => _httpClient ?? new();
-        private static HttpClient CachedHttpClientIgnoreCertificate => _httpClientIgnoreCertificate ?? new(new HttpClientHandler()
+        private static HttpClient CachedHttpClient => _httpClient ??= new HttpClient();
+        private static HttpClient CachedHttpClientIgnoreCertificate => _httpClientIgnoreCertificate ??= new(new HttpClientHandler()
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         });

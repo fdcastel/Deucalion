@@ -22,9 +22,9 @@ namespace Deucalion
                     checkInMonitor.CheckedInEvent += PushMonitorCheckedIn;
                     checkInMonitor.TimedOutEvent += PushMonitorTimedOut;
                 }
-                else
+                else if (monitor is IPullMonitor<PullMonitorOptions> pullMonitor)
                 {
-                    status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, monitor.Options.IntervalWhenUpOrDefault);
+                    status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, pullMonitor.Options.IntervalWhenUpOrDefault);
                 }
             }
 
@@ -32,19 +32,19 @@ namespace Deucalion
 
             void PushMonitorCheckedIn(object? sender, EventArgs _)
             {
-                if (sender is IPushMonitor<MonitorOptions> monitor)
+                if (sender is IPushMonitor<PushMonitorOptions> monitor)
                     UpdateMonitorState(monitor, MonitorState.Up);
             }
 
             void PushMonitorTimedOut(object? sender, EventArgs _)
             {
-                if (sender is IPushMonitor<MonitorOptions> monitor)
+                if (sender is IPushMonitor<PushMonitorOptions> monitor)
                     UpdateMonitorState(monitor, MonitorState.Down);
             }
 
             async void QueryPullMonitor(object? sender)
             {
-                if (sender is IPullMonitor<MonitorOptions> monitor)
+                if (sender is IPullMonitor<PullMonitorOptions> monitor)
                 {
                     var stopwatch = Stopwatch.StartNew();
                     var newState = await monitor.QueryAsync();

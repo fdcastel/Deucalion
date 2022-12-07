@@ -2,12 +2,12 @@
 
 namespace Deucalion.Monitors
 {
-    public class CheckInMonitor : IPushMonitor<CheckInMonitorOptions>
+    public class CheckInMonitor : IPushMonitor<PushMonitorOptions>
     {
         private readonly ManualResetEvent _checkInEvent = new(false);
         private Timer? _resetTimer;
 
-        public required CheckInMonitorOptions Options { get; init; }
+        public required PushMonitorOptions Options { get; init; }
 
         public event EventHandler? CheckedInEvent;
         public event EventHandler? TimedOutEvent;

@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Monitors.Options
 {
-    public class CheckInMonitorOptions : MonitorOptions
+    public class PushMonitorOptions : MonitorOptions
     {
         public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromSeconds(60);
 

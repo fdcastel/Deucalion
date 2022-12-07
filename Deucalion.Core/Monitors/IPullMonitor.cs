@@ -2,7 +2,7 @@
 
 namespace Deucalion.Monitors
 {
-    public interface IPullMonitor<out TOptions> : IMonitor<TOptions> where TOptions : MonitorOptions
+    public interface IPullMonitor<out TOptions> : IMonitor<TOptions> where TOptions : PullMonitorOptions
     {
         public Task<MonitorState> QueryAsync();
     }

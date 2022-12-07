@@ -3,7 +3,7 @@ using DnsClient;
 
 namespace Deucalion.Monitors.Options
 {
-    public class DnsMonitorOptions : MonitorOptions
+    public class DnsMonitorOptions : PullMonitorOptions
     {
         public static readonly QueryType DefaultRecordType = QueryType.A;
 
