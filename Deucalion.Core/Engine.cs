@@ -40,50 +40,78 @@ namespace Deucalion
 
             void PushMonitorCheckedIn(object? sender, EventArgs _)
             {
-                if (sender is IPushMonitor<PushMonitorOptions> monitor)
-                    UpdateMonitorState(monitor, MonitorState.Up);
+                if (sender is IPushMonitor<PushMonitorOptions> pushMonitor)
+                    UpdatePushMonitorState(pushMonitor, MonitorState.Up);
             }
 
             void PushMonitorTimedOut(object? sender, EventArgs _)
             {
-                if (sender is IPushMonitor<PushMonitorOptions> monitor)
-                    UpdateMonitorState(monitor, MonitorState.Down);
+                if (sender is IPushMonitor<PushMonitorOptions> pushMonitor)
+                    UpdatePushMonitorState(pushMonitor, MonitorState.Down);
             }
 
             async void QueryPullMonitor(object? sender)
             {
-                if (sender is IPullMonitor<PullMonitorOptions> monitor)
+                var timerEventAt = DateTime.Now;
+
+                if (sender is IPullMonitor<PullMonitorOptions> pullMonitor)
                 {
                     var stopwatch = Stopwatch.StartNew();
-                    var newState = await monitor.QueryAsync();
+                    var newState = await pullMonitor.QueryAsync();
                     stopwatch.Stop();
 
                     var queryDuration = stopwatch.Elapsed;
-                    UpdateMonitorState(monitor, newState, queryDuration);
+                    UpdatePullMonitorState(pullMonitor, newState, queryDuration, timerEventAt);
                 }
             }
 
-            void UpdateMonitorState(IMonitor<MonitorOptions> monitor, MonitorState newState, TimeSpan queryDuration = default)
+            void UpdatePullMonitorState(IPullMonitor<PullMonitorOptions> pullMonitor, MonitorState newState, TimeSpan queryDuration, DateTime timerEventAt)
+            {
+                var name = pullMonitor.Options.Name;
+                var at = DateTime.Now - start;
+
+                if (catalog.TryGetValue(pullMonitor, out var status))
+                {
+                    // Notify response
+                    callback(new QueryResponse(name, at, newState, queryDuration));
+
+                    if (status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState)
+                    {
+                        // State changed
+
+                        // Notify change
+                        callback(new StateChanged(name, at, newState));
+
+                        // Update timer interval
+                        var dueTime = newState == MonitorState.Up
+                            ? pullMonitor.Options.IntervalWhenUpOrDefault
+                            : pullMonitor.Options.IntervalWhenDownOrDefault;
+
+                        // Subtract from next dueTime the already elapsed time since the current timer event.
+                        var deltaUntilNow = DateTime.Now - timerEventAt;
+                        status.QueryTimer?.Change(dueTime - deltaUntilNow, dueTime);
+                    }
+
+                    status.LastKnownState = newState;
+                }
+            }
+
+            void UpdatePushMonitorState(IMonitor<MonitorOptions> monitor, MonitorState newState)
             {
                 var name = monitor.Options.Name;
                 var at = DateTime.Now - start;
 
-                if (monitor is IPullMonitor<PullMonitorOptions>)
-                    callback(new QueryResponse(name, at, newState, queryDuration));
-                else
+                if (catalog.TryGetValue(monitor, out var status))
                 {
                     if (newState == MonitorState.Up)
                         callback(new CheckedIn(name, at));
                     else
                         callback(new CheckInMissed(name, at));
-                }
 
-                if (catalog.TryGetValue(monitor, out var status))
-                {
-                    if (status.LastState != MonitorState.Unknown && status.LastState != newState)
+                    if (status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState)
                         callback(new StateChanged(name, at, newState));
 
-                    status.LastState = newState;
+                    status.LastKnownState = newState;
                 }
             }
         }
@@ -92,7 +120,7 @@ namespace Deucalion
         {
             internal required IMonitor<MonitorOptions> Monitor { get; init; }
             internal Timer? QueryTimer { get; set; }
-            internal MonitorState LastState { get; set; } = MonitorState.Unknown;
+            internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
         }
     }
 }

@@ -18,7 +18,7 @@ namespace Deucalion.Tests
         }
 
         [Fact]
-        public void Engine_Works_WithPushMonitors()
+        public void Engine_ReceiveEventsFromPushMonitors()
         {
             var pulse = TimeSpan.FromMilliseconds(500);
 
@@ -73,7 +73,7 @@ namespace Deucalion.Tests
         }
 
         [Fact]
-        public void Engine_Works_WithPullMonitors()
+        public void Engine_QueryPullMonitors()
         {
             var pulse = TimeSpan.FromMilliseconds(500);
 
@@ -85,7 +85,7 @@ namespace Deucalion.Tests
                 (MonitorState.Down, pulse),
                 (MonitorState.Up, pulse)
                 )
-            { Options = new() { Name = "m1", IntervalWhenUp = pulse } };
+            { Options = new() { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse } };
 
             PullMonitorMock m2 = new(
                 (MonitorState.Unknown, pulse / 2),
@@ -93,7 +93,7 @@ namespace Deucalion.Tests
                 (MonitorState.Up, pulse),
                 (MonitorState.Up, pulse)
                 )
-            { Options = new() { Name = "m2", IntervalWhenUp = pulse } };
+            { Options = new() { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse } };
 
             var eventCount = new ConcurrentDictionary<Type, int>();
 
@@ -120,5 +120,46 @@ namespace Deucalion.Tests
             Assert.Equal(10, eventCount[typeof(QueryResponse)]);
             Assert.Equal(3, eventCount[typeof(StateChanged)]);
         }
+
+        [Fact]
+        public void Engine_QueryPullMonitors_WithDifferentIntervalWhenDown()
+        {
+            var pulse = TimeSpan.FromMilliseconds(500);
+
+            Engine engine = new();
+
+            PullMonitorMock m1 = new(
+                (MonitorState.Unknown, pulse / 2),
+                (MonitorState.Up, pulse * 2),
+                (MonitorState.Down, pulse * 2),
+                (MonitorState.Up, pulse)
+                )
+            { Options = new() { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5 } };
+
+            var eventCount = new ConcurrentDictionary<Type, int>();
+
+            void MonitorCallback(MonitorEvent monitorEvent)
+            {
+                _output.WriteLine(monitorEvent.ToString());
+                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+            }
+
+            try
+            {
+                m1.Start();
+
+                using CancellationTokenSource cts = new(pulse * 7.5);
+                var monitors = new List<IMonitor<MonitorOptions>>() { m1 };
+                engine.Run(monitors, MonitorCallback, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // NOP
+            }
+
+            Assert.Equal(14, eventCount[typeof(QueryResponse)]);
+            Assert.Equal(2, eventCount[typeof(StateChanged)]);
+        }
+
     }
 }
