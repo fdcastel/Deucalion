@@ -27,18 +27,14 @@ namespace Deucalion.Tests
 
             List<IMonitor<MonitorOptions>> monitors = new() { m1, m2 };
 
-            var responseCount = 0;
-            var changeCount = 0;
+            var eventCount = new Dictionary<Type, int>();
 
             void MonitorCallback(MonitorEvent monitorEvent)
             {
                 _output.WriteLine(monitorEvent.ToString());
 
-                switch (monitorEvent)
-                {
-                    case MonitorResponse _: responseCount++; break;
-                    case MonitorChange _: changeCount++; break;
-                }
+                var prior = eventCount.TryGetValue(monitorEvent.GetType(), out var c) ? c : 0;
+                eventCount[monitorEvent.GetType()] = prior + 1;
             }
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -46,25 +42,19 @@ namespace Deucalion.Tests
             {
                 var start = DateTime.Now;
 
-                void CheckIn(CheckInMonitor monitor)
-                {
-                    monitor.CheckIn();
-                    _output.WriteLine($"        Checkin {{ Name = {monitor.Options.Name}, At = {DateTime.Now - start} }}");
-                }
-
                 await Task.Delay(pulse / 2);
-                CheckIn(m1);
-                CheckIn(m2);
+                m1.CheckIn();
+                m2.CheckIn();
 
                 await Task.Delay(pulse);
-                CheckIn(m1);
+                m1.CheckIn();
 
                 await Task.Delay(pulse);
-                CheckIn(m2);
+                m2.CheckIn();
 
                 await Task.Delay(pulse);
-                CheckIn(m1);
-                CheckIn(m2);
+                m1.CheckIn();
+                m2.CheckIn();
             });
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
@@ -78,8 +68,9 @@ namespace Deucalion.Tests
                 // NOP
             }
 
-            Assert.Equal(8, responseCount);
-            Assert.Equal(4, changeCount);
+            Assert.Equal(6, eventCount[typeof(CheckedIn)]);
+            Assert.Equal(2, eventCount[typeof(CheckInMissed)]);
+            Assert.Equal(4, eventCount[typeof(StateChanged)]);
         }
     }
 }

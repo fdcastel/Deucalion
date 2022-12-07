@@ -60,15 +60,23 @@ namespace Deucalion
                 var name = monitor.Options.Name;
                 var at = DateTime.Now - start;
 
+                if (monitor is IPullMonitor<PullMonitorOptions>)
+                    callback(new QueryResponse(name, at, newState, queryDuration));
+                else
+                {
+                    if (newState == MonitorState.Up)
+                        callback(new CheckedIn(name, at));
+                    else
+                        callback(new CheckInMissed(name, at));
+                }
+
                 if (catalog.TryGetValue(monitor, out var status))
                 {
                     if (status.LastState != MonitorState.Unknown && status.LastState != newState)
-                        callback(new MonitorChange(name, at, newState));
+                        callback(new StateChanged(name, at, newState));
 
                     status.LastState = newState;
                 }
-
-                callback(new MonitorResponse(name, at, newState, queryDuration));
             }
         }
 
