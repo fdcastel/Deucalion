@@ -1,7 +1,8 @@
 ﻿using System.Net;
+using Deucalion.Monitors.Options;
 using DnsClient;
 
-namespace Deucalion.Monitors.Options
+namespace Deucalion.Network.Monitors.Options
 {
     public class DnsMonitorOptions : PullMonitorOptions
     {

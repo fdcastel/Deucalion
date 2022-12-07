@@ -1,11 +1,12 @@
 ﻿using System.Net.NetworkInformation;
-using Deucalion.Monitors.Options;
+using Deucalion.Monitors;
+using Deucalion.Network.Monitors.Options;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Network.Monitors
 {
     public class PingMonitor : IPullMonitor<PingMonitorOptions>
     {
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan DefaultPingTimeout = TimeSpan.FromSeconds(1);
 
         public required PingMonitorOptions Options { get; init; }
 
@@ -14,7 +15,7 @@ namespace Deucalion.Monitors
             try
             {
                 using Ping pinger = new();
-                var timeout = (Options.Timeout ?? DefaultTimeout).TotalMilliseconds;
+                var timeout = (Options.Timeout ?? DefaultPingTimeout).TotalMilliseconds;
                 var reply = await pinger.SendPingAsync(Options.Host, (int)timeout);
                 return MonitorState.FromBool(reply.Status == IPStatus.Success);
             }

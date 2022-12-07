@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Deucalion.Core\Deucalion.Core.csproj" />
+    <ProjectReference Include="..\Deucalion.Network\Deucalion.Network.csproj" />
   </ItemGroup>
 
 </Project>

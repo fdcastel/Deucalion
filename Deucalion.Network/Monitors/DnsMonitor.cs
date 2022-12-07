@@ -1,11 +1,12 @@
-﻿using Deucalion.Monitors.Options;
+﻿using Deucalion.Monitors;
+using Deucalion.Network.Monitors.Options;
 using DnsClient;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Network.Monitors
 {
     public class DnsMonitor : IPullMonitor<DnsMonitorOptions>
     {
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMilliseconds(500);
+        private static readonly TimeSpan DefaultDnsTimeout = TimeSpan.FromMilliseconds(500);
 
         public required DnsMonitorOptions Options { get; init; }
 
@@ -17,7 +18,7 @@ namespace Deucalion.Monitors
                     ? new(Options.Resolver)
                     : new();
 
-                options.Timeout = Options.Timeout ?? DefaultTimeout;
+                options.Timeout = Options.Timeout ?? DefaultDnsTimeout;
 
                 LookupClient lookup = new(options);
                 var result = await lookup.QueryAsync(Options.HostName, Options.RecordType ?? QueryType.A);

@@ -1,11 +1,12 @@
 ﻿using System.Net.Sockets;
-using Deucalion.Monitors.Options;
+using Deucalion.Monitors;
+using Deucalion.Network.Monitors.Options;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Network.Monitors
 {
     public class TcpMonitor : IPullMonitor<TcpMonitorOptions>
     {
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMilliseconds(500);
+        private static readonly TimeSpan DefaultTcpTimeout = TimeSpan.FromMilliseconds(500);
 
         public required TcpMonitorOptions Options { get; init; }
 
@@ -14,7 +15,7 @@ namespace Deucalion.Monitors
             try
             {
                 using TcpClient tcpClient = new();
-                using CancellationTokenSource cts = new(Options.Timeout ?? DefaultTimeout);
+                using CancellationTokenSource cts = new(Options.Timeout ?? DefaultTcpTimeout);
                 await tcpClient.ConnectAsync(Options.Host, Options.Port, cts.Token);
                 return MonitorState.Up;
             }

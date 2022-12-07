@@ -1,12 +1,13 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
-using Deucalion.Monitors.Options;
+using Deucalion.Monitors;
+using Deucalion.Network.Monitors.Options;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Network.Monitors
 {
     public class HttpMonitor : IPullMonitor<HttpMonitorOptions>
     {
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan DefaultHttpTimeout = TimeSpan.FromSeconds(1);
 
         private static HttpClient? _httpClient;
         private static HttpClient? _httpClientIgnoreCertificate;
@@ -31,7 +32,7 @@ namespace Deucalion.Monitors
                     ? CachedHttpClientIgnoreCertificate
                     : CachedHttpClient;
 
-                using CancellationTokenSource cts = new(Options.Timeout ?? DefaultTimeout);
+                using CancellationTokenSource cts = new(Options.Timeout ?? DefaultHttpTimeout);
                 using var response = await httpClient.SendAsync(request, cts.Token);
 
                 if (Options.ExpectedStatusCode is not null)

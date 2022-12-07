@@ -1,6 +1,7 @@
 ﻿using System.Net;
+using Deucalion.Monitors.Options;
 
-namespace Deucalion.Monitors.Options
+namespace Deucalion.Network.Monitors.Options
 {
     public class HttpMonitorOptions : PullMonitorOptions
     {
