@@ -28,7 +28,15 @@ namespace Deucalion
                 }
             }
 
-            stopToken.WaitHandle.WaitOne();
+            try
+            {
+                stopToken.WaitHandle.WaitOne();
+            }
+            finally
+            {
+                foreach (var (_, status) in catalog)
+                    status.QueryTimer?.Dispose();
+            }
 
             void PushMonitorCheckedIn(object? sender, EventArgs _)
             {
@@ -83,8 +91,7 @@ namespace Deucalion
         internal class MonitorStatus
         {
             internal required IMonitor<MonitorOptions> Monitor { get; init; }
-            internal Timer QueryTimer { get; set; } = default!;
-
+            internal Timer? QueryTimer { get; set; }
             internal MonitorState LastState { get; set; } = MonitorState.Unknown;
         }
     }

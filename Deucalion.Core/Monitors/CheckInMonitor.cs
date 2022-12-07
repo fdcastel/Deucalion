@@ -2,10 +2,11 @@
 
 namespace Deucalion.Monitors
 {
-    public class CheckInMonitor : IPushMonitor<PushMonitorOptions>
+    public sealed class CheckInMonitor : IPushMonitor<PushMonitorOptions>, IDisposable
     {
         private readonly ManualResetEvent _checkInEvent = new(false);
         private Timer? _resetTimer;
+        private bool _disposed;
 
         public required PushMonitorOptions Options { get; init; }
 
@@ -24,14 +25,25 @@ namespace Deucalion.Monitors
                 _resetTimer.Change(resetIn, Timeout.InfiniteTimeSpan);
         }
 
-        protected virtual void OnCheckedInEvent()
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _resetTimer?.Dispose();
+            _disposed = true;
+        }
+
+        private void OnCheckedInEvent()
         {
             // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-publish-events-that-conform-to-net-framework-guidelines#example
             var checkedInEvent = CheckedInEvent;
             checkedInEvent?.Invoke(this, EventArgs.Empty);
         }
 
-        protected virtual void OnTimedOutEvent()
+        private void OnTimedOutEvent()
         {
             var timedOutEvent = TimedOutEvent;
             timedOutEvent?.Invoke(this, EventArgs.Empty);

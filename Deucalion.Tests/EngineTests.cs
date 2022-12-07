@@ -24,8 +24,8 @@ namespace Deucalion.Tests
 
             Engine engine = new();
 
-            CheckInMonitor m1 = new() { Options = new() { Name = "m1", IntervalToDown = pulse * 1.1 } };
-            CheckInMonitor m2 = new() { Options = new() { Name = "m2", IntervalToDown = pulse * 1.1 } };
+            using CheckInMonitor m1 = new() { Options = new() { Name = "m1", IntervalToDown = pulse * 1.1 } };
+            using CheckInMonitor m2 = new() { Options = new() { Name = "m2", IntervalToDown = pulse * 1.1 } };
 
             var eventCount = new ConcurrentDictionary<Type, int>();
 

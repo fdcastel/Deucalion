@@ -8,7 +8,7 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public void CheckInMonitor_ReturnsUnknown_WhenInitialized()
         {
-            CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
+            using CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
             var result = MonitorState.Unknown;
             checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
             checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
@@ -18,7 +18,7 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public void CheckInMonitor_ReturnsUp_WhenCheckedIn()
         {
-            CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
+            using CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
             var result = MonitorState.Unknown;
             checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
             checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
@@ -30,7 +30,7 @@ namespace Deucalion.Tests.Monitors
         [Fact]
         public async Task CheckInMonitor_ReturnsDown_WhenNotCheckedIn()
         {
-            CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
+            using CheckInMonitor checkInMonitor = new() { Options = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) } };
             var result = MonitorState.Unknown;
             checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
             checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
