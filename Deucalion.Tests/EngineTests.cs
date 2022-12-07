@@ -1,6 +1,8 @@
-﻿using Deucalion.Monitors;
+﻿using System.Collections.Concurrent;
+using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
 using Deucalion.Monitors.Options;
+using Deucalion.Tests.Mocks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +18,7 @@ namespace Deucalion.Tests
         }
 
         [Fact]
-        public void Engine_Works()
+        public void Engine_Works_WithPushMonitors()
         {
             var pulse = TimeSpan.FromMilliseconds(500);
 
@@ -25,16 +27,12 @@ namespace Deucalion.Tests
             CheckInMonitor m1 = new() { Options = new() { Name = "m1", IntervalToDown = pulse * 1.1 } };
             CheckInMonitor m2 = new() { Options = new() { Name = "m2", IntervalToDown = pulse * 1.1 } };
 
-            List<IMonitor<MonitorOptions>> monitors = new() { m1, m2 };
-
-            var eventCount = new Dictionary<Type, int>();
+            var eventCount = new ConcurrentDictionary<Type, int>();
 
             void MonitorCallback(MonitorEvent monitorEvent)
             {
                 _output.WriteLine(monitorEvent.ToString());
-
-                var prior = eventCount.TryGetValue(monitorEvent.GetType(), out var c) ? c : 0;
-                eventCount[monitorEvent.GetType()] = prior + 1;
+                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
             }
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -61,6 +59,7 @@ namespace Deucalion.Tests
             try
             {
                 using CancellationTokenSource cts = new(pulse * 4.5);
+                var monitors = new List<IMonitor<MonitorOptions>>() { m1, m2 };
                 engine.Run(monitors, MonitorCallback, cts.Token);
             }
             catch (OperationCanceledException)
@@ -71,6 +70,55 @@ namespace Deucalion.Tests
             Assert.Equal(6, eventCount[typeof(CheckedIn)]);
             Assert.Equal(2, eventCount[typeof(CheckInMissed)]);
             Assert.Equal(4, eventCount[typeof(StateChanged)]);
+        }
+
+        [Fact]
+        public void Engine_Works_WithPullMonitors()
+        {
+            var pulse = TimeSpan.FromMilliseconds(500);
+
+            Engine engine = new();
+
+            PullMonitorMock m1 = new(
+                (MonitorState.Unknown, pulse / 2),
+                (MonitorState.Up, pulse),
+                (MonitorState.Down, pulse),
+                (MonitorState.Up, pulse)
+                )
+            { Options = new() { Name = "m1", IntervalWhenUp = pulse } };
+
+            PullMonitorMock m2 = new(
+                (MonitorState.Unknown, pulse / 2),
+                (MonitorState.Down, pulse),
+                (MonitorState.Up, pulse),
+                (MonitorState.Up, pulse)
+                )
+            { Options = new() { Name = "m2", IntervalWhenUp = pulse } };
+
+            var eventCount = new ConcurrentDictionary<Type, int>();
+
+            void MonitorCallback(MonitorEvent monitorEvent)
+            {
+                _output.WriteLine(monitorEvent.ToString());
+                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+            }
+
+            try
+            {
+                m1.Start();
+                m2.Start();
+
+                using CancellationTokenSource cts = new(pulse * 4.5);
+                var monitors = new List<IMonitor<MonitorOptions>>() { m1, m2 };
+                engine.Run(monitors, MonitorCallback, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // NOP
+            }
+
+            Assert.Equal(10, eventCount[typeof(QueryResponse)]);
+            Assert.Equal(3, eventCount[typeof(StateChanged)]);
         }
     }
 }
