@@ -1,4 +1,4 @@
 ﻿namespace Deucalion.Monitors.Events
 {
-    public record CheckedIn(string Name, TimeSpan At) : MonitorEvent(Name, At);
+    public record CheckedIn(string Name, TimeSpan At, MonitorResponse Response) : MonitorEvent(Name, At);
 }

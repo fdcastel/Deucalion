@@ -10,7 +10,7 @@ namespace Deucalion.Network.Monitors
 
         public required DnsMonitorOptions Options { get; init; }
 
-        public async Task<MonitorState> QueryAsync()
+        public async Task<MonitorResponse> QueryAsync()
         {
             try
             {
@@ -23,11 +23,13 @@ namespace Deucalion.Network.Monitors
                 LookupClient lookup = new(options);
                 var result = await lookup.QueryAsync(Options.HostName, Options.RecordType ?? QueryType.A);
 
-                return MonitorState.FromBool(result.Answers.Any());
+                return result.Answers.Any()
+                    ? MonitorResponse.DefaultUp
+                    : MonitorResponse.DefaultDown;
             }
             catch (DnsResponseException)
             {
-                return MonitorState.Down;
+                return MonitorResponse.DefaultDown;
             }
         }
     }

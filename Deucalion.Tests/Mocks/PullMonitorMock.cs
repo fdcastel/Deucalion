@@ -28,7 +28,11 @@ namespace Deucalion.Tests.Mocks
             });
         }
 
-        public Task<MonitorState> QueryAsync() =>
-            Task.FromResult(CurrentState);
+        public Task<MonitorResponse> QueryAsync() =>
+            Task.FromResult(new MonitorResponse()
+            {
+                State = CurrentState,
+                ResponseTime = TimeSpan.FromMilliseconds(333)
+            });
     }
 }

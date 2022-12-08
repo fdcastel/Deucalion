@@ -10,18 +10,21 @@ namespace Deucalion.Network.Monitors
 
         public required PingMonitorOptions Options { get; init; }
 
-        public async Task<MonitorState> QueryAsync()
+        public async Task<MonitorResponse> QueryAsync()
         {
             try
             {
                 using Ping pinger = new();
                 var timeout = (Options.Timeout ?? DefaultPingTimeout).TotalMilliseconds;
                 var reply = await pinger.SendPingAsync(Options.Host, (int)timeout);
-                return MonitorState.FromBool(reply.Status == IPStatus.Success);
+
+                return reply.Status == IPStatus.Success
+                    ? new() { State = MonitorState.Up, ResponseTime = TimeSpan.FromMilliseconds(reply.RoundtripTime) }
+                    : MonitorResponse.DefaultDown;
             }
             catch (PingException)
             {
-                return MonitorState.Unknown;
+                return MonitorResponse.DefaultDown;
             }
         }
     }

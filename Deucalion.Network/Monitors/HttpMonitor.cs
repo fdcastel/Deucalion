@@ -20,7 +20,7 @@ namespace Deucalion.Network.Monitors
 
         public required HttpMonitorOptions Options { get; init; }
 
-        public async Task<MonitorState> QueryAsync()
+        public async Task<MonitorResponse> QueryAsync()
         {
             try
             {
@@ -39,14 +39,14 @@ namespace Deucalion.Network.Monitors
                 {
                     if (response.StatusCode != Options.ExpectedStatusCode)
                     {
-                        return MonitorState.Down;
+                        return MonitorResponse.DefaultDown;
                     }
                 }
                 else
                 {
                     if (!response.IsSuccessStatusCode)
                     {
-                        return MonitorState.Down;
+                        return MonitorResponse.DefaultDown;
                     }
                 }
 
@@ -55,19 +55,19 @@ namespace Deucalion.Network.Monitors
                     var responseBody = await response.Content.ReadAsStringAsync();
                     if (!Regex.IsMatch(responseBody, Options.ExpectedResponseBodyPattern))
                     {
-                        return MonitorState.Down;
+                        return MonitorResponse.DefaultDown;
                     };
                 }
 
-                return MonitorState.Up;
+                return MonitorResponse.DefaultUp;
             }
             catch (HttpRequestException)
             {
-                return MonitorState.Down;
+                return MonitorResponse.DefaultDown;
             }
             catch (OperationCanceledException)
             {
-                return MonitorState.Down;
+                return MonitorResponse.DefaultDown;
             }
         }
     }

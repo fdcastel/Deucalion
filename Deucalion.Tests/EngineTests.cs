@@ -38,7 +38,7 @@ namespace Deucalion.Tests
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () =>
             {
-                var start = DateTime.Now;
+                var start = DateTime.UtcNow;
 
                 await Task.Delay(pulse / 2);
                 m1.CheckIn();
@@ -160,6 +160,5 @@ namespace Deucalion.Tests
             Assert.Equal(14, eventCount[typeof(QueryResponse)]);
             Assert.Equal(2, eventCount[typeof(StateChanged)]);
         }
-
     }
 }

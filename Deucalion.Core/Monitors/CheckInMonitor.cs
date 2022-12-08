@@ -13,10 +13,10 @@ namespace Deucalion.Monitors
         public event EventHandler? CheckedInEvent;
         public event EventHandler? TimedOutEvent;
 
-        public void CheckIn()
+        public void CheckIn(MonitorResponse? response = null)
         {
             _checkInEvent.Set();
-            OnCheckedInEvent();
+            OnCheckedInEvent(response);
 
             var resetIn = Options.IntervalToDownOrDefault;
             if (_resetTimer is null)
@@ -36,11 +36,11 @@ namespace Deucalion.Monitors
             _disposed = true;
         }
 
-        private void OnCheckedInEvent()
+        private void OnCheckedInEvent(MonitorResponse? response = null)
         {
             // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-publish-events-that-conform-to-net-framework-guidelines#example
             var checkedInEvent = CheckedInEvent;
-            checkedInEvent?.Invoke(this, EventArgs.Empty);
+            checkedInEvent?.Invoke(this, response ?? EventArgs.Empty);
         }
 
         private void OnTimedOutEvent()

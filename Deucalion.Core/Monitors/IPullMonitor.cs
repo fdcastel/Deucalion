@@ -4,6 +4,6 @@ namespace Deucalion.Monitors
 {
     public interface IPullMonitor<out TOptions> : IMonitor<TOptions> where TOptions : PullMonitorOptions
     {
-        public Task<MonitorState> QueryAsync();
+        public Task<MonitorResponse> QueryAsync();
     }
 }

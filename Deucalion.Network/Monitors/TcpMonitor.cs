@@ -10,22 +10,22 @@ namespace Deucalion.Network.Monitors
 
         public required TcpMonitorOptions Options { get; init; }
 
-        public async Task<MonitorState> QueryAsync()
+        public async Task<MonitorResponse> QueryAsync()
         {
             try
             {
                 using TcpClient tcpClient = new();
                 using CancellationTokenSource cts = new(Options.Timeout ?? DefaultTcpTimeout);
                 await tcpClient.ConnectAsync(Options.Host, Options.Port, cts.Token);
-                return MonitorState.Up;
+                return MonitorResponse.DefaultUp;
             }
             catch (SocketException)
             {
-                return MonitorState.Down;
+                return MonitorResponse.DefaultDown;
             }
             catch (OperationCanceledException)
             {
-                return MonitorState.Down;
+                return MonitorResponse.DefaultDown;
             }
         }
     }

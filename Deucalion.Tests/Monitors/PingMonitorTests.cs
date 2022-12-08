@@ -11,7 +11,7 @@ namespace Deucalion.Tests.Monitors
         {
             PingMonitor pingMonitor = new() { Options = new() { Host = "192.168.10.1" } };
             var result = await pingMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
         }
 
         [Fact]
@@ -19,7 +19,7 @@ namespace Deucalion.Tests.Monitors
         {
             PingMonitor pingMonitor = new() { Options = new() { Host = "192.168.1.1", Timeout = TimeSpan.FromMilliseconds(200) } };
             var result = await pingMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Down, result);
+            Assert.Equal(MonitorState.Down, result.State);
         }
     }
 }

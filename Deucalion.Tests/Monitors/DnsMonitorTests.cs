@@ -12,7 +12,7 @@ namespace Deucalion.Tests.Monitors
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com" } };
             var result = await dnsMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
         }
 
         [Fact]
@@ -20,7 +20,7 @@ namespace Deucalion.Tests.Monitors
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com.fake" } };
             var result = await dnsMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Down, result);
+            Assert.Equal(MonitorState.Down, result.State);
         }
 
         [Fact]
@@ -28,11 +28,11 @@ namespace Deucalion.Tests.Monitors
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com" } };
             var result = await dnsMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
 
             dnsMonitor = new() { Options = new() { HostName = "google.com", Resolver = new IPEndPoint(IPAddress.Parse("1.2.3.4"), 99) } };
             result = await dnsMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Down, result);
+            Assert.Equal(MonitorState.Down, result.State);
         }
 
         [Fact]
@@ -40,7 +40,7 @@ namespace Deucalion.Tests.Monitors
         {
             DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com", RecordType = DnsClient.QueryType.AAAA } };
             var result = await dnsMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
         }
     }
 }

@@ -14,7 +14,7 @@
             if (value == null || value == Unknown)
                 return null;
 
-            return value == Up ? true : false;
+            return value == Up;
         }
 
         public override string ToString() =>

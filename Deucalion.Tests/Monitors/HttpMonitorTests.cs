@@ -11,7 +11,7 @@ namespace Deucalion.Tests.Monitors
         {
             HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://google.com") } };
             var result = await httpMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
         }
 
         [Fact]
@@ -19,7 +19,7 @@ namespace Deucalion.Tests.Monitors
         {
             HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://google.com:12345"), Timeout = TimeSpan.FromMilliseconds(200) } };
             var result = await httpMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Down, result);
+            Assert.Equal(MonitorState.Down, result.State);
         }
 
         [Fact]
@@ -27,11 +27,11 @@ namespace Deucalion.Tests.Monitors
         {
             HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://api.google.com/") } };
             var result = await httpMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Down, result);
+            Assert.Equal(MonitorState.Down, result.State);
 
             httpMonitor = new() { Options = new() { Url = new Uri("https://api.google.com/"), ExpectedStatusCode = System.Net.HttpStatusCode.NotFound } };
             result = await httpMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
         }
 
         [Fact]
@@ -39,11 +39,11 @@ namespace Deucalion.Tests.Monitors
         {
             HttpMonitor httpMonitor = new() { Options = new() { Url = new Uri("https://api.github.com"), ExpectedResponseBodyPattern = "{}" } };
             var result = await httpMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Down, result);
+            Assert.Equal(MonitorState.Down, result.State);
 
             httpMonitor = new() { Options = new() { Url = new Uri("https://api.github.com"), ExpectedResponseBodyPattern = "current_user_url" } };
             result = await httpMonitor.QueryAsync();
-            Assert.Equal(MonitorState.Up, result);
+            Assert.Equal(MonitorState.Up, result.State);
         }
     }
 }
