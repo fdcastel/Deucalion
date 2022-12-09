@@ -21,7 +21,7 @@ namespace Deucalion.Network.Monitors
                 options.Timeout = Options.Timeout ?? DefaultDnsTimeout;
 
                 LookupClient lookup = new(options);
-                var result = await lookup.QueryAsync(Options.HostName, Options.RecordType ?? QueryType.A);
+                var result = await lookup.QueryAsync(Options.Host, Options.RecordType ?? QueryType.A);
 
                 return result.Answers.Any()
                     ? MonitorResponse.DefaultUp

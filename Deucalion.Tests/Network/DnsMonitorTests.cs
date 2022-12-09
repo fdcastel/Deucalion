@@ -10,7 +10,7 @@ namespace Deucalion.Tests.Network
         [Fact]
         public async Task DnsMonitor_ReturnsUp_WhenReachable()
         {
-            DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com" } };
+            DnsMonitor dnsMonitor = new() { Options = new() { Host = "google.com" } };
             var result = await dnsMonitor.QueryAsync();
             Assert.Equal(MonitorState.Up, result.State);
         }
@@ -18,7 +18,7 @@ namespace Deucalion.Tests.Network
         [Fact]
         public async Task DnsMonitor_ReturnsDown_WhenUnreachable()
         {
-            DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com.fake" } };
+            DnsMonitor dnsMonitor = new() { Options = new() { Host = "google.com.fake" } };
             var result = await dnsMonitor.QueryAsync();
             Assert.Equal(MonitorState.Down, result.State);
         }
@@ -26,11 +26,11 @@ namespace Deucalion.Tests.Network
         [Fact]
         public async Task DnsMonitor_WorksWith_Resolver()
         {
-            DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com" } };
+            DnsMonitor dnsMonitor = new() { Options = new() { Host = "google.com" } };
             var result = await dnsMonitor.QueryAsync();
             Assert.Equal(MonitorState.Up, result.State);
 
-            dnsMonitor = new() { Options = new() { HostName = "google.com", Resolver = new IPEndPoint(IPAddress.Parse("1.2.3.4"), 99) } };
+            dnsMonitor = new() { Options = new() { Host = "google.com", Resolver = new IPEndPoint(IPAddress.Parse("1.2.3.4"), 99) } };
             result = await dnsMonitor.QueryAsync();
             Assert.Equal(MonitorState.Down, result.State);
         }
@@ -38,7 +38,7 @@ namespace Deucalion.Tests.Network
         [Fact]
         public async Task DnsMonitor_WorksWith_RecordType()
         {
-            DnsMonitor dnsMonitor = new() { Options = new() { HostName = "google.com", RecordType = DnsClient.QueryType.AAAA } };
+            DnsMonitor dnsMonitor = new() { Options = new() { Host = "google.com", RecordType = DnsClient.QueryType.AAAA } };
             var result = await dnsMonitor.QueryAsync();
             Assert.Equal(MonitorState.Up, result.State);
         }
