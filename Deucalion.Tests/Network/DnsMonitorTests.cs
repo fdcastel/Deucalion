@@ -3,7 +3,7 @@ using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Xunit;
 
-namespace Deucalion.Tests.Monitors
+namespace Deucalion.Tests.Network
 {
     public class DnsMonitorTests
     {
