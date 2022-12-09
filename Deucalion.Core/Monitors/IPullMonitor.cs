@@ -1,9 +1,8 @@
 ﻿using Deucalion.Monitors.Options;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Monitors;
+
+public interface IPullMonitor<out TOptions> : IMonitor<TOptions> where TOptions : PullMonitorOptions
 {
-    public interface IPullMonitor<out TOptions> : IMonitor<TOptions> where TOptions : PullMonitorOptions
-    {
-        public Task<MonitorResponse> QueryAsync();
-    }
+    public Task<MonitorResponse> QueryAsync();
 }

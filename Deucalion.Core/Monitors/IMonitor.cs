@@ -1,9 +1,8 @@
 ﻿using Deucalion.Monitors.Options;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Monitors;
+
+public interface IMonitor<out TOptions> where TOptions : MonitorOptions
 {
-    public interface IMonitor<out TOptions> where TOptions : MonitorOptions
-    {
-        public TOptions Options { get; }
-    }
+    public TOptions Options { get; }
 }

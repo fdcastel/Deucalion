@@ -1,11 +1,10 @@
-﻿namespace Deucalion.Monitors.Options
+﻿namespace Deucalion.Monitors.Options;
+
+public class PushMonitorOptions : MonitorOptions
 {
-    public class PushMonitorOptions : MonitorOptions
-    {
-        public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromSeconds(60);
+    public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromSeconds(60);
 
-        public TimeSpan? IntervalToDown { get; set; }
+    public TimeSpan? IntervalToDown { get; set; }
 
-        public TimeSpan IntervalToDownOrDefault => IntervalToDown ?? DefaultIntervalToDown;
-    }
+    public TimeSpan IntervalToDownOrDefault => IntervalToDown ?? DefaultIntervalToDown;
 }

@@ -1,9 +1,8 @@
 ﻿using Deucalion.Monitors.Options;
 
-namespace Deucalion.Monitors
+namespace Deucalion.Monitors;
+
+public interface IPushMonitor<out TOptions> : IMonitor<TOptions> where TOptions : PushMonitorOptions
 {
-    public interface IPushMonitor<out TOptions> : IMonitor<TOptions> where TOptions : PushMonitorOptions
-    {
-        public void CheckIn(MonitorResponse? response = null);
-    }
+    public void CheckIn(MonitorResponse? response = null);
 }
