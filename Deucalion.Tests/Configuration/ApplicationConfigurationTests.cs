@@ -1,5 +1,8 @@
 ﻿using System.Net;
 using Deucalion.Application.Configuration;
+using Deucalion.Monitors;
+using Deucalion.Monitors.Options;
+using Deucalion.Network.Monitors;
 using DnsClient;
 using Xunit;
 
@@ -15,7 +18,7 @@ public class ApplicationConfigurationTests
     }
 
     [Fact]
-    public void Monitor_WithoutClass_Throws()
+    public void EmptyMonitor_Throws()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -23,86 +26,7 @@ public class ApplicationConfigurationTests
         ";
 
         var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorMustHaveClass, "m1"), exception.Message);
-    }
-
-    [Fact]
-    public void Monitor_WithClassNotFound_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              m2:
-                class: notfound
-        ";
-
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorClassNotFound, "m2", "notfound"), exception.Message);
-    }
-
-    [Fact]
-    public void MonitorDns_WithoutHost_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mdns:
-                class: dns
-        ";
-
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorMustHaveHost, "mdns"), exception.Message);
-    }
-
-    [Fact]
-    public void MonitorHttp_WithoutUrl_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mhttp:
-                class: http
-        ";
-
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorMustHaveUrl, "mhttp"), exception.Message);
-    }
-
-    [Fact]
-    public void MonitorPing_WithoutHost_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mping:
-                class: ping
-        ";
-
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorMustHaveHost, "mping"), exception.Message);
-    }
-
-    [Fact]
-    public void MonitorTcp_WithoutHost_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mtcp:
-                class: tcp
-        ";
-
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorMustHaveHost, "mtcp"), exception.Message);
-    }
-
-    [Fact]
-    public void MonitorTcp_WithoutPort_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mtcp:
-                class: tcp
-                host: google.com
-        ";
-
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorMustHavePort, "mtcp"), exception.Message);
+        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorCannotBeEmpty, "m1"), exception.Message);
     }
 
     [Fact]
@@ -111,18 +35,19 @@ public class ApplicationConfigurationTests
         const string ConfigurationContent = @"
             monitors:
               mdns:
-                class: dns
-                host: google.com
-                recordType: A
-                resolver: 8.8.8.8
+                !dns
+                options:
+                  host: google.com
+                  recordType: A
+                  resolver: 8.8.8.8
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        Assert.Equal("dns", monitor.ClassName);
-        Assert.Equal("mdns", monitor.MonitorName);
-        Assert.Equal("google.com", monitor.Host);
-        Assert.Equal(QueryType.A, monitor.RecordType);
-        Assert.Equal(IPEndPoint.Parse("8.8.8.8:0"), monitor.Resolver);
+        var dnsMonitor = Assert.IsType<DnsMonitor>(monitor);
+        Assert.Equal("mdns", dnsMonitor.Options.Name);
+        Assert.Equal("google.com", dnsMonitor.Options.Host);
+        Assert.Equal(QueryType.A, dnsMonitor.Options.RecordType);
+        Assert.Equal(IPEndPoint.Parse("8.8.8.8:0"), dnsMonitor.Options.Resolver);
     }
 
     [Fact]
@@ -131,20 +56,21 @@ public class ApplicationConfigurationTests
         const string ConfigurationContent = @"
             monitors:
               mhttp:
-                class: http
-                url: http://github.com/api
-                expectedStatusCode: 202
-                expectedResponseBodyPattern: .*/.*
-                ignoreCertificateErrors: true
+                !http
+                options:
+                  url: http://github.com/api
+                  expectedStatusCode: 202
+                  expectedResponseBodyPattern: .*
+                  ignoreCertificateErrors: true
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        Assert.Equal("http", monitor.ClassName);
-        Assert.Equal("mhttp", monitor.MonitorName);
-        Assert.Equal(new Uri("http://github.com/api"), monitor.Url);
-        Assert.Equal(HttpStatusCode.Accepted, monitor.ExpectedStatusCode);
-        Assert.Equal(".*/.*", monitor.ExpectedResponseBodyPattern);
-        Assert.Equal(true, monitor.IgnoreCertificateErrors);
+        var httpMonitor = Assert.IsType<HttpMonitor>(monitor);
+        Assert.Equal("mhttp", httpMonitor.Options.Name);
+        Assert.Equal(new Uri("http://github.com/api"), httpMonitor.Options.Url);
+        Assert.Equal(HttpStatusCode.Accepted, httpMonitor.Options.ExpectedStatusCode);
+        Assert.Equal(".*", httpMonitor.Options.ExpectedResponseBodyPattern);
+        Assert.Equal(true, httpMonitor.Options.IgnoreCertificateErrors);
     }
 
     [Fact]
@@ -153,14 +79,15 @@ public class ApplicationConfigurationTests
         const string ConfigurationContent = @"
             monitors:
               mping:
-                class: ping
-                host: 192.168.1.1
+                !ping
+                options:
+                  host: 192.168.1.1
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        Assert.Equal("ping", monitor.ClassName);
-        Assert.Equal("mping", monitor.MonitorName);
-        Assert.Equal("192.168.1.1", monitor.Host);
+        var pingMonitor = Assert.IsType<PingMonitor>(monitor);
+        Assert.Equal("mping", pingMonitor.Options.Name);
+        Assert.Equal("192.168.1.1", pingMonitor.Options.Host);
     }
 
     [Fact]
@@ -169,16 +96,17 @@ public class ApplicationConfigurationTests
         const string ConfigurationContent = @"
             monitors:
               mtcp:
-                class: tcp
-                host: 192.168.1.2
-                port: 65000
+                !tcp
+                options:
+                  host: 192.168.1.2
+                  port: 65000
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        Assert.Equal("tcp", monitor.ClassName);
-        Assert.Equal("mtcp", monitor.MonitorName);
-        Assert.Equal("192.168.1.2", monitor.Host);
-        Assert.Equal(65000, monitor.Port);
+        var tcpMonitor = Assert.IsType<TcpMonitor>(monitor);
+        Assert.Equal("mtcp", tcpMonitor.Options.Name);
+        Assert.Equal("192.168.1.2", tcpMonitor.Options.Host);
+        Assert.Equal(65000, tcpMonitor.Options.Port);
     }
 
     private static ConfigurationErrorException CatchConfigurationException(string configuration) =>
@@ -194,7 +122,7 @@ public class ApplicationConfigurationTests
         return ApplicationConfiguration.ReadFromStream(reader);
     }
 
-    private static MonitorConfiguration ReadSingleMonitorFromConfiguration(string ConfigurationContent)
+    private static IMonitor<MonitorOptions> ReadSingleMonitorFromConfiguration(string ConfigurationContent)
     {
         var configuration = ReadConfiguration(ConfigurationContent);
         Assert.Single(configuration.Monitors);

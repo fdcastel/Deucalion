@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Deucalion.Monitors.Options;
 using DnsClient;
 
@@ -8,6 +9,7 @@ public class DnsMonitorOptions : PullMonitorOptions
 {
     public static readonly QueryType DefaultRecordType = QueryType.A;
 
+    [Required]
     public string Host { get; set; } = default!;
 
     public QueryType? RecordType { get; set; }
