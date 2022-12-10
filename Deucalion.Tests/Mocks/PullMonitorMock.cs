@@ -1,14 +1,11 @@
 ﻿using Deucalion.Monitors;
-using Deucalion.Monitors.Options;
 
 namespace Deucalion.Tests.Mocks;
 
-internal class PullMonitorMock : IPullMonitor<PullMonitorOptions>
+internal class PullMonitorMock : PullMonitor
 {
     private MonitorState CurrentState { get; set; }
     public (MonitorState, TimeSpan)[] Timeline { get; }
-
-    public required PullMonitorOptions Options { get; init; }
 
     public PullMonitorMock(params (MonitorState, TimeSpan)[] timeline)
     {
@@ -28,7 +25,7 @@ internal class PullMonitorMock : IPullMonitor<PullMonitorOptions>
         });
     }
 
-    public Task<MonitorResponse> QueryAsync() =>
+    public override Task<MonitorResponse> QueryAsync() =>
         Task.FromResult(new MonitorResponse()
         {
             State = CurrentState,

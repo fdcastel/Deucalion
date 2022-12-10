@@ -1,6 +1,5 @@
 ﻿using Deucalion.Application.Yaml;
 using Deucalion.Monitors;
-using Deucalion.Monitors.Options;
 using Deucalion.Network.Monitors;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -21,7 +20,7 @@ public class ApplicationConfiguration
 
     public DatabaseConfiguration Database { get; set; } = default!;
 
-    public Dictionary<string, IMonitor<MonitorOptions>> Monitors { get; set; } = default!;
+    public Dictionary<string, Monitors.Monitor> Monitors { get; set; } = default!;
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {
@@ -54,10 +53,7 @@ public class ApplicationConfiguration
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, d.Key));
             }
 
-            if (d.Value.Options is not null)
-            {
-                d.Value.Options.Name = d.Key;
-            }
+            d.Value.Name = d.Key;
         }
 
         return result;

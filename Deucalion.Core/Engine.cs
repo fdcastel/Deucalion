@@ -1,13 +1,12 @@
 ﻿using System.Diagnostics;
 using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
-using Deucalion.Monitors.Options;
 
 namespace Deucalion;
 
 public class Engine
 {
-    public void Run(IEnumerable<IMonitor<MonitorOptions>> monitors, Action<MonitorEvent> callback, CancellationToken stopToken)
+    public void Run(IEnumerable<Monitors.Monitor> monitors, Action<MonitorEvent> callback, CancellationToken stopToken)
     {
         var start = DateTimeOffset.UtcNow;
 
@@ -22,9 +21,9 @@ public class Engine
                 checkInMonitor.CheckedInEvent += PushMonitorCheckedIn;
                 checkInMonitor.TimedOutEvent += PushMonitorTimedOut;
             }
-            else if (monitor is IPullMonitor<PullMonitorOptions> pullMonitor)
+            else if (monitor is PullMonitor pullMonitor)
             {
-                status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, pullMonitor.Options.IntervalWhenUpOrDefault);
+                status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, pullMonitor.IntervalWhenUpOrDefault);
             }
         }
 
@@ -40,7 +39,7 @@ public class Engine
 
         void PushMonitorCheckedIn(object? sender, EventArgs args)
         {
-            if (sender is IPushMonitor<PushMonitorOptions> pushMonitor)
+            if (sender is PushMonitor pushMonitor)
             {
                 var monitorResponse = args is MonitorResponse mr ? mr : MonitorResponse.DefaultUp;
                 UpdatePushMonitorState(pushMonitor, monitorResponse);
@@ -49,7 +48,7 @@ public class Engine
 
         void PushMonitorTimedOut(object? sender, EventArgs _)
         {
-            if (sender is IPushMonitor<PushMonitorOptions> pushMonitor)
+            if (sender is PushMonitor pushMonitor)
                 UpdatePushMonitorState(pushMonitor, MonitorResponse.DefaultDown);
         }
 
@@ -57,7 +56,7 @@ public class Engine
         {
             var timerEventAt = DateTimeOffset.UtcNow;
 
-            if (sender is IPullMonitor<PullMonitorOptions> pullMonitor)
+            if (sender is PullMonitor pullMonitor)
             {
                 var stopwatch = Stopwatch.StartNew();
                 var response = await pullMonitor.QueryAsync();
@@ -69,9 +68,9 @@ public class Engine
             }
         }
 
-        void UpdatePullMonitorState(IPullMonitor<PullMonitorOptions> pullMonitor, MonitorResponse monitorResponse, DateTimeOffset timerEventAt)
+        void UpdatePullMonitorState(PullMonitor pullMonitor, MonitorResponse monitorResponse, DateTimeOffset timerEventAt)
         {
-            var name = pullMonitor.Options.Name;
+            var name = pullMonitor.Name;
             var at = DateTimeOffset.UtcNow - start;
 
             if (catalog.TryGetValue(pullMonitor, out var status))
@@ -89,8 +88,8 @@ public class Engine
 
                     // Update timer interval
                     var dueTime = newState == MonitorState.Up
-                        ? pullMonitor.Options.IntervalWhenUpOrDefault
-                        : pullMonitor.Options.IntervalWhenDownOrDefault;
+                        ? pullMonitor.IntervalWhenUpOrDefault
+                        : pullMonitor.IntervalWhenDownOrDefault;
 
                     // Subtract from next dueTime the elapsed time since the current timer event.
                     var deltaUntilNow = DateTimeOffset.UtcNow - timerEventAt;
@@ -102,9 +101,9 @@ public class Engine
             }
         }
 
-        void UpdatePushMonitorState(IPushMonitor<PushMonitorOptions> monitor, MonitorResponse monitorResponse)
+        void UpdatePushMonitorState(PushMonitor monitor, MonitorResponse monitorResponse)
         {
-            var name = monitor.Options.Name;
+            var name = monitor.Name;
             var at = DateTimeOffset.UtcNow - start;
 
             if (catalog.TryGetValue(monitor, out var status))
@@ -127,7 +126,7 @@ public class Engine
 
     internal class MonitorStatus
     {
-        internal required IMonitor<MonitorOptions> Monitor { get; init; }
+        internal required Monitors.Monitor Monitor { get; init; }
         internal Timer? QueryTimer { get; set; }
         internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
         internal TimeSpan LastResponseTime { get; set; } = TimeSpan.Zero;

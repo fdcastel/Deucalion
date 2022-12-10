@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
-using Deucalion.Monitors.Options;
 using Deucalion.Tests.Mocks;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,8 +23,8 @@ public class EngineTests
 
         Engine engine = new();
 
-        using CheckInMonitor m1 = new() { Options = new() { Name = "m1", IntervalToDown = pulse * 1.1 } };
-        using CheckInMonitor m2 = new() { Options = new() { Name = "m2", IntervalToDown = pulse * 1.1 } };
+        using CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1 };
+        using CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
 
         var eventCount = new ConcurrentDictionary<Type, int>();
 
@@ -59,7 +58,7 @@ public class EngineTests
         try
         {
             using CancellationTokenSource cts = new(pulse * 4.5);
-            var monitors = new List<IMonitor<MonitorOptions>>() { m1, m2 };
+            var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)
@@ -85,7 +84,7 @@ public class EngineTests
             (MonitorState.Down, pulse),
             (MonitorState.Up, pulse)
             )
-        { Options = new() { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse } };
+        { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
 
         PullMonitorMock m2 = new(
             (MonitorState.Unknown, pulse / 2),
@@ -93,7 +92,7 @@ public class EngineTests
             (MonitorState.Up, pulse),
             (MonitorState.Up, pulse)
             )
-        { Options = new() { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse } };
+        { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
 
         var eventCount = new ConcurrentDictionary<Type, int>();
 
@@ -109,7 +108,7 @@ public class EngineTests
             m2.Start();
 
             using CancellationTokenSource cts = new(pulse * 4.5);
-            var monitors = new List<IMonitor<MonitorOptions>>() { m1, m2 };
+            var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)
@@ -134,7 +133,7 @@ public class EngineTests
             (MonitorState.Down, pulse * 2),
             (MonitorState.Up, pulse)
             )
-        { Options = new() { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5 } };
+        { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5 };
 
         var eventCount = new ConcurrentDictionary<Type, int>();
 
@@ -149,7 +148,7 @@ public class EngineTests
             m1.Start();
 
             using CancellationTokenSource cts = new(pulse * 7.5);
-            var monitors = new List<IMonitor<MonitorOptions>>() { m1 };
+            var monitors = new List<Deucalion.Monitors.Monitor>() { m1 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)

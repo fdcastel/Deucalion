@@ -1,24 +1,20 @@
-﻿using Deucalion.Monitors.Options;
+﻿namespace Deucalion.Monitors;
 
-namespace Deucalion.Monitors;
-
-public sealed class CheckInMonitor : IPushMonitor<PushMonitorOptions>, IDisposable
+public sealed class CheckInMonitor : PushMonitor, IDisposable
 {
     private readonly ManualResetEvent _checkInEvent = new(false);
     private Timer? _resetTimer;
     private bool _disposed;
 
-    public required PushMonitorOptions Options { get; init; }
-
     public event EventHandler? CheckedInEvent;
     public event EventHandler? TimedOutEvent;
 
-    public void CheckIn(MonitorResponse? response = null)
+    public override void CheckIn(MonitorResponse? response = null)
     {
         _checkInEvent.Set();
         OnCheckedInEvent(response);
 
-        var resetIn = Options.IntervalToDownOrDefault;
+        var resetIn = IntervalToDownOrDefault;
         if (_resetTimer is null)
             _resetTimer = new(Reset, null, resetIn, Timeout.InfiniteTimeSpan);
         else

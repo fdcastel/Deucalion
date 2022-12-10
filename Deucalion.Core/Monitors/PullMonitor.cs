@@ -1,6 +1,6 @@
-﻿namespace Deucalion.Monitors.Options;
+﻿namespace Deucalion.Monitors;
 
-public class PullMonitorOptions : MonitorOptions
+public abstract class PullMonitor : Monitor
 {
     public static readonly TimeSpan DefaultIntervalWhenUp = TimeSpan.FromMinutes(1);
     public static readonly TimeSpan DefaultIntervalWhenDown = TimeSpan.FromMinutes(1);
@@ -11,4 +11,6 @@ public class PullMonitorOptions : MonitorOptions
 
     public TimeSpan IntervalWhenUpOrDefault => IntervalWhenUp ?? DefaultIntervalWhenUp;
     public TimeSpan IntervalWhenDownOrDefault => IntervalWhenDown ?? DefaultIntervalWhenDown;
+
+    public abstract Task<MonitorResponse> QueryAsync();
 }

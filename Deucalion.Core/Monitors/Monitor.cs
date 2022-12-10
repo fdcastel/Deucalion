@@ -1,6 +1,6 @@
-﻿namespace Deucalion.Monitors.Options;
+﻿namespace Deucalion.Monitors;
 
-public class MonitorOptions
+public abstract class Monitor
 {
     public static readonly int DefaultIgnoreFailCount = 0;
     public static readonly bool DefaultUpsideDown = false;

@@ -1,22 +1,25 @@
-﻿using System.Net.Sockets;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net.Sockets;
 using Deucalion.Monitors;
-using Deucalion.Network.Monitors.Options;
 
 namespace Deucalion.Network.Monitors;
 
-public class TcpMonitor : IPullMonitor<TcpMonitorOptions>
+public class TcpMonitor : PullMonitor
 {
     private static readonly TimeSpan DefaultTcpTimeout = TimeSpan.FromMilliseconds(500);
 
-    public required TcpMonitorOptions Options { get; init; }
+    [Required]
+    public string Host { get; set; } = default!;
+    [Required]
+    public int Port { get; set; } = default!;
 
-    public async Task<MonitorResponse> QueryAsync()
+    public override async Task<MonitorResponse> QueryAsync()
     {
         try
         {
             using TcpClient tcpClient = new();
-            using CancellationTokenSource cts = new(Options.Timeout ?? DefaultTcpTimeout);
-            await tcpClient.ConnectAsync(Options.Host, Options.Port, cts.Token);
+            using CancellationTokenSource cts = new(Timeout ?? DefaultTcpTimeout);
+            await tcpClient.ConnectAsync(Host, Port, cts.Token);
             return MonitorResponse.DefaultUp;
         }
         catch (SocketException)

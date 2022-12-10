@@ -1,22 +1,23 @@
-﻿using System.Net.NetworkInformation;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net.NetworkInformation;
 using Deucalion.Monitors;
-using Deucalion.Network.Monitors.Options;
 
 namespace Deucalion.Network.Monitors;
 
-public class PingMonitor : IPullMonitor<PingMonitorOptions>
+public class PingMonitor : PullMonitor
 {
     private static readonly TimeSpan DefaultPingTimeout = TimeSpan.FromSeconds(1);
 
-    public required PingMonitorOptions Options { get; init; }
+    [Required]
+    public string Host { get; set; } = default!;
 
-    public async Task<MonitorResponse> QueryAsync()
+    public override async Task<MonitorResponse> QueryAsync()
     {
         try
         {
             using Ping pinger = new();
-            var timeout = (Options.Timeout ?? DefaultPingTimeout).TotalMilliseconds;
-            var reply = await pinger.SendPingAsync(Options.Host, (int)timeout);
+            var timeout = (Timeout ?? DefaultPingTimeout).TotalMilliseconds;
+            var reply = await pinger.SendPingAsync(Host, (int)timeout);
 
             return reply.Status == IPStatus.Success
                 ? new() { State = MonitorState.Up, ResponseTime = TimeSpan.FromMilliseconds(reply.RoundtripTime) }
