@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Monitors;
 
-public abstract class Monitor
+public abstract class MonitorBase
 {
     public static readonly int DefaultIgnoreFailCount = 0;
     public static readonly bool DefaultUpsideDown = false;

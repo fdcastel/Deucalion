@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Deucalion.Application.Configuration;
+using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using DnsClient;
 using Xunit;
@@ -116,7 +117,7 @@ public class ApplicationConfigurationTests
         return ApplicationConfiguration.ReadFromStream(reader);
     }
 
-    private static Deucalion.Monitors.Monitor ReadSingleMonitorFromConfiguration(string ConfigurationContent)
+    private static MonitorBase ReadSingleMonitorFromConfiguration(string ConfigurationContent)
     {
         var configuration = ReadConfiguration(ConfigurationContent);
         Assert.Single(configuration.Monitors);

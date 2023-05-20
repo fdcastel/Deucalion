@@ -28,13 +28,12 @@ public class EngineTests
 
         var eventCount = new ConcurrentDictionary<Type, int>();
 
-        void MonitorCallback(MonitorEvent monitorEvent)
+        void MonitorCallback(MonitorEventBase monitorEvent)
         {
             _output.WriteLine(monitorEvent.ToString());
             eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
         }
 
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         Task.Run(async () =>
         {
             var start = DateTimeOffset.UtcNow;
@@ -53,12 +52,10 @@ public class EngineTests
             m1.CheckIn();
             m2.CheckIn();
         });
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-
         try
         {
             using CancellationTokenSource cts = new(pulse * 4.5);
-            var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
+            var monitors = new List<MonitorBase>() { m1, m2 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)
@@ -96,7 +93,7 @@ public class EngineTests
 
         var eventCount = new ConcurrentDictionary<Type, int>();
 
-        void MonitorCallback(MonitorEvent monitorEvent)
+        void MonitorCallback(MonitorEventBase monitorEvent)
         {
             _output.WriteLine(monitorEvent.ToString());
             eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
@@ -108,7 +105,7 @@ public class EngineTests
             m2.Start();
 
             using CancellationTokenSource cts = new(pulse * 4.5);
-            var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
+            var monitors = new List<MonitorBase>() { m1, m2 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)
@@ -137,7 +134,7 @@ public class EngineTests
 
         var eventCount = new ConcurrentDictionary<Type, int>();
 
-        void MonitorCallback(MonitorEvent monitorEvent)
+        void MonitorCallback(MonitorEventBase monitorEvent)
         {
             _output.WriteLine(monitorEvent.ToString());
             eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
@@ -148,7 +145,7 @@ public class EngineTests
             m1.Start();
 
             using CancellationTokenSource cts = new(pulse * 7.5);
-            var monitors = new List<Deucalion.Monitors.Monitor>() { m1 };
+            var monitors = new List<MonitorBase>() { m1 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)

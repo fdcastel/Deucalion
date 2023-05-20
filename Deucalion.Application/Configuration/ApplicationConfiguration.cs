@@ -20,7 +20,7 @@ public class ApplicationConfiguration
 
     public DatabaseConfiguration Database { get; set; } = default!;
 
-    public Dictionary<string, Monitors.Monitor> Monitors { get; set; } = default!;
+    public Dictionary<string, MonitorBase> Monitors { get; set; } = default!;
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {

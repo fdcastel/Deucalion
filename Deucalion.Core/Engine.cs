@@ -6,7 +6,7 @@ namespace Deucalion;
 
 public class Engine
 {
-    public void Run(IEnumerable<Monitors.Monitor> monitors, Action<MonitorEvent> callback, CancellationToken stopToken)
+    public void Run(IEnumerable<MonitorBase> monitors, Action<MonitorEventBase> callback, CancellationToken stopToken)
     {
         var start = DateTimeOffset.UtcNow;
 
@@ -34,7 +34,9 @@ public class Engine
         finally
         {
             foreach (var (_, status) in catalog)
+            {
                 status.QueryTimer?.Dispose();
+            }
         }
 
         void PushMonitorCheckedIn(object? sender, EventArgs args)
@@ -49,7 +51,9 @@ public class Engine
         void PushMonitorTimedOut(object? sender, EventArgs _)
         {
             if (sender is PushMonitor pushMonitor)
+            {
                 UpdatePushMonitorState(pushMonitor, MonitorResponse.DefaultDown);
+            }
         }
 
         async void QueryPullMonitor(object? sender)
@@ -111,12 +115,18 @@ public class Engine
                 var newState = monitorResponse.State;
 
                 if (newState == MonitorState.Up)
+                {
                     callback(new CheckedIn(name, at, monitorResponse));
+                }
                 else
+                {
                     callback(new CheckInMissed(name, at));
+                }
 
                 if (status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState)
+                {
                     callback(new StateChanged(name, at, newState));
+                }
 
                 status.LastKnownState = newState;
                 status.LastResponseTime = monitorResponse.ResponseTime ?? TimeSpan.Zero;
@@ -126,7 +136,7 @@ public class Engine
 
     internal class MonitorStatus
     {
-        internal required Monitors.Monitor Monitor { get; init; }
+        internal required MonitorBase Monitor { get; init; }
         internal Timer? QueryTimer { get; set; }
         internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
         internal TimeSpan LastResponseTime { get; set; } = TimeSpan.Zero;
