@@ -71,7 +71,7 @@ public class Engine
         void UpdatePullMonitorState(PullMonitor pullMonitor, MonitorResponse monitorResponse, DateTimeOffset timerEventAt)
         {
             var name = pullMonitor.Name;
-            var at = DateTimeOffset.UtcNow - start;
+            var at = DateTimeOffset.UtcNow;
 
             if (catalog.TryGetValue(pullMonitor, out var status))
             {
@@ -104,7 +104,7 @@ public class Engine
         void UpdatePushMonitorState(PushMonitor monitor, MonitorResponse monitorResponse)
         {
             var name = monitor.Name;
-            var at = DateTimeOffset.UtcNow - start;
+            var at = DateTimeOffset.UtcNow;
 
             if (catalog.TryGetValue(monitor, out var status))
             {

@@ -1,3 +1,3 @@
 ﻿namespace Deucalion.Monitors.Events;
 
-public record MonitorEvent(string Name, TimeSpan At);
+public record MonitorEvent(string Name, DateTimeOffset At);
