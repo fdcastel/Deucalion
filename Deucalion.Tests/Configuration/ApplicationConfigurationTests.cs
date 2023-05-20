@@ -44,7 +44,7 @@ public class ApplicationConfigurationTests
         Assert.Equal("mdns", dnsMonitor.Name);
         Assert.Equal("google.com", dnsMonitor.Host);
         Assert.Equal(QueryType.A, dnsMonitor.RecordType);
-        Assert.Equal(IPEndPoint.Parse("8.8.8.8:0"), dnsMonitor.Resolver);
+        Assert.Equal(IPEndPoint.Parse("8.8.8.8:53"), dnsMonitor.Resolver);
     }
 
     [Fact]

@@ -26,11 +26,11 @@ public class DnsMonitorTests
     [Fact]
     public async Task DnsMonitor_WorksWith_Resolver()
     {
-        DnsMonitor dnsMonitor = new() { Host = "google.com" };
+        DnsMonitor dnsMonitor = new() { Host = "google.com", Resolver = IPEndPoint.Parse("8.8.8.8") };
         var result = await dnsMonitor.QueryAsync();
         Assert.Equal(MonitorState.Up, result.State);
 
-        dnsMonitor = new() { Host = "google.com", Resolver = new IPEndPoint(IPAddress.Parse("1.2.3.4"), 99) };
+        dnsMonitor = new() { Host = "google.com", Resolver = IPEndPoint.Parse("1.2.3.4:99") };
         result = await dnsMonitor.QueryAsync();
         Assert.Equal(MonitorState.Down, result.State);
     }

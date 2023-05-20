@@ -9,13 +9,24 @@ public class DnsMonitor : PullMonitor
 {
     private static readonly TimeSpan DefaultDnsTimeout = TimeSpan.FromMilliseconds(500);
 
+    public static readonly int DefaultDnsPort = 53;
     public static readonly QueryType DefaultRecordType = QueryType.A;
 
     [Required]
     public string Host { get; set; } = default!;
 
     public QueryType? RecordType { get; set; }
-    public IPEndPoint? Resolver { get; set; }
+
+    private IPEndPoint? _resolver;
+    public IPEndPoint? Resolver
+    {
+        get => _resolver;
+        set => _resolver = value is not null
+            ? value.Port == 0
+                ? new IPEndPoint(value.Address, DefaultDnsPort)
+                : value
+            : null;
+    }
 
     public QueryType RecordTypeOrDefault => RecordType ?? DefaultRecordType;
 
@@ -27,7 +38,7 @@ public class DnsMonitor : PullMonitor
                 ? new(Resolver)
                 : new();
 
-            Timeout = Timeout ?? DefaultDnsTimeout;
+            options.Timeout = Timeout ?? DefaultDnsTimeout;
 
             LookupClient lookup = new(options);
             var result = await lookup.QueryAsync(Host, RecordType ?? QueryType.A);
