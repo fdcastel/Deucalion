@@ -7,4 +7,6 @@ public class MonitorResponse : EventArgs
 
     public MonitorState State { get; set; } = MonitorState.Unknown;
     public TimeSpan? ResponseTime { get; set; }
+
+    public override string ToString() => $"{this.GetType().Name} {{ State = {State}, ResponseTime = {ResponseTime} }}";
 }

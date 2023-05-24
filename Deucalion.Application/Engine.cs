@@ -44,7 +44,7 @@ public class Engine
             if (sender is PushMonitor pushMonitor)
             {
                 var monitorResponse = args is MonitorResponse mr ? mr : MonitorResponse.DefaultUp;
-                UpdatePushMonitorState(pushMonitor, monitorResponse);
+                UpdateMonitorState(pushMonitor, monitorResponse);
             }
         }
 
@@ -52,7 +52,7 @@ public class Engine
         {
             if (sender is PushMonitor pushMonitor)
             {
-                UpdatePushMonitorState(pushMonitor, MonitorResponse.DefaultDown);
+                UpdateMonitorState(pushMonitor, null);
             }
         }
 
@@ -68,68 +68,42 @@ public class Engine
 
                 response.ResponseTime ??= stopwatch.Elapsed;
 
-                UpdatePullMonitorState(pullMonitor, response, timerEventAt);
+                UpdateMonitorState(pullMonitor, response, timerEventAt);
             }
         }
 
-        void UpdatePullMonitorState(PullMonitor pullMonitor, MonitorResponse monitorResponse, DateTimeOffset timerEventAt)
-        {
-            var name = pullMonitor.Name;
-            var at = DateTimeOffset.UtcNow;
-
-            if (catalog.TryGetValue(pullMonitor, out var status))
-            {
-                // Notify response
-                callback(new QueryResponse(name, at, monitorResponse));
-
-                var newState = monitorResponse.State;
-                if (status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState)
-                {
-                    // State changed
-
-                    // Notify change
-                    callback(new StateChanged(name, at, newState));
-
-                    // Update timer interval
-                    var dueTime = newState == MonitorState.Up
-                        ? pullMonitor.IntervalWhenUpOrDefault
-                        : pullMonitor.IntervalWhenDownOrDefault;
-
-                    // Subtract from next dueTime the elapsed time since the current timer event.
-                    var deltaUntilNow = DateTimeOffset.UtcNow - timerEventAt;
-                    status.QueryTimer?.Change(dueTime - deltaUntilNow, dueTime);
-                }
-
-                status.LastKnownState = newState;
-                status.LastResponseTime = monitorResponse.ResponseTime ?? TimeSpan.Zero;
-            }
-        }
-
-        void UpdatePushMonitorState(PushMonitor monitor, MonitorResponse monitorResponse)
+        void UpdateMonitorState(MonitorBase monitor, MonitorResponse? monitorResponse, DateTimeOffset timerEventAt = default)
         {
             var name = monitor.Name;
             var at = DateTimeOffset.UtcNow;
 
             if (catalog.TryGetValue(monitor, out var status))
             {
-                var newState = monitorResponse.State;
+                // Notify response
+                callback(new MonitorChecked(name, at, monitorResponse));
 
-                if (newState == MonitorState.Up)
+                var newState = monitorResponse?.State ?? MonitorState.Down;
+                var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState;
+                if (hasStateChanged)
                 {
-                    callback(new CheckedIn(name, at, monitorResponse));
-                }
-                else
-                {
-                    callback(new CheckInMissed(name, at));
-                }
-
-                if (status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState)
-                {
+                    // Notify change
                     callback(new StateChanged(name, at, newState));
+
+                    if (monitor is PullMonitor pullMonitor)
+                    {
+                        // Update timer interval
+                        var dueTime = newState == MonitorState.Up
+                            ? pullMonitor.IntervalWhenUpOrDefault
+                            : pullMonitor.IntervalWhenDownOrDefault;
+
+                        // Subtract from next dueTime the elapsed time since the current timer event.
+                        var deltaUntilNow = DateTimeOffset.UtcNow - timerEventAt;
+                        status.QueryTimer?.Change(dueTime - deltaUntilNow, dueTime);
+                    }
                 }
 
                 status.LastKnownState = newState;
-                status.LastResponseTime = monitorResponse.ResponseTime ?? TimeSpan.Zero;
+                status.LastResponseTime = monitorResponse?.ResponseTime ?? TimeSpan.Zero;
             }
         }
     }

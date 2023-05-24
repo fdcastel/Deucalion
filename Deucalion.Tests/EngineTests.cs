@@ -19,6 +19,10 @@ public class EngineTests
     [Fact]
     public void Engine_ReceiveEventsFromPushMonitors()
     {
+        const string CheckedInEvent = "CheckedIn";
+        const string CheckInMissedEvent = "CheckInMissed";
+        const string StateChangedEvent = "StateChanged";
+
         var pulse = TimeSpan.FromMilliseconds(500);
 
         Engine engine = new();
@@ -26,12 +30,19 @@ public class EngineTests
         using CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1 };
         using CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
 
-        var eventCount = new ConcurrentDictionary<Type, int>();
+        var eventCount = new ConcurrentDictionary<string, int>();
 
         void MonitorCallback(MonitorEventBase monitorEvent)
         {
             _output.WriteLine(monitorEvent.ToString());
-            eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+
+            var eventType = monitorEvent switch
+            {
+                StateChanged => StateChangedEvent,
+                MonitorChecked mr => mr.Response is null ? CheckInMissedEvent : CheckedInEvent,
+                _ => string.Empty
+            };
+            eventCount.AddOrUpdate(eventType, 1, (k, v) => Interlocked.Increment(ref v));
         }
 
         Task.Run(async () =>
@@ -63,9 +74,9 @@ public class EngineTests
             // NOP
         }
 
-        Assert.Equal(6, eventCount[typeof(CheckedIn)]);
-        Assert.Equal(2, eventCount[typeof(CheckInMissed)]);
-        Assert.Equal(4, eventCount[typeof(StateChanged)]);
+        Assert.Equal(6, eventCount[CheckedInEvent]);
+        Assert.Equal(2, eventCount[CheckInMissedEvent]);
+        Assert.Equal(4, eventCount[StateChangedEvent]);
     }
 
     [Fact]
@@ -113,7 +124,7 @@ public class EngineTests
             // NOP
         }
 
-        Assert.Equal(10, eventCount[typeof(QueryResponse)]);
+        Assert.Equal(10, eventCount[typeof(MonitorChecked)]);
         Assert.Equal(3, eventCount[typeof(StateChanged)]);
     }
 
@@ -153,7 +164,7 @@ public class EngineTests
             // NOP
         }
 
-        Assert.Equal(14, eventCount[typeof(QueryResponse)]);
+        Assert.Equal(14, eventCount[typeof(MonitorChecked)]);
         Assert.Equal(2, eventCount[typeof(StateChanged)]);
     }
 }
