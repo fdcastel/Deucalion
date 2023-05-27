@@ -1,0 +1,18 @@
+monitors:
+  mdns:
+    !dns
+    host: google.com
+    recordType: A
+    resolver: 8.8.8.8:53
+    intervalWhenUp: 00:00:03
+  mhttp:
+    !http
+    url: https://google.com
+    expectedStatusCode: 200
+    expectedResponseBodyPattern: .*
+    ignoreCertificateErrors: true
+    intervalWhenUp: 00:00:03
+  mping:
+    !ping
+    host: google.com
+    intervalWhenUp: 00:00:03
