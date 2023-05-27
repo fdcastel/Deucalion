@@ -1,7 +1,7 @@
 ﻿// Source: https://stackoverflow.com/a/9844528/33244 -- http://unlicense.org
 
-using System.Collections.ObjectModel;
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 
@@ -148,15 +148,10 @@ public class OrderedDictionary<TKey, TValue> : IOrderedDictionary<TKey, TValue> 
     /// Gets the value associated with the specified key.
     /// </summary>
     /// <param name="key">The key associated with the value to get.</param>
-    public TValue GetValue(TKey key)
-    {
-        if (!_keyedCollection.Contains(key))
-        {
-            throw new KeyNotFoundException($"The given key is not present in the dictionary ({key}).");
-        }
-
-        return _keyedCollection[key].Value;
-    }
+    public TValue GetValue(TKey key) =>
+        !_keyedCollection.Contains(key)
+            ? throw new KeyNotFoundException($"The given key is not present in the dictionary ({key}).")
+            : _keyedCollection[key].Value;
 
     /// <summary>
     /// Sets the value associated with the specified key.
