@@ -6,7 +6,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Deucalion.Application.Configuration;
 
-public class ApplicationConfiguration
+public class MonitorConfiguration
 {
     public static class Messages
     {
@@ -16,19 +16,29 @@ public class ApplicationConfiguration
         public const string ConfigurationMonitorCannotBeEmpty = "Monitor '{0}' cannot be empty.";
     }
 
+    public class DefaultConfiguration
+    {
+        public int? IgnoreFailCount { get; set; }
+        public bool? UpsideDown { get; set; }
+
+        public TimeSpan? IntervalWhenDown { get; set; }
+        public TimeSpan? IntervalWhenUp { get; set; }
+
+        public TimeSpan? IntervalToDown { get; set; }
+    }
+
     public string? Version { get; set; }
 
-    public DatabaseConfiguration Database { get; set; } = default!;
-
     public Dictionary<string, MonitorBase> Monitors { get; set; } = default!;
+    public DefaultConfiguration? Defaults { get; set; } = default!;
 
-    public static ApplicationConfiguration ReadFromFile(string configurationFile)
+    public static MonitorConfiguration ReadFromFile(string configurationFile)
     {
         using var reader = new StreamReader(configurationFile);
         return ReadFromStream(reader);
     }
 
-    public static ApplicationConfiguration ReadFromStream(TextReader reader)
+    public static MonitorConfiguration ReadFromStream(TextReader reader)
     {
         var deserializer = new DeserializerBuilder()
             .IgnoreUnmatchedProperties()
@@ -41,9 +51,21 @@ public class ApplicationConfiguration
             .WithValidation()
             .Build();
 
-        var result = deserializer.Deserialize<ApplicationConfiguration>(reader) ?? throw new ConfigurationErrorException(Messages.ConfigurationMustNotBeEmpty);
+        var result = deserializer.Deserialize<MonitorConfiguration>(reader) ?? throw new ConfigurationErrorException(Messages.ConfigurationMustNotBeEmpty);
 
         result.Monitors = result.Monitors ?? throw new ConfigurationErrorException(Messages.ConfigurationMustHaveMonitorsSection);
+
+        if (result.Defaults is not null)
+        {
+            // Set monitor defaults
+            MonitorBase.DefaultIgnoreFailCount = result.Defaults.IgnoreFailCount ?? MonitorBase.DefaultIgnoreFailCount;
+            MonitorBase.DefaultUpsideDown = result.Defaults.UpsideDown ?? MonitorBase.DefaultUpsideDown;
+
+            PullMonitor.DefaultIntervalWhenDown = result.Defaults.IntervalWhenDown ?? PullMonitor.DefaultIntervalWhenDown;
+            PullMonitor.DefaultIntervalWhenUp = result.Defaults.IntervalWhenUp ?? PullMonitor.DefaultIntervalWhenUp;
+
+            PushMonitor.DefaultIntervalToDown = result.Defaults.IntervalToDown ?? PushMonitor.DefaultIntervalToDown;
+        }
 
         foreach (var d in result.Monitors)
         {

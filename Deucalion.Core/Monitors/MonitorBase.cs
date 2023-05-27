@@ -2,8 +2,8 @@
 
 public abstract class MonitorBase
 {
-    public static readonly int DefaultIgnoreFailCount = 0;
-    public static readonly bool DefaultUpsideDown = false;
+    public static int DefaultIgnoreFailCount = 0;
+    public static bool DefaultUpsideDown = false;
 
     public string Name { get; set; } = default!;
 

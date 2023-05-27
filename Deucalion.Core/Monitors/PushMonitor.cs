@@ -2,7 +2,7 @@
 
 public abstract class PushMonitor : MonitorBase
 {
-    public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromSeconds(60);
+    public static TimeSpan DefaultIntervalToDown = TimeSpan.FromSeconds(60);
 
     public TimeSpan? IntervalToDown { get; set; }
 

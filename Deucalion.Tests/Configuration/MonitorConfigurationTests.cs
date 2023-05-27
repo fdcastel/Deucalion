@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Deucalion.Tests.Configuration;
 
-public class ApplicationConfigurationTests
+public class MonitorConfigurationTests
 {
     [Fact]
     public void EmptyConfiguration_Throws()
     {
         var exception = CatchConfigurationException(string.Empty);
-        Assert.Equal(ApplicationConfiguration.Messages.ConfigurationMustNotBeEmpty, exception.Message);
+        Assert.Equal(MonitorConfiguration.Messages.ConfigurationMustNotBeEmpty, exception.Message);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class ApplicationConfigurationTests
         ";
 
         var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorCannotBeEmpty, "m1"), exception.Message);
+        Assert.Equal(string.Format(MonitorConfiguration.Messages.ConfigurationMonitorCannotBeEmpty, "m1"), exception.Message);
     }
 
     [Fact]
@@ -108,13 +108,13 @@ public class ApplicationConfigurationTests
         Assert.Throws<ConfigurationErrorException>(() =>
         {
             using var reader = new StringReader(configuration);
-            ApplicationConfiguration.ReadFromStream(reader);
+            MonitorConfiguration.ReadFromStream(reader);
         });
 
-    private static ApplicationConfiguration ReadConfiguration(string configuration)
+    private static MonitorConfiguration ReadConfiguration(string configuration)
     {
         using var reader = new StringReader(configuration);
-        return ApplicationConfiguration.ReadFromStream(reader);
+        return MonitorConfiguration.ReadFromStream(reader);
     }
 
     private static MonitorBase ReadSingleMonitorFromConfiguration(string ConfigurationContent)

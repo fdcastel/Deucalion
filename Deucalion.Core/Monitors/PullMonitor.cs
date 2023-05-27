@@ -2,8 +2,8 @@
 
 public abstract class PullMonitor : MonitorBase
 {
-    public static readonly TimeSpan DefaultIntervalWhenUp = TimeSpan.FromMinutes(1);
-    public static readonly TimeSpan DefaultIntervalWhenDown = TimeSpan.FromMinutes(1);
+    public static TimeSpan DefaultIntervalWhenUp = TimeSpan.FromMinutes(1);
+    public static TimeSpan DefaultIntervalWhenDown = TimeSpan.FromMinutes(1);
 
     public TimeSpan? IntervalWhenUp { get; set; }
     public TimeSpan? IntervalWhenDown { get; set; }
