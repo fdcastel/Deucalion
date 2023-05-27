@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Deucalion.Application;
 using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
 using Deucalion.Tests.Mocks;

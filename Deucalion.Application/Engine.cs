@@ -2,7 +2,7 @@
 using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
 
-namespace Deucalion;
+namespace Deucalion.Application;
 
 public class Engine
 {
