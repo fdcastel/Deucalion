@@ -1,4 +1,5 @@
-﻿using Deucalion.Application.Yaml;
+﻿using Deucalion.Application.Collections;
+using Deucalion.Application.Yaml;
 using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using YamlDotNet.Serialization;
@@ -29,7 +30,7 @@ public class MonitorConfiguration
 
     public string? Version { get; set; }
 
-    public Dictionary<string, MonitorBase> Monitors { get; set; } = default!;
+    public OrderedDictionary<string, MonitorBase> Monitors { get; set; } = default!;
     public DefaultConfiguration? Defaults { get; set; } = default!;
 
     public static MonitorConfiguration ReadFromFile(string configurationFile)
