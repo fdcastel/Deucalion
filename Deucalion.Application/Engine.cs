@@ -103,7 +103,6 @@ public class Engine
                 }
 
                 status.LastKnownState = newState;
-                status.LastResponseTime = monitorResponse?.ResponseTime ?? TimeSpan.Zero;
             }
         }
     }
@@ -113,6 +112,5 @@ public class Engine
         internal required MonitorBase Monitor { get; init; }
         internal Timer? QueryTimer { get; set; }
         internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
-        internal TimeSpan LastResponseTime { get; set; } = TimeSpan.Zero;
     }
 }
