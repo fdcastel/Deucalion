@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Net.Sockets;
 using Deucalion.Monitors;
 
@@ -15,20 +16,25 @@ public class TcpMonitor : PullMonitor
 
     public override async Task<MonitorResponse> QueryAsync()
     {
+        using TcpClient tcpClient = new();
+        var timeout = Timeout ?? DefaultTcpTimeout;
+        using CancellationTokenSource cts = new(timeout);
+
+        var stopwatch = Stopwatch.StartNew();
         try
         {
-            using TcpClient tcpClient = new();
-            using CancellationTokenSource cts = new(Timeout ?? DefaultTcpTimeout);
             await tcpClient.ConnectAsync(Host, Port, cts.Token);
-            return MonitorResponse.DefaultUp;
+            stopwatch.Stop();
+
+            return MonitorResponse.Up(stopwatch.Elapsed);
         }
-        catch (SocketException)
+        catch (SocketException e)
         {
-            return MonitorResponse.DefaultDown;
+            return MonitorResponse.Down(stopwatch.Elapsed, e.Message);
         }
         catch (OperationCanceledException)
         {
-            return MonitorResponse.DefaultDown;
+            return MonitorResponse.Down(timeout, "Timeout");
         }
     }
 }

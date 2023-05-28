@@ -12,6 +12,7 @@ public class PingMonitorTests
         PingMonitor pingMonitor = new() { Host = "8.8.8.8" };
         var result = await pingMonitor.QueryAsync();
         Assert.Equal(MonitorState.Up, result.State);
+        Assert.Null(result.ResponseText);
     }
 
     [Fact]
@@ -20,5 +21,6 @@ public class PingMonitorTests
         PingMonitor pingMonitor = new() { Host = "8.8.8.7", Timeout = TimeSpan.FromMilliseconds(200) };
         var result = await pingMonitor.QueryAsync();
         Assert.Equal(MonitorState.Down, result.State);
+        Assert.NotNull(result.ResponseText);
     }
 }

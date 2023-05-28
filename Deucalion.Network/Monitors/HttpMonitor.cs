@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
@@ -28,31 +29,37 @@ public class HttpMonitor : PullMonitor
 
     public override async Task<MonitorResponse> QueryAsync()
     {
+        HttpRequestMessage request = new(HttpMethod.Get, Url);
+        ProductInfoHeaderValue userAgentValue = new("Deucalion", "1.0");
+        request.Headers.UserAgent.Add(userAgentValue);
+
+        var httpClient = IgnoreCertificateErrors ?? false
+            ? CachedHttpClientIgnoreCertificate
+            : CachedHttpClient;
+
+        var timeout = Timeout ?? DefaultHttpTimeout;
+
+        using CancellationTokenSource cts = new(timeout);
+
+        var stopwatch = Stopwatch.StartNew();
         try
         {
-            HttpRequestMessage request = new(HttpMethod.Get, Url);
-            ProductInfoHeaderValue userAgentValue = new("Deucalion", "1.0");
-            request.Headers.UserAgent.Add(userAgentValue);
-
-            var httpClient = IgnoreCertificateErrors ?? false
-                ? CachedHttpClientIgnoreCertificate
-                : CachedHttpClient;
-
-            using CancellationTokenSource cts = new(Timeout ?? DefaultHttpTimeout);
             using var response = await httpClient.SendAsync(request, cts.Token);
+            stopwatch.Stop();
 
+            var success = response.IsSuccessStatusCode;
             if (ExpectedStatusCode is not null)
             {
-                if (response.StatusCode != ExpectedStatusCode)
+                if (ExpectedStatusCode != response.StatusCode)
                 {
-                    return MonitorResponse.DefaultDown;
+                    return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase);
                 }
             }
             else
             {
                 if (!response.IsSuccessStatusCode)
                 {
-                    return MonitorResponse.DefaultDown;
+                    return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase);
                 }
             }
 
@@ -61,19 +68,23 @@ public class HttpMonitor : PullMonitor
                 var responseBody = await response.Content.ReadAsStringAsync();
                 if (!Regex.IsMatch(responseBody, ExpectedResponseBodyPattern))
                 {
-                    return MonitorResponse.DefaultDown;
+                    var truncatedBody = responseBody.Length <= 60
+                        ? responseBody
+                        : string.Concat(responseBody.AsSpan(0, 60), "...");
+
+                    return MonitorResponse.Down(stopwatch.Elapsed, $"Unexpected response: {truncatedBody}");
                 };
             }
 
-            return MonitorResponse.DefaultUp;
+            return MonitorResponse.Up(stopwatch.Elapsed);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException e)
         {
-            return MonitorResponse.DefaultDown;
+            return MonitorResponse.Down(stopwatch.Elapsed, e.Message);
         }
         catch (OperationCanceledException)
         {
-            return MonitorResponse.DefaultDown;
+            return MonitorResponse.Down(timeout, "Timeout");
         }
     }
 }

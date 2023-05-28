@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Net;
 using Deucalion.Monitors;
 using DnsClient;
@@ -32,24 +33,27 @@ public class DnsMonitor : PullMonitor
 
     public override async Task<MonitorResponse> QueryAsync()
     {
+        LookupClientOptions options = Resolver is not null
+            ? new(Resolver)
+            : new();
+
+        options.Timeout = Timeout ?? DefaultDnsTimeout;
+
+        LookupClient lookup = new(options);
+
+        var stopwatch = Stopwatch.StartNew();
         try
         {
-            LookupClientOptions options = Resolver is not null
-                ? new(Resolver)
-                : new();
-
-            options.Timeout = Timeout ?? DefaultDnsTimeout;
-
-            LookupClient lookup = new(options);
             var result = await lookup.QueryAsync(Host, RecordType ?? QueryType.A);
+            stopwatch.Stop();
 
-            return result.Answers.Any()
-                ? MonitorResponse.DefaultUp
-                : MonitorResponse.DefaultDown;
+            return result.HasError
+                ? MonitorResponse.Down(stopwatch.Elapsed, result.ErrorMessage)
+                : MonitorResponse.Up(stopwatch.Elapsed, result.Answers[0].ToString());
         }
-        catch (DnsResponseException)
+        catch (DnsResponseException e)
         {
-            return MonitorResponse.DefaultDown;
+            return MonitorResponse.Down(stopwatch.Elapsed, e.Message);
         }
     }
 }

@@ -20,5 +20,6 @@ public class TcpMonitorTests
         TcpMonitor tcpMonitor = new() { Host = "8.8.8.8", Port = 54, Timeout = TimeSpan.FromMilliseconds(200) };
         var result = await tcpMonitor.QueryAsync();
         Assert.Equal(MonitorState.Down, result.State);
+        Assert.Equal("Timeout", result.ResponseText);
     }
 }

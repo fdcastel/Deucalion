@@ -18,14 +18,15 @@ public class PingMonitor : PullMonitor
             using Ping pinger = new();
             var timeout = (Timeout ?? DefaultPingTimeout).TotalMilliseconds;
             var reply = await pinger.SendPingAsync(Host, (int)timeout);
+            var elapsed = TimeSpan.FromMilliseconds(reply.RoundtripTime);
 
             return reply.Status == IPStatus.Success
-                ? new() { State = MonitorState.Up, ResponseTime = TimeSpan.FromMilliseconds(reply.RoundtripTime) }
-                : MonitorResponse.DefaultDown;
+                ? MonitorResponse.Up(elapsed)
+                : MonitorResponse.Down(elapsed, reply.Status.ToString());
         }
-        catch (PingException)
+        catch (PingException e)
         {
-            return MonitorResponse.DefaultDown;
+            return MonitorResponse.Down(null, e.Message);
         }
     }
 }
