@@ -21,7 +21,7 @@ public class PingMonitor : PullMonitor
             var elapsed = TimeSpan.FromMilliseconds(reply.RoundtripTime);
 
             return reply.Status == IPStatus.Success
-                ? MonitorResponse.Up(elapsed)
+                ? MonitorResponse.Up(elapsed, warnElapsed: WarnTimeout)
                 : MonitorResponse.Down(elapsed, reply.Status.ToString());
         }
         catch (PingException e)

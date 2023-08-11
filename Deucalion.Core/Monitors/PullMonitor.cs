@@ -8,6 +8,7 @@ public abstract class PullMonitor : MonitorBase
     public TimeSpan? IntervalWhenUp { get; set; }
     public TimeSpan? IntervalWhenDown { get; set; }
     public TimeSpan? Timeout { get; set; }
+    public TimeSpan? WarnTimeout { get; set; }
 
     public TimeSpan IntervalWhenUpOrDefault => IntervalWhenUp ?? DefaultIntervalWhenUp;
     public TimeSpan IntervalWhenDownOrDefault => IntervalWhenDown ?? DefaultIntervalWhenDown;

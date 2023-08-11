@@ -76,7 +76,7 @@ public class HttpMonitor : PullMonitor
                 };
             }
 
-            return MonitorResponse.Up(stopwatch.Elapsed);
+            return MonitorResponse.Up(elapsed: stopwatch.Elapsed, warnElapsed: WarnTimeout);
         }
         catch (HttpRequestException e)
         {

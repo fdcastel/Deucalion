@@ -20,9 +20,20 @@ public class MonitorResponse : EventArgs
         ResponseText = text
     };
 
-    public static MonitorResponse Up(TimeSpan? elapsed = null, string? text = null) => new()
+    public static MonitorResponse Up(TimeSpan? elapsed = null, string? text = null, TimeSpan? warnElapsed = null) => new()
     {
-        State = MonitorState.Up,
+        State = warnElapsed is null
+            ? MonitorState.Up
+            : elapsed > warnElapsed
+                ? MonitorState.Warn
+                : MonitorState.Up,
+        ResponseTime = elapsed,
+        ResponseText = text
+    };
+
+    public static MonitorResponse Warn(TimeSpan? elapsed = null, string? text = null) => new()
+    {
+        State = MonitorState.Warn,
         ResponseTime = elapsed,
         ResponseText = text
     };
