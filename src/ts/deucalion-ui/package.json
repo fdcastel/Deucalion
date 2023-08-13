@@ -18,6 +18,8 @@
     "react-icons": "^4.10.1"
   },
   "devDependencies": {
+    "@import-meta-env/cli": "^0.6.4",
+    "@import-meta-env/unplugin": "^0.4.9",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.0.0",

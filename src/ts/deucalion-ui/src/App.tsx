@@ -45,8 +45,8 @@ if (import.meta.env.PROD) {
   logger.disableLogger();
 }
 
-const DEUCALION_PAGE_TITLE = (import.meta.env.VITE_DEUCALION_PAGE_TITLE as string | undefined) ?? "Deucalion Status";
-const DEUCALION_ROOT_URL = (import.meta.env.VITE_DEUCALION_ROOT_URL as string | undefined) ?? "http://localhost:5000";
+const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string
+const DEUCALION_ROOT_URL = import.meta.env.DEUCALION_ROOT_URL as string
 
 // --- App functions
 
