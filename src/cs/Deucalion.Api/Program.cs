@@ -18,7 +18,7 @@ builder.Services.AddSignalR();
 var deucalionOptions = new DeucalionOptions();
 builder.Configuration.GetSection("Deucalion").Bind(deucalionOptions);
 
-var monitorConfiguration = MonitorConfiguration.ReadFromFile(deucalionOptions.MonitorsFile ?? "Deucalion.yaml");
+var monitorConfiguration = MonitorConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
 builder.Services.AddSingleton(_ => monitorConfiguration);
 
 // Application services

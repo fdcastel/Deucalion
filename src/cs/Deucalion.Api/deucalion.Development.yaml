@@ -5,6 +5,7 @@ monitors:
     recordType: A
     resolver: 8.8.8.8:53
     intervalWhenUp: 00:00:03
+    
   mhttp:
     !http
     url: https://google.com
@@ -12,6 +13,7 @@ monitors:
     expectedResponseBodyPattern: .*
     ignoreCertificateErrors: true
     intervalWhenUp: 00:00:03
+
   mping:
     !ping
     host: google.com
