@@ -20,6 +20,9 @@ RUN npx pkg ./node_modules/@import-meta-env/cli/bin/import-meta-env.js \
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 
+ENV DEUCALION_PAGE_TITLE="Deucalion Status" \
+    DEUCALION_API_URL=""
+
 COPY --from=build /source/dist ./
 
 # Copy import-meta-env files
