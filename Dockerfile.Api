@@ -1,0 +1,22 @@
+# build image
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+WORKDIR /source
+
+COPY Deucalion.Api/*.csproj ./Deucalion.Api/
+COPY Deucalion.Application/*.csproj ./Deucalion.Application/
+COPY Deucalion.Core/*.csproj ./Deucalion.Core/
+COPY Deucalion.Network/*.csproj ./Deucalion.Network/
+COPY Deucalion.Storage/*.csproj ./Deucalion.Storage/
+
+RUN dotnet restore Deucalion.Api
+
+COPY . .
+WORKDIR /source/Deucalion.Api
+RUN dotnet publish -c release -o /app --no-restore
+
+# final image
+FROM mcr.microsoft.com/dotnet/aspnet:7.0
+WORKDIR /app
+
+COPY --from=build /app ./
+ENTRYPOINT ["dotnet", "Deucalion.Api.dll"]

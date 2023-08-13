@@ -1,0 +1,17 @@
+# build image
+FROM node:lts-alpine AS build
+WORKDIR /source
+
+RUN npm install -g vite
+
+COPY deucalion-ui/package*.json .
+RUN npm install
+
+COPY deucalion-ui/ .
+RUN npm run build
+
+# final image
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
+
+COPY --from=build /source/dist ./

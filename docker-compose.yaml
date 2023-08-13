@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  api:
+    image: deucalion-api
+    build:
+      context: ./src/cs/
+      dockerfile: ../../Dockerfile.Api
+
+  ui:
+    image: deucalion-ui
+    build:
+      context: ./src/ts/
+      dockerfile: ../../Dockerfile.Ui
