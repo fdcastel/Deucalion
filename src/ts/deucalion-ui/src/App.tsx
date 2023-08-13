@@ -45,8 +45,15 @@ if (import.meta.env.PROD) {
   logger.disableLogger();
 }
 
-const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string
-const DEUCALION_ROOT_URL = import.meta.env.DEUCALION_ROOT_URL as string
+const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string;
+
+let DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL as string;
+if (!DEUCALION_API_URL) {
+  // API_URL not specified. Uses port 5000 from same origin.
+  const origin_url = new URL(window.location.origin);
+  origin_url.port = "5000";
+  DEUCALION_API_URL = origin_url.toString();
+}
 
 // --- App functions
 
@@ -97,8 +104,8 @@ const DEGRADED_COLOR = "red.500";
 
 const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
-const API_URL = new URL("/api/monitors/*", DEUCALION_ROOT_URL);
-const HUB_URL = new URL("/hub/monitors", DEUCALION_ROOT_URL);
+const API_URL = new URL("/api/monitors/*", DEUCALION_API_URL);
+const HUB_URL = new URL("/hub/monitors", DEUCALION_API_URL);
 
 export const App = () => {
   const [allMonitors, setAllMonitors] = useState(EMPTY_MONITORS);
