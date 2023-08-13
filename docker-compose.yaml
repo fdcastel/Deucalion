@@ -5,10 +5,10 @@ services:
     image: deucalion-api
     build:
       context: ./src/cs/
-      dockerfile: ../../Dockerfile.Api
+      dockerfile: Dockerfile.Api
 
   ui:
     image: deucalion-ui
     build:
       context: ./src/ts/
-      dockerfile: ../../Dockerfile.Ui
+      dockerfile: Dockerfile.Ui
