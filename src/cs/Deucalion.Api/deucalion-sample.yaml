@@ -1,12 +1,12 @@
 monitors:
-  mdns:
+  dns-example:
     !dns
     host: google.com
     recordType: A
     resolver: 1.1.1.1:53
     intervalWhenUp: 00:00:03
-    
-  mhttp:
+
+  http-example:
     !http
     url: https://google.com
     expectedStatusCode: 200
@@ -14,7 +14,7 @@ monitors:
     ignoreCertificateErrors: true
     intervalWhenUp: 00:00:03
 
-  mping:
+  ping-example:
     !ping
     host: google.com
     intervalWhenUp: 00:00:03
