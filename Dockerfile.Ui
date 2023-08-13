@@ -5,13 +5,24 @@ WORKDIR /source
 RUN npm install -g vite
 
 COPY deucalion-ui/package*.json .
-RUN npm install
+RUN npm ci
 
 COPY deucalion-ui/ .
 RUN npm run build
+
+# Package import-meta-env for runtime transforms.
+#   https://iendeavor.github.io/import-meta-env/guide/getting-started/runtime-transform.html#without-node-js
+RUN npx pkg ./node_modules/@import-meta-env/cli/bin/import-meta-env.js \
+  --target node18-alpine-x64 \
+  --output import-meta-env-alpine
 
 # final image
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 
 COPY --from=build /source/dist ./
+
+# Copy import-meta-env files
+COPY --from=build /source/import-meta-env-alpine /source/.env /app/
+COPY --from=build /source/docker-entrypoint.d/90-call-import-meta-env.sh /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.d/90-call-import-meta-env.sh
