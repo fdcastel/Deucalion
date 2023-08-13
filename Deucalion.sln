@@ -8,19 +8,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Api", "Deucalion.Api\Deucalion.Api.csproj", "{58579B62-BC21-43F7-9CB4-03C070929ABA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Api", "src\cs\Deucalion.Api\Deucalion.Api.csproj", "{58579B62-BC21-43F7-9CB4-03C070929ABA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Application", "Deucalion.Application\Deucalion.Application.csproj", "{EDE1EA89-3E73-4625-9FB5-2FD20D25694F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Application", "src\cs\Deucalion.Application\Deucalion.Application.csproj", "{EDE1EA89-3E73-4625-9FB5-2FD20D25694F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Cli", "Deucalion.Cli\Deucalion.Cli.csproj", "{63C2C77B-FF1C-4C14-B15A-F77040DC8ED4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Cli", "src\cs\Deucalion.Cli\Deucalion.Cli.csproj", "{63C2C77B-FF1C-4C14-B15A-F77040DC8ED4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Core", "Deucalion.Core\Deucalion.Core.csproj", "{EF48BEDF-0B72-4DE8-82DC-E9ACC8B2902F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Core", "src\cs\Deucalion.Core\Deucalion.Core.csproj", "{EF48BEDF-0B72-4DE8-82DC-E9ACC8B2902F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Network", "Deucalion.Network\Deucalion.Network.csproj", "{0774DD33-F8DD-4979-8B18-EEBC4BE4D590}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Network", "src\cs\Deucalion.Network\Deucalion.Network.csproj", "{0774DD33-F8DD-4979-8B18-EEBC4BE4D590}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Storage", "Deucalion.Storage\Deucalion.Storage.csproj", "{BD21D99A-1BF9-4476-AEB5-F2C8AF3DF303}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Storage", "src\cs\Deucalion.Storage\Deucalion.Storage.csproj", "{BD21D99A-1BF9-4476-AEB5-F2C8AF3DF303}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Tests", "Deucalion.Tests\Deucalion.Tests.csproj", "{B3808983-C404-4746-8334-0CB266D60B29}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Tests", "src\cs\Deucalion.Tests\Deucalion.Tests.csproj", "{B3808983-C404-4746-8334-0CB266D60B29}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{863C3FD3-62F9-450B-8724-115CFE11C8F7}"
 EndProject
