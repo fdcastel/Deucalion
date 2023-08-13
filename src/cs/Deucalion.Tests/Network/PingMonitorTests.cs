@@ -9,7 +9,7 @@ public class PingMonitorTests
     [Fact]
     public async Task PingMonitor_ReturnsUp_WhenReachable()
     {
-        PingMonitor pingMonitor = new() { Host = "8.8.8.8" };
+        PingMonitor pingMonitor = new() { Host = "1.1.1.1" };
         var result = await pingMonitor.QueryAsync();
         Assert.Equal(MonitorState.Up, result.State);
         Assert.Null(result.ResponseText);

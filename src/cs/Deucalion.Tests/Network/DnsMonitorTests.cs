@@ -37,7 +37,7 @@ public class DnsMonitorTests
     [Fact]
     public async Task DnsMonitor_WorksWith_Resolver()
     {
-        DnsMonitor dnsMonitor = new() { Host = "google.com", Resolver = IPEndPoint.Parse("8.8.8.8") };
+        DnsMonitor dnsMonitor = new() { Host = "google.com", Resolver = IPEndPoint.Parse("1.1.1.1") };
         var result = await dnsMonitor.QueryAsync();
         Assert.Equal(MonitorState.Up, result.State);
 

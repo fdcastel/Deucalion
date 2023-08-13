@@ -3,7 +3,7 @@ monitors:
     !dns
     host: google.com
     recordType: A
-    resolver: 8.8.8.8:53
+    resolver: 1.1.1.1:53
     intervalWhenUp: 00:00:03
     
   mhttp:
