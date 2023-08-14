@@ -25,6 +25,9 @@ ENV DEUCALION_PAGE_TITLE="Deucalion Status" \
 
 COPY --from=build /source/dist ./
 
+# Copy nginx configuration
+COPY --from=build /source/nginx-conf.d/default.conf /etc/nginx/conf.d/
+
 # Copy import-meta-env files
 COPY --from=build /source/import-meta-env-alpine /source/.env /app/
 COPY --from=build /source/docker-entrypoint.d/90-call-import-meta-env.sh /docker-entrypoint.d/

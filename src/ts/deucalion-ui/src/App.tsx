@@ -46,14 +46,9 @@ if (import.meta.env.PROD) {
 }
 
 const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string;
-
-let DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL as string;
-if (!DEUCALION_API_URL) {
-  // API_URL not specified. Uses port 5000 from same origin.
-  const origin_url = new URL(window.location.origin);
-  origin_url.port = "5000";
-  DEUCALION_API_URL = origin_url.toString();
-}
+const DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL
+  ? import.meta.env.DEUCALION_API_URL as string
+  : window.location.origin;
 
 // --- App functions
 
