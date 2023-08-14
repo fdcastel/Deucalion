@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
