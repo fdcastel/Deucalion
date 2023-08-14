@@ -38,29 +38,37 @@ const monitorStateToColor = (state: MonitorState) => {
 
 // --- MonitorComponent
 
-export const MonitorComponent = ({ name, events, stats }: MonitorProps) => (
-  <Flex>
-    <Text noOfLines={1}>{name}</Text>
-    <Spacer />
-    {events.map((e) => (
-      <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>
-        <Box
-          bg={monitorStateToColor(e.st)}
-          minWidth="0.5em"
-          mr="0.25em"
-          borderRadius="xl"
-          _hover={{
-            transform: "translateY(-0.25em)",
-            transitionDuration: "0.2s",
-            transitionTimingFunction: "ease-in-out",
-          }}
-        />
-      </Tooltip>
-    ))}
-    <Center minWidth="4em">
-      <Badge colorScheme="teal" variant="solid" borderRadius="xl" paddingX="0.75em">
-        {stats?.availability.toFixed(0)}%
-      </Badge>
-    </Center>
-  </Flex>
-);
+export const MonitorComponent = ({ name, events, stats }: MonitorProps) => {
+  const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx])
+  return (
+    <Flex>
+      <Text noOfLines={1} minWidth="5em">{name}</Text>
+      <Spacer />
+
+      {/* ToDo: restict the contents of this container */}
+      <Flex direction="row-reverse" overflowX={"clip"}>
+        <Center minWidth="4em">
+          <Badge colorScheme="teal" variant="solid" borderRadius="xl" paddingX="0.75em">
+            {stats?.availability.toFixed(0)}%
+          </Badge>
+        </Center>
+
+        {reverseEvents.map((e) => (
+          <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>
+            <Box
+              bg={monitorStateToColor(e.st)}
+              minWidth="0.5em"
+              mr="0.25em"
+              borderRadius="xl"
+              _hover={{
+                transform: "translateY(-0.25em)",
+                transitionDuration: "0.2s",
+                transitionTimingFunction: "ease-in-out",
+              }}
+            />
+          </Tooltip>
+        ))}
+      </Flex>
+    </Flex>
+  );
+};

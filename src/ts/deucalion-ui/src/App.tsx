@@ -248,7 +248,7 @@ export const App = () => {
     <Container padding="4" maxWidth="80em">
       <Flex>
         <Image src="/deucalion-icon.svg" height="3em" marginRight="1em" />
-        <Text fontSize="3xl">{DEUCALION_PAGE_TITLE}</Text>
+        <Text fontSize="3xl" noOfLines={1}>{DEUCALION_PAGE_TITLE}</Text>
         <Spacer />
         <ThemeSwitcherComponent />
       </Flex>
@@ -280,7 +280,9 @@ export const App = () => {
         <Stat>
           <StatLabel>Updated</StatLabel>
           <Skeleton isLoaded={allServicesCount > 0} width="100%">
-            <StatNumber>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
+            <Tooltip hasArrow label={dayjs.unix(lastUpdateAt).format("YYYY-MM-DD HH:mm:ss")} placement="left">
+              <StatNumber noOfLines={1}>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
+            </Tooltip>            
           </Skeleton>
           <Tooltip hasArrow label={hubConnectionErrorMessage} isDisabled={hubConnectionErrorMessage === undefined} placement="left">
             <StatHelpText>
