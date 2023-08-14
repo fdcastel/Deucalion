@@ -42,7 +42,7 @@ public class FasterStorage : IDisposable
         committedPageStart = Math.Max(committedPageStart, 0); // avoid negative values
 
         using var iter = log.Scan(committedPageStart, committedUntilAddress);
-        while (iter.GetNext(out byte[] rawEvent, out _, out _))
+        while (iter.GetNext(out var rawEvent, out _, out _))
         {
             var ev = Deserialize<MonitorChecked>(rawEvent);
             if (ev is not null)
@@ -57,7 +57,7 @@ public class FasterStorage : IDisposable
     public void AddEvent(MonitorChecked ev)
     {
         var log = GetLogFor(ev.Name);
-        byte[] valueBytes = Serialize(ev);
+        var valueBytes = Serialize(ev);
         log.Enqueue(valueBytes);
     }
 
