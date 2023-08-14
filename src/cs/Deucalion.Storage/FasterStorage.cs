@@ -8,6 +8,7 @@ namespace Deucalion.Storage;
 
 public class FasterStorage : IDisposable
 {
+    public static readonly TimeSpan DefaultCommitInterval = TimeSpan.FromMinutes(1);
     public static readonly long LogPageSize = 1L << 16;
 
     private readonly string _storagePath;
@@ -16,10 +17,11 @@ public class FasterStorage : IDisposable
     private readonly ConcurrentDictionary<string, (FasterLog, FasterLogSettings)> _monitors = new();
     private bool _disposedValue;
 
-    public FasterStorage(string? storagePath = null)
+    public FasterStorage(string? storagePath = null, TimeSpan? commitInterval = null)
     {
         _storagePath = storagePath ?? Path.Join(Path.GetTempPath(), "Deucalion");
-        _commitTimer = new Timer(CommitCallbackAsync, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+
+        _commitTimer = new Timer(CommitCallbackAsync, null, TimeSpan.Zero, commitInterval ?? DefaultCommitInterval);
     }
 
     public IEnumerable<string> GetMonitors() => _monitors.Keys;

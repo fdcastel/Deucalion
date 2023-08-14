@@ -22,7 +22,7 @@ var monitorConfiguration = MonitorConfiguration.ReadFromFile(deucalionOptions.Co
 builder.Services.AddSingleton(_ => monitorConfiguration);
 
 // Application services
-var storage = new FasterStorage(deucalionOptions.StoragePath);
+var storage = new FasterStorage(deucalionOptions.StoragePath, deucalionOptions.CommitInterval);
 builder.Services.AddSingleton(_ => storage);
 builder.Services.AddHostedService<EngineBackgroundService>();
 
