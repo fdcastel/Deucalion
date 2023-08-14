@@ -5,6 +5,7 @@ monitors:
     recordType: A
     resolver: 1.1.1.1:53
     intervalWhenUp: 00:00:03
+    intervalWhenDown: 00:00:10
 
   http-example:
     !http
