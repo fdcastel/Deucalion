@@ -112,7 +112,7 @@ export const App = () => {
   const toast = useToast();
 
   useEffect(() => {
-    logger.log("Retry requested", hubConnectionRetries);
+    logger.log("Retry requested. RetryCount =", hubConnectionRetries);
 
     if (allMonitors.size === 0) {
       // Fetch initial data only once (when allMonitors is empty).
@@ -186,12 +186,18 @@ export const App = () => {
           });
 
           hubConnection.onclose((err) => {
-            // Do not clear last error message if onClose does not provide one.
-            if (err?.message) {
-              setHubConnectionErrorMessage(err.message);
+            if (err === undefined) {
+              // Connection closed by code (cleanup / closing).
+              logger.warn("Hub connection closed.");
+
+              // Do not clear last error message
+              return;
             }
 
-            logger.warn("Hub connection closed. Retrying in 5s...");
+            // Connection closed by error.
+            setHubConnectionErrorMessage(err.message);
+
+            logger.warn("Hub connection closed unexpectedly. Retrying in 5s...", err);
             setTimeout(() => {
               setHubConnectionRetries((old) => old + 1);
             }, 5000);
@@ -211,15 +217,14 @@ export const App = () => {
         });
     }
 
-    const cleanUp = () => {
+    const cleanUp = async () => {
       logger.warn("Cleanup called!");
-
-      // Do NOT call hubConnection.stop() here.
-      // It will cause a continuous cycle of connect/disconnects.
+      await hubConnection?.stop();
     };
 
     return () => {
-      cleanUp();
+      cleanUp()
+        .catch(console.error);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hubConnection]);
