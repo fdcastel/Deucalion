@@ -248,66 +248,76 @@ export const App = () => {
   }
   totalAvailability = (100 * totalAvailability) / eventCount;
 
+  const Header = () => (
+    <Flex>
+      <Image src="/deucalion-icon.svg" width="3em" height="3em" marginRight="0.5em" />
+      <Text fontSize="3xl" noOfLines={1}>
+        {DEUCALION_PAGE_TITLE}
+      </Text>
+      <Spacer />
+      <ThemeSwitcherComponent />
+    </Flex>
+  );
+
+  const Overview = () => (
+    <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
+      <Stat>
+        <StatLabel>Services</StatLabel>
+        <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
+          <StatNumber>
+            {onlineServicesCount} of {allServicesCount}
+          </StatNumber>
+        </Box>
+
+        {onlineServicesCount === allServicesCount ? <StatHelpText>Online</StatHelpText> : <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>}
+      </Stat>
+
+      <Stat>
+        <StatLabel>Availability</StatLabel>
+        <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
+          <StatNumber>{isLoading ? "98.3" : totalAvailability.toFixed(1)}%</StatNumber>
+        </Box>
+        <StatHelpText>Last hour</StatHelpText>
+      </Stat>
+
+      <Stat>
+        <StatLabel>Updated</StatLabel>
+        <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
+          <Tooltip hasArrow label={dayjs.unix(lastUpdateAt).format("YYYY-MM-DD HH:mm:ss")} placement="left">
+            <StatNumber noOfLines={1}>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
+          </Tooltip>
+        </Box>
+        <Tooltip hasArrow label={hubConnectionErrorMessage} isDisabled={hubConnectionErrorMessage === undefined} placement="left">
+          <StatHelpText>
+            <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
+            {hubConnection?.state ?? HubConnectionState.Disconnected}
+          </StatHelpText>
+        </Tooltip>
+      </Stat>
+    </StatGroup>
+  );
+
+  const Monitors = () => (
+    <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
+      {isLoading ? (
+        <Center>
+          <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
+        </Center>
+      ) : (
+        Array.from(allMonitors).map(([monitorName, monitorProps]) => (
+          <ListItem key={monitorName}>
+            <MonitorComponent name={monitorName} events={monitorProps.events} stats={monitorProps.stats} />
+          </ListItem>
+        ))
+      )}
+    </List>
+  );
+
   return (
     <Container padding="4" maxWidth="80em">
-      <Flex>
-        <Image src="/deucalion-icon.svg" width="3em" height="3em" marginRight="0.5em" />
-        <Text fontSize="3xl" noOfLines={1}>
-          {DEUCALION_PAGE_TITLE}
-        </Text>
-        <Spacer />
-        <ThemeSwitcherComponent />
-      </Flex>
-
-      <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
-        <Stat>
-          <StatLabel>Services</StatLabel>
-          <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
-            <StatNumber>
-              {onlineServicesCount} of {allServicesCount}
-            </StatNumber>
-          </Box>
-
-          {onlineServicesCount === allServicesCount ? <StatHelpText>Online</StatHelpText> : <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>}
-        </Stat>
-
-        <Stat>
-          <StatLabel>Availability</StatLabel>
-          <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
-            <StatNumber>{isLoading ? "98.3" : totalAvailability.toFixed(1)}%</StatNumber>
-          </Box>
-          <StatHelpText>Last hour</StatHelpText>
-        </Stat>
-
-        <Stat>
-          <StatLabel>Updated</StatLabel>
-          <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
-            <Tooltip hasArrow label={dayjs.unix(lastUpdateAt).format("YYYY-MM-DD HH:mm:ss")} placement="left">
-              <StatNumber noOfLines={1}>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
-            </Tooltip>
-          </Box>
-          <Tooltip hasArrow label={hubConnectionErrorMessage} isDisabled={hubConnectionErrorMessage === undefined} placement="left">
-            <StatHelpText>
-              <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
-              {hubConnection?.state ?? HubConnectionState.Disconnected}
-            </StatHelpText>
-          </Tooltip>
-        </Stat>
-      </StatGroup>
-
-      <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
-        {isLoading ? (
-          <Center>
-            <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
-          </Center>
-        ) : (
-          Array.from(allMonitors).map(([monitorName, monitorProps]) => (
-            <ListItem key={monitorName}>
-              <MonitorComponent name={monitorName} events={monitorProps.events} stats={monitorProps.stats} />
-            </ListItem>
-          ))
-        )}
-      </List>
+      <Header />
+      <Overview />
+      <Monitors />
     </Container>
   );
 };
