@@ -1,10 +1,11 @@
-import { Badge, Box, Center, Flex, Spacer, Text, Tooltip } from "@chakra-ui/react";
+import { Box, Center, Flex, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import dayjs from "dayjs";
 import { MonitorEventDto, MonitorState } from "../server-types";
 
 export interface MonitorStats {
   availability: number;
+  averageResponseTime: number;
   lastState: MonitorState;
   lastUpdate: number;
 }
@@ -15,7 +16,7 @@ export interface MonitorProps {
   stats?: MonitorStats;
 }
 
-// --- MonitorComponent functions 
+// --- MonitorComponent functions
 
 const formatMonitorEvent = (e: MonitorEventDto) => {
   const at = dayjs.unix(e.at).fromNow();
@@ -39,19 +40,26 @@ const monitorStateToColor = (state: MonitorState) => {
 // --- MonitorComponent
 
 export const MonitorComponent = ({ name, events, stats }: MonitorProps) => {
-  const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx])
+  const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex>
-      <Text noOfLines={1} minWidth="5em">{name}</Text>
+      <Text noOfLines={1} minWidth="5em">
+        {name}
+      </Text>
       <Spacer />
 
-      {/* ToDo: restict the contents of this container */}
       <Flex direction="row-reverse" overflowX={"clip"}>
-        <Center minWidth="4em">
-          <Badge colorScheme="teal" variant="solid" borderRadius="xl" paddingX="0.75em">
-            {stats?.availability.toFixed(0)}%
-          </Badge>
-        </Center>
+        <Tooltip hasArrow label="Average response time" placement="bottom-end">
+          <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" width="4em">
+            <Center width="100%">{stats?.averageResponseTime.toFixed(0)}ms</Center>
+          </Tag>
+        </Tooltip>
+
+        <Tooltip hasArrow label="Availability" placement="bottom-end">
+          <Tag colorScheme="teal" variant="solid" borderRadius="full" marginLeft="0.25em" width="4em">
+            <Center width="100%">{stats?.availability.toFixed(0)}%</Center>
+          </Tag>
+        </Tooltip>
 
         {reverseEvents.map((e) => (
           <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>

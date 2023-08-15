@@ -55,10 +55,14 @@ const DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL
 const addStats = (m: MonitorProps) => {
   if (m.events.length > 0) {
     const unknownEventCount = m.events.reduce((acc, e) => acc + (e.st == MonitorState.Unknown ? 1 : 0), 0);
+
     const downEventCount = m.events.reduce((acc, e) => acc + (e.st == MonitorState.Down ? 1 : 0), 0);
+
+    const averageResponseTimes = [...m.events].filter((e) => e.ms).sort((a, b) => (a.ms ?? 0) - (b.ms ?? 0));
 
     m.stats = {
       availability: (100 * (m.events.length - downEventCount)) / (m.events.length - unknownEventCount),
+      averageResponseTime: averageResponseTimes.length > 0 ? averageResponseTimes.reduce((acc, e) => acc + (e.ms ?? 0), 0) / averageResponseTimes.length : 0,
       lastState: m.events[m.events.length - 1].st,
       lastUpdate: m.events[m.events.length - 1].at,
     };
@@ -241,11 +245,11 @@ export const App = () => {
 
     onlineServicesCount += isOnline ? 1 : 0;
     eventCount += mp.events.length;
-    totalAvailability += (mp.stats?.availability ?? 0) * mp.events.length / 100;
+    totalAvailability += ((mp.stats?.availability ?? 0) * mp.events.length) / 100;
 
     if (lastUpdateAt < (mp.stats?.lastUpdate ?? 0)) lastUpdateAt = mp.stats?.lastUpdate ?? 0;
   }
-  totalAvailability = 100 * totalAvailability / eventCount;
+  totalAvailability = (100 * totalAvailability) / eventCount;
 
   return (
     <Container padding="4" maxWidth="80em">
