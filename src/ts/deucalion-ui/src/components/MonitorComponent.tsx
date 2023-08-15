@@ -51,14 +51,14 @@ export const MonitorComponent = ({ name, events, stats }: MonitorProps) => {
       <Flex direction="row-reverse" overflowX={"clip"}>
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
           <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" minWidth="4em">
-            <Center width="100%">{stats?.averageResponseTime.toFixed(0)}ms</Center>
+            <Center width="100%">{stats?.averageResponseTime !== undefined ? stats.averageResponseTime.toFixed(0) : "... "}ms</Center>
           </Tag>
         </Tooltip>
 
         <Hide below="md" ssr={false}>
           <Tooltip hasArrow label="Availability" placement="bottom-end">
             <Tag colorScheme="teal" variant="solid" borderRadius="full" marginLeft="0.25em" minWidth="4em">
-              <Center width="100%">{stats?.availability.toFixed(0)}%</Center>
+              <Center width="100%">{stats?.availability !== undefined ? stats.availability.toFixed(0) : "... "}%</Center>
             </Tag>
           </Tooltip>
         </Hide>

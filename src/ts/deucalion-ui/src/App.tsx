@@ -231,7 +231,6 @@ export const App = () => {
   }, [hubConnection]);
 
   const allServicesCount = allMonitors.size;
-  const isLoading = allServicesCount === 0;
 
   let lastUpdateAt = 0;
   let onlineServicesCount = 0;
@@ -263,26 +262,32 @@ export const App = () => {
     <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
       <Stat>
         <StatLabel>Services</StatLabel>
-        <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
+        <Box filter="auto" blur={onlineServicesCount === 0 ? "6px" : "0px"}>
           <StatNumber>
             {onlineServicesCount} of {allServicesCount}
           </StatNumber>
         </Box>
 
-        {onlineServicesCount === allServicesCount ? <StatHelpText>Online</StatHelpText> : <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>}
+        {onlineServicesCount === 0 ? (
+          <StatHelpText textColor="gray">Loading...</StatHelpText>
+        ) : onlineServicesCount === allServicesCount ? (
+          <StatHelpText>Online</StatHelpText>
+        ) : (
+          <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>
+        )}
       </Stat>
 
       <Stat>
         <StatLabel>Availability</StatLabel>
-        <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
-          <StatNumber>{isLoading ? "98.3" : totalAvailability.toFixed(1)}%</StatNumber>
+        <Box filter="auto" blur={isNaN(totalAvailability) ? "6px" : "0px"}>
+          <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
         </Box>
         <StatHelpText>Last hour</StatHelpText>
       </Stat>
 
       <Stat>
         <StatLabel>Updated</StatLabel>
-        <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
+        <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
           <Tooltip hasArrow label={dayjs.unix(lastUpdateAt).format("YYYY-MM-DD HH:mm:ss")} placement="left">
             <StatNumber noOfLines={1}>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
           </Tooltip>
@@ -299,7 +304,7 @@ export const App = () => {
 
   const Monitors = () => (
     <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
-      {isLoading ? (
+      {allServicesCount === 0 ? (
         <Center>
           <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
         </Center>
