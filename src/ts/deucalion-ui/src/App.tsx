@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { HubConnection, HubConnectionState, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 
 import {
+  Box,
   Center,
   Container,
   Flex,
   Image,
   List,
   ListItem,
-  Skeleton,
   Spacer,
   Spinner,
   Stat,
@@ -95,7 +95,7 @@ const monitorStateToToastDescription = (state: MonitorState) => {
 
 // --- App
 
-const DEGRADED_COLOR = "red.500";
+const DEGRADED_COLOR = "red.400";
 
 const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
@@ -230,24 +230,27 @@ export const App = () => {
   }, [hubConnection]);
 
   const allServicesCount = allMonitors.size;
+  const isLoading = allServicesCount === 0;
 
   let lastUpdateAt = 0;
   let onlineServicesCount = 0;
+  let eventCount = 0;
   let totalAvailability = 0;
   for (const [, mp] of allMonitors) {
     const isOnline = mp.stats?.lastState == MonitorState.Up || mp.stats?.lastState == MonitorState.Warn;
 
     onlineServicesCount += isOnline ? 1 : 0;
-    totalAvailability += isOnline ? mp.stats?.availability ?? 0 : 0;
+    eventCount += mp.events.length;
+    totalAvailability += (mp.stats?.availability ?? 0) * mp.events.length / 100;
 
     if (lastUpdateAt < (mp.stats?.lastUpdate ?? 0)) lastUpdateAt = mp.stats?.lastUpdate ?? 0;
   }
-  totalAvailability /= allServicesCount;
+  totalAvailability = 100 * totalAvailability / eventCount;
 
   return (
     <Container padding="4" maxWidth="80em">
       <Flex>
-        <Image src="/deucalion-icon.svg" height="3em" marginRight="1em" />
+        <Image src="/deucalion-icon.svg" width="3em" height="3em" marginRight="0.5em" />
         <Text fontSize="3xl" noOfLines={1}>{DEUCALION_PAGE_TITLE}</Text>
         <Spacer />
         <ThemeSwitcherComponent />
@@ -256,11 +259,11 @@ export const App = () => {
       <StatGroup marginY="1em" padding="0.5em" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
         <Stat>
           <StatLabel>Services</StatLabel>
-          <Skeleton isLoaded={allServicesCount > 0} width="50%">
+          <Box filter='auto' blur={isLoading ? '4px' : '0px'}>
             <StatNumber>
               {onlineServicesCount} of {allServicesCount}
             </StatNumber>
-          </Skeleton>
+          </Box>
 
           {onlineServicesCount === allServicesCount ? (
             <StatHelpText>Online</StatHelpText>
@@ -271,19 +274,19 @@ export const App = () => {
 
         <Stat>
           <StatLabel>Availability</StatLabel>
-          <Skeleton isLoaded={allServicesCount > 0} width="50%">
-            <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
-          </Skeleton>
+          <Box filter='auto' blur={isLoading ? '4px' : '0px'}>
+            <StatNumber>{isLoading ? "98.3" : totalAvailability.toFixed(1)}%</StatNumber>
+          </Box>
           <StatHelpText>Last hour</StatHelpText>
         </Stat>
 
         <Stat>
           <StatLabel>Updated</StatLabel>
-          <Skeleton isLoaded={allServicesCount > 0} width="100%">
+          <Box filter='auto' blur={isLoading ? '4px' : '0px'}>
             <Tooltip hasArrow label={dayjs.unix(lastUpdateAt).format("YYYY-MM-DD HH:mm:ss")} placement="left">
               <StatNumber noOfLines={1}>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
             </Tooltip>            
-          </Skeleton>
+          </Box>
           <Tooltip hasArrow label={hubConnectionErrorMessage} isDisabled={hubConnectionErrorMessage === undefined} placement="left">
             <StatHelpText>
               <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
@@ -294,16 +297,16 @@ export const App = () => {
       </StatGroup>
 
       <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
-        {allServicesCount > 0 ? (
+        {isLoading ? (
+          <Center>
+            <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
+          </Center>
+        ) : (
           Array.from(allMonitors).map(([monitorName, monitorProps]) => (
             <ListItem key={monitorName}>
               <MonitorComponent name={monitorName} events={monitorProps.events} stats={monitorProps.stats} />
             </ListItem>
           ))
-        ) : (
-          <Center>
-            <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
-          </Center>
         )}
       </List>
     </Container>
