@@ -31,11 +31,11 @@ server {
     # proxy API calls
     #
     location /api/ {
-        proxy_pass   http://deucalion-api/api/;
+        proxy_pass   ${DEUCALION_PROXY_API_URL}/api/;
     }
 
     location /hub/ {
-        proxy_pass   http://deucalion-api/hub/;
+        proxy_pass   ${DEUCALION_PROXY_API_URL}/hub/;
 
         # Configuration for WebSockets -- https://learn.microsoft.com/en-us/aspnet/core/signalr/scale?view=aspnetcore-7.0#linux-with-nginx
         proxy_set_header Upgrade $http_upgrade;

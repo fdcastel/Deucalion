@@ -21,12 +21,14 @@ FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 
 ENV DEUCALION_PAGE_TITLE="Deucalion Status" \
-    DEUCALION_API_URL=""
+    DEUCALION_API_URL="" \
+    DEUCALION_PROXY_API_URL="http://deucalion-api"
 
 COPY --from=build /source/dist ./
 
-# Copy nginx configuration
-COPY --from=build /source/nginx-conf.d/default.conf /etc/nginx/conf.d/
+# Copy nginx configuration templates
+#   https://github.com/docker-library/docs/tree/master/nginx#using-environment-variables-in-nginx-configuration-new-in-119
+COPY --from=build /source/nginx-templates/default.conf.template /etc/nginx/templates/
 
 # Copy import-meta-env files
 COPY --from=build /source/import-meta-env-alpine /source/.env /app/
