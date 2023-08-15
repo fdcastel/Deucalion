@@ -46,9 +46,7 @@ if (import.meta.env.PROD) {
 }
 
 const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string;
-const DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL
-  ? import.meta.env.DEUCALION_API_URL as string
-  : window.location.origin;
+const DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL ? (import.meta.env.DEUCALION_API_URL as string) : window.location.origin;
 
 // --- App functions
 
@@ -227,8 +225,7 @@ export const App = () => {
     };
 
     return () => {
-      cleanUp()
-        .catch(console.error);
+      cleanUp().catch(console.error);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hubConnection]);
@@ -255,7 +252,9 @@ export const App = () => {
     <Container padding="4" maxWidth="80em">
       <Flex>
         <Image src="/deucalion-icon.svg" width="3em" height="3em" marginRight="0.5em" />
-        <Text fontSize="3xl" noOfLines={1}>{DEUCALION_PAGE_TITLE}</Text>
+        <Text fontSize="3xl" noOfLines={1}>
+          {DEUCALION_PAGE_TITLE}
+        </Text>
         <Spacer />
         <ThemeSwitcherComponent />
       </Flex>
@@ -263,22 +262,18 @@ export const App = () => {
       <StatGroup marginY="1em" padding="0.5em" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
         <Stat>
           <StatLabel>Services</StatLabel>
-          <Box filter='auto' blur={isLoading ? '4px' : '0px'}>
+          <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
             <StatNumber>
               {onlineServicesCount} of {allServicesCount}
             </StatNumber>
           </Box>
 
-          {onlineServicesCount === allServicesCount ? (
-            <StatHelpText>Online</StatHelpText>
-          ) : (
-            <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>
-          )}
+          {onlineServicesCount === allServicesCount ? <StatHelpText>Online</StatHelpText> : <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>}
         </Stat>
 
         <Stat>
           <StatLabel>Availability</StatLabel>
-          <Box filter='auto' blur={isLoading ? '4px' : '0px'}>
+          <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
             <StatNumber>{isLoading ? "98.3" : totalAvailability.toFixed(1)}%</StatNumber>
           </Box>
           <StatHelpText>Last hour</StatHelpText>
@@ -286,10 +281,10 @@ export const App = () => {
 
         <Stat>
           <StatLabel>Updated</StatLabel>
-          <Box filter='auto' blur={isLoading ? '4px' : '0px'}>
+          <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
             <Tooltip hasArrow label={dayjs.unix(lastUpdateAt).format("YYYY-MM-DD HH:mm:ss")} placement="left">
               <StatNumber noOfLines={1}>{dayjs.unix(lastUpdateAt).fromNow()}</StatNumber>
-            </Tooltip>            
+            </Tooltip>
           </Box>
           <Tooltip hasArrow label={hubConnectionErrorMessage} isDisabled={hubConnectionErrorMessage === undefined} placement="left">
             <StatHelpText>
