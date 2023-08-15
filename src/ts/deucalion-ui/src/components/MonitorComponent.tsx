@@ -1,4 +1,4 @@
-import { Box, Center, Flex, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
+import { Box, Center, Flex, Hide, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import dayjs from "dayjs";
 import { MonitorEventDto, MonitorState } from "../server-types";
@@ -50,16 +50,18 @@ export const MonitorComponent = ({ name, events, stats }: MonitorProps) => {
 
       <Flex direction="row-reverse" overflowX={"clip"}>
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
-          <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" width="4em">
+          <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" minWidth="4em">
             <Center width="100%">{stats?.averageResponseTime.toFixed(0)}ms</Center>
           </Tag>
         </Tooltip>
 
-        <Tooltip hasArrow label="Availability" placement="bottom-end">
-          <Tag colorScheme="teal" variant="solid" borderRadius="full" marginLeft="0.25em" width="4em">
-            <Center width="100%">{stats?.availability.toFixed(0)}%</Center>
-          </Tag>
-        </Tooltip>
+        <Hide below="md" ssr={false}>
+          <Tooltip hasArrow label="Availability" placement="bottom-end">
+            <Tag colorScheme="teal" variant="solid" borderRadius="full" marginLeft="0.25em" minWidth="4em">
+              <Center width="100%">{stats?.availability.toFixed(0)}%</Center>
+            </Tag>
+          </Tooltip>
+        </Hide>
 
         {reverseEvents.map((e) => (
           <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>

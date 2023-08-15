@@ -259,7 +259,7 @@ export const App = () => {
         <ThemeSwitcherComponent />
       </Flex>
 
-      <StatGroup marginY="1em" padding="0.5em" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
+      <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
         <Stat>
           <StatLabel>Services</StatLabel>
           <Box filter="auto" blur={isLoading ? "4px" : "0px"}>
