@@ -7,7 +7,6 @@ import {
   Center,
   Container,
   Flex,
-  Image,
   List,
   ListItem,
   Spacer,
@@ -31,6 +30,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { MonitorState, MonitorEventDto, MonitorChangedDto } from "./server-types";
 import { MonitorProps, MonitorComponent } from "./components/MonitorComponent";
 import { ThemeSwitcherComponent } from "./components/ThemeSwitcherComponent";
+import { DeucalionIconComponent } from "./components/DeucalionIconComponent";
 
 import * as logger from "./logger";
 
@@ -245,8 +245,8 @@ export const App = () => {
 
   const Header = () => (
     <Flex>
-      <Image src="/deucalion-icon.svg" width="3em" height="3em" marginRight="0.5em" />
-      <Text fontSize="3xl" noOfLines={1}>
+      <DeucalionIconComponent width="3em" height="3em" />
+      <Text marginLeft="0.25em" fontSize="3xl" noOfLines={1}>
         {DEUCALION_PAGE_TITLE}
       </Text>
       <Spacer />
