@@ -24,16 +24,16 @@ const formatMonitorEvent = (e: MonitorEventDto) => {
   return e.te ? `${timeStamp} (${e.te})` : timeStamp;
 };
 
-const monitorStateToColor = (state: MonitorState) => {
+const monitorStateToColor = (state?: MonitorState) => {
   switch (state) {
     case MonitorState.Up:
-      return "green.400";
+      return "monitor.up";
     case MonitorState.Warn:
-      return "yellow.400";
+      return "monitor.warn";
     case MonitorState.Down:
-      return "red.400";
+      return "monitor.down";
     default:
-      return "gray.400";
+      return "monitor.unknown";
   }
 };
 
@@ -43,7 +43,7 @@ export const MonitorComponent = ({ name, events, stats }: MonitorProps) => {
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex>
-      <Text noOfLines={1} minWidth="5em">
+      <Text noOfLines={1} minWidth="5em" color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}>
         {name}
       </Text>
       <Spacer />

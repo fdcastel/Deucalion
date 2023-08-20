@@ -95,8 +95,6 @@ const monitorStateToToastDescription = (state: MonitorState) => {
 
 // --- App
 
-const DEGRADED_COLOR = "red.400";
-
 const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
 const API_URL = new URL("/api/monitors/*", DEUCALION_API_URL);
@@ -271,7 +269,7 @@ export const App = () => {
         ) : onlineServicesCount === allServicesCount ? (
           <StatHelpText>Online</StatHelpText>
         ) : (
-          <StatHelpText color={DEGRADED_COLOR}>Degraded</StatHelpText>
+          <StatHelpText color="monitor.down">Degraded</StatHelpText>
         )}
       </Stat>
 
