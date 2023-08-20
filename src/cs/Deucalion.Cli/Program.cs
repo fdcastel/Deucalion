@@ -1,7 +1,7 @@
 ﻿using Deucalion.Monitors.Events;
 using Microsoft.AspNetCore.SignalR.Client;
 
-var url = "http://localhost:5000/hub/monitors";
+var url = "http://localhost:5000/api/monitors/hub";
 
 var hubConnection = new HubConnectionBuilder()
     .WithUrl(url)

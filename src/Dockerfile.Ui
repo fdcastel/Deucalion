@@ -4,10 +4,10 @@ WORKDIR /source
 
 RUN npm install -g vite
 
-COPY deucalion-ui/package*.json .
+COPY ts/deucalion-ui/package*.json .
 RUN npm ci
 
-COPY deucalion-ui/ .
+COPY ts/deucalion-ui/ .
 RUN npm run build
 
 # Package import-meta-env for runtime transforms.

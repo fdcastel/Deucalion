@@ -1,14 +1,20 @@
 version: "3.9"
 
 services:
-  api:
+  deucalion:
+    image: ghcr.io/fdcastel/deucalion
+    build:
+      context: ./src/
+      dockerfile: ./Dockerfile
+
+  deucalion-api:
     image: ghcr.io/fdcastel/deucalion-api
     build:
-      context: ./src/cs/
-      dockerfile: Dockerfile.Api
+      context: ./src/
+      dockerfile: ./Dockerfile.Api
 
-  ui:
+  deucalion-ui:
     image: ghcr.io/fdcastel/deucalion-ui
     build:
-      context: ./src/ts/
-      dockerfile: Dockerfile.Ui
+      context: ./src/
+      dockerfile: ./Dockerfile.Ui

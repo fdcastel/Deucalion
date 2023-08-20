@@ -6,12 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <!-- Do not output Debug information in Release configuration -->
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <DebugSymbols>False</DebugSymbols>
-    <DebugType>None</DebugType>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Deucalion.Application\Deucalion.Application.csproj" />
     <ProjectReference Include="..\Deucalion.Storage\Deucalion.Storage.csproj" />

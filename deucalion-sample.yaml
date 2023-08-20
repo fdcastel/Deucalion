@@ -1,0 +1,27 @@
+defaults:
+    intervalWhenUp: 00:00:03
+    intervalWhenDown: 00:00:03
+
+monitors:
+  dns-cf:
+    !dns
+    host: google.com
+    recordType: A
+    resolver: 1.1.1.1:53
+
+  http-cf:
+    !http
+    url: https://cloudflare.com
+    warnTimeout: 00:00:00.250
+    timeout: 00:00:02
+
+  http-goog:
+    !http
+    url: https://google.com
+    expectedStatusCode: 200
+    expectedResponseBodyPattern: .*
+    ignoreCertificateErrors: true
+
+  ping-goog:
+    !ping
+    host: google.com

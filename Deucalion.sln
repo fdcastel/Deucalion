@@ -32,6 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{863C3F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{9B83C0C5-E72B-444E-AF7A-11B142A8A5C1}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deucalion.Service", "src\cs\Deucalion.Service\Deucalion.Service.csproj", "{4A17820E-00D5-4899-BD54-76942001267F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,6 +74,10 @@ Global
 		{E3DFA395-0606-4963-91FC-15DB0E06B179}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E3DFA395-0606-4963-91FC-15DB0E06B179}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E3DFA395-0606-4963-91FC-15DB0E06B179}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{4A17820E-00D5-4899-BD54-76942001267F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A17820E-00D5-4899-BD54-76942001267F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A17820E-00D5-4899-BD54-76942001267F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A17820E-00D5-4899-BD54-76942001267F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -89,6 +95,7 @@ Global
 		{A54D4F2B-498A-42D1-AFED-08D99B311D16} = {A76189F8-A6D1-45F6-98DA-CC1505190F24}
 		{863C3FD3-62F9-450B-8724-115CFE11C8F7} = {A76189F8-A6D1-45F6-98DA-CC1505190F24}
 		{9B83C0C5-E72B-444E-AF7A-11B142A8A5C1} = {A76189F8-A6D1-45F6-98DA-CC1505190F24}
+		{4A17820E-00D5-4899-BD54-76942001267F} = {863C3FD3-62F9-450B-8724-115CFE11C8F7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {889C2AFB-8F90-47C3-AD69-1F6EBB867CAB}

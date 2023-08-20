@@ -98,7 +98,7 @@ const monitorStateToToastDescription = (state: MonitorState) => {
 const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
 const API_URL = new URL("/api/monitors/*", DEUCALION_API_URL);
-const HUB_URL = new URL("/hub/monitors", DEUCALION_API_URL);
+const HUB_URL = new URL("/api/monitors/hub", DEUCALION_API_URL);
 
 export const App = () => {
   const [allMonitors, setAllMonitors] = useState(EMPTY_MONITORS);

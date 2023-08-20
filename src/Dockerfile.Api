@@ -2,17 +2,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /source
 
-COPY Deucalion.Api/*.csproj ./Deucalion.Api/
-COPY Deucalion.Application/*.csproj ./Deucalion.Application/
-COPY Deucalion.Core/*.csproj ./Deucalion.Core/
-COPY Deucalion.Network/*.csproj ./Deucalion.Network/
-COPY Deucalion.Storage/*.csproj ./Deucalion.Storage/
+COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
+COPY cs/Deucalion.Application/*.csproj ./Deucalion.Application/
+COPY cs/Deucalion.Core/*.csproj ./Deucalion.Core/
+COPY cs/Deucalion.Network/*.csproj ./Deucalion.Network/
+COPY cs/Deucalion.Storage/*.csproj ./Deucalion.Storage/
 
 RUN dotnet restore Deucalion.Api
 
-COPY . .
+COPY cs/ .
 WORKDIR /source/Deucalion.Api
-RUN dotnet publish -c release -o /app --no-restore
+RUN dotnet publish -c release -o /app -p:DebugType=None --no-restore
 
 # final image
 FROM mcr.microsoft.com/dotnet/aspnet:7.0
