@@ -1,4 +1,5 @@
 ﻿using Deucalion.Api;
+using Microsoft.AspNetCore.Http.Features;
 
 var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == Environments.Development;
 var webRootPath = isDevelopment ? "../../../publish/wwwroot" : "./wwwroot";
@@ -22,6 +23,14 @@ app.Use(async (context, next) =>
     // Serve "index.html" in "/" replacing "import_meta_env_placeholder\".
     if (context.Request.Path == "/")
     {
+        // Workaround for "Synchronous operations are disallowed" error in Linux. (!?)
+        //   -- https://stackoverflow.com/a/67632199/33244
+        var syncIOFeature = context.Features.Get<IHttpBodyControlFeature>();
+        if (syncIOFeature != null)
+        {
+            syncIOFeature.AllowSynchronousIO = true;
+        }
+
         var pageTitle = Environment.GetEnvironmentVariable("DEUCALION_PAGE_TITLE");
         var apiUrl = Environment.GetEnvironmentVariable("DEUCALION_API_URL");
 
