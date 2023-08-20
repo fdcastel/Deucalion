@@ -53,10 +53,8 @@ const DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL ? (import.meta.env.D
 const addStats = (m: MonitorProps) => {
   if (m.events.length > 0) {
     const unknownEventCount = m.events.reduce((acc, e) => acc + (e.st == MonitorState.Unknown ? 1 : 0), 0);
-
     const downEventCount = m.events.reduce((acc, e) => acc + (e.st == MonitorState.Down ? 1 : 0), 0);
-
-    const averageResponseTimes = [...m.events].filter((e) => e.ms).sort((a, b) => (a.ms ?? 0) - (b.ms ?? 0));
+    const averageResponseTimes = [...m.events].filter((e) => e.st > MonitorState.Down);
 
     m.stats = {
       availability: (100 * (m.events.length - downEventCount)) / (m.events.length - unknownEventCount),
