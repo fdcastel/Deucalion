@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.Features;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Deucalion.Service;
 
@@ -10,9 +11,10 @@ public static class WebApplicationExtensions
 
         app.Use(async (context, next) =>
         {
-            // Serve "index.html" in "/" replacing "import_meta_env_placeholder\".
             if (context.Request.Path == "/")
             {
+                // Serve "index.html" replacing "import_meta_env_placeholder".
+
                 // Workaround for "Synchronous operations are disallowed" error in Linux. (!?)
                 //   -- https://stackoverflow.com/a/67632199/33244
                 var syncIOFeature = context.Features.Get<IHttpBodyControlFeature>();
@@ -21,10 +23,8 @@ public static class WebApplicationExtensions
                     syncIOFeature.AllowSynchronousIO = true;
                 }
 
-                var pageTitle = Environment.GetEnvironmentVariable("DEUCALION_PAGE_TITLE");
-                var apiUrl = Environment.GetEnvironmentVariable("DEUCALION_API_URL");
-
-                var importMetaEnvJson = "{\"DEUCALION_PAGE_TITLE\":\"" + pageTitle + "\",\"DEUCALION_API_URL\":\"" + apiUrl + "\"}";
+                var pageTitle = Environment.GetEnvironmentVariable("DEUCALION_PAGE_TITLE") ?? string.Empty;
+                var apiUrl = Environment.GetEnvironmentVariable("DEUCALION_API_URL") ?? string.Empty;
 
                 var indexFile = app.Environment.WebRootFileProvider.GetFileInfo("/index.html").PhysicalPath;
                 if (indexFile is not null)
@@ -33,11 +33,12 @@ public static class WebApplicationExtensions
 
                     var newContent = indexContent.Replace(
                         "\"import_meta_env_placeholder\"",
-                        importMetaEnvJson
+                        GetImportMetaEnvJson(pageTitle, apiUrl)
                     );
 
                     using var bodyWriter = new StreamWriter(context.Response.Body);
                     await bodyWriter.WriteAsync(newContent);
+
                     return;
                 }
             }
@@ -47,4 +48,11 @@ public static class WebApplicationExtensions
 
         return app;
     }
+
+    private static string GetImportMetaEnvJson(string pageTitle, string apiUrl) =>
+        JsonSerializer.Serialize(new
+        {
+            DEUCALION_PAGE_TITLE = pageTitle,
+            DEUCALION_API_URL = apiUrl,
+        });
 }
