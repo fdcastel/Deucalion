@@ -228,6 +228,7 @@ export const App = () => {
 
   const allServicesCount = allMonitors.size;
 
+  let firstUpdateAt = 0;
   let lastUpdateAt = 0;
   let onlineServicesCount = 0;
   let eventCount = 0;
@@ -239,6 +240,7 @@ export const App = () => {
     eventCount += mp.events.length;
     totalAvailability += ((mp.stats?.availability ?? 0) * mp.events.length) / 100;
 
+    if (firstUpdateAt === 0 || firstUpdateAt > (mp.events[0]?.at ?? 0)) firstUpdateAt = mp.events[0]?.at ?? 0;
     if (lastUpdateAt < (mp.stats?.lastUpdate ?? 0)) lastUpdateAt = mp.stats?.lastUpdate ?? 0;
   }
   totalAvailability = (100 * totalAvailability) / eventCount;
@@ -278,7 +280,9 @@ export const App = () => {
         <Box filter="auto" blur={isNaN(totalAvailability) ? "6px" : "0px"}>
           <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
         </Box>
-        <StatHelpText>Last hour</StatHelpText>
+        <Box filter="auto" blur={firstUpdateAt === 0 ? "6px" : "0px"}>
+          <StatHelpText>From {dayjs.unix(firstUpdateAt).fromNow(true)}</StatHelpText>
+        </Box>
       </Stat>
 
       <Stat>
