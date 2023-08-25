@@ -3,17 +3,26 @@ defaults:
     intervalWhenDown: 00:00:03
 
 monitors:
+  ping-ms:
+    !ping
+    host: microsoft.com
+    
   dns-cf:
     !dns
     host: google.com
     recordType: A
     resolver: 1.1.1.1:53
+    group: Cloudflare
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/cloudflare.svg
 
   http-cf:
     !http
     url: https://cloudflare.com
     warnTimeout: 00:00:00.250
     timeout: 00:00:02
+    group: Cloudflare
+    href: https://cloudflare.com
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/cloudflare.svg
 
   http-goog:
     !http
@@ -21,7 +30,12 @@ monitors:
     expectedStatusCode: 200
     expectedResponseBodyPattern: .*
     ignoreCertificateErrors: true
+    group: Google
+    href: https://google.com
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/google.svg
 
   ping-goog:
     !ping
     host: google.com
+    group: Google
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/google.svg

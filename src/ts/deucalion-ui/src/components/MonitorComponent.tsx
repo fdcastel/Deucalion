@@ -1,7 +1,7 @@
-import { Box, Center, Flex, Hide, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
+import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import dayjs from "dayjs";
-import { MonitorEventDto, MonitorState } from "../server-types";
+import { MonitorEventDto, MonitorInfoDto, MonitorState } from "../server-types";
 
 export interface MonitorStats {
   availability: number;
@@ -12,11 +12,10 @@ export interface MonitorStats {
 
 export interface MonitorProps {
   name: string;
+  info: MonitorInfoDto;
   events: MonitorEventDto[];
   stats?: MonitorStats;
 }
-
-// --- MonitorComponent functions
 
 const formatMonitorEvent = (e: MonitorEventDto) => {
   const at = dayjs.unix(e.at).fromNow();
@@ -37,14 +36,19 @@ const monitorStateToColor = (state?: MonitorState) => {
   }
 };
 
-// --- MonitorComponent
-
-export const MonitorComponent = ({ name, events, stats }: MonitorProps) => {
+export const MonitorComponent = ({ name, info, events, stats }: MonitorProps) => {
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex>
+      {info.image ? <Image src={info.image} height="1.5em" marginRight="0.5em" /> : <div />}
       <Text noOfLines={1} minWidth="5em" color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}>
-        {name}
+        {info.href ? (
+          <Link href={info.href} isExternal>
+            {name}
+          </Link>
+        ) : (
+          name
+        )}
       </Text>
       <Spacer />
 

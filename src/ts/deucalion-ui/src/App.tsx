@@ -4,9 +4,13 @@ import { HubConnection, HubConnectionState, HubConnectionBuilder, LogLevel } fro
 
 import {
   Box,
+  Card,
+  CardBody,
+  CardHeader,
   Center,
   Container,
   Flex,
+  Heading,
   List,
   ListItem,
   Spacer,
@@ -158,6 +162,7 @@ export const App = () => {
 
                   const newMonitorProps = addStats({
                     name: monitorName,
+                    info: oldMonitorProps.info,
                     events: [...oldMonitorProps.events, newEvent].slice(-60), // keep only the last 60
                   });
 
@@ -302,21 +307,45 @@ export const App = () => {
     </StatGroup>
   );
 
-  const Monitors = () => (
-    <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
-      {allServicesCount === 0 ? (
-        <Center>
-          <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
-        </Center>
-      ) : (
-        Array.from(allMonitors).map(([monitorName, monitorProps]) => (
-          <ListItem key={monitorName}>
-            <MonitorComponent name={monitorName} events={monitorProps.events} stats={monitorProps.stats} />
-          </ListItem>
-        ))
-      )}
-    </List>
-  );
+  const Monitors = () => {
+    const groupedMonitors = Array.from(allMonitors).reduce((groups, [monitorName, monitorProps]) => {
+      const groupKey = monitorProps.info.group ?? "";
+
+      let slot = groups.get(groupKey);
+      if (slot === undefined) {
+        slot = new Map<string, MonitorProps>();
+        groups.set(groupKey, slot);
+      }
+      slot.set(monitorName, monitorProps);
+
+      return groups;
+    }, new Map<string, Map<string, MonitorProps>>());
+
+    return allServicesCount === 0 ? (
+      <Center>
+        <Spinner color="gray.600" emptyColor="gray.400" size="lg" />
+      </Center>
+    ) : (
+      <Box>
+        {Array.from(groupedMonitors).map(([group, monitors]) => (
+          <Card marginTop="0.5em" >
+            <CardHeader hidden={!group} paddingBottom="0em" >
+              <Heading size="lg" fontWeight="thin">{group}</Heading>
+            </CardHeader>
+            <CardBody >
+              <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
+                {Array.from(monitors).map(([monitorName, monitorProps]) => (
+                  <ListItem key={monitorName}>
+                    <MonitorComponent name={monitorName} info={monitorProps.info} events={monitorProps.events} stats={monitorProps.stats} />
+                  </ListItem>
+                ))}
+              </List>
+            </CardBody>
+          </Card>
+        ))}
+      </Box>
+    );
+  };
 
   return (
     <Container padding="4" maxWidth="80em">

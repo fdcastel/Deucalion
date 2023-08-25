@@ -5,6 +5,12 @@ export enum MonitorState {
   Warn = 2,
 }
 
+export interface MonitorInfoDto {
+  group?: string;
+  href?: string;
+  image?: string;
+}
+
 export interface MonitorEventDto {
   n?: string;
   at: number;

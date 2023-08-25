@@ -48,13 +48,18 @@ public static class Application
 
         // Setup Api endpoints
         app.MapGet("/api/monitors", (FasterStorage storage) =>
-            monitorConfiguration.Monitors.Keys);
+            monitorConfiguration.Monitors);
 
         app.MapGet("/api/monitors/*", (FasterStorage storage) =>
             from m in monitorConfiguration.Monitors.Keys
             select new
             {
                 Name = m,
+                Info = new MonitorInfoDto(
+                    Group: monitorConfiguration.Monitors[m].Group,
+                    Href: monitorConfiguration.Monitors[m].Href,
+                    Image: monitorConfiguration.Monitors[m].Image
+                ),
                 Events = from e in storage.GetLastEvents(m)
                          select new MonitorEventDto(
                              N: null,
