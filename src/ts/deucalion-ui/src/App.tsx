@@ -328,12 +328,12 @@ export const App = () => {
     ) : (
       <Box>
         {Array.from(groupedMonitors).map(([group, monitors]) => (
-          <Card marginTop="0.5em" >
-            <CardHeader hidden={!group} paddingBottom="0em" >
+          <Card marginY="1em" >
+            <CardHeader hidden={!group} padding="0.5em">
               <Heading size="lg" fontWeight="thin">{group}</Heading>
             </CardHeader>
-            <CardBody >
-              <List spacing="1em" padding="0.5em" bg="blackAlpha.100" boxShadow="md" borderRadius="md">
+            <CardBody paddingY="0.5em" >
+              <List spacing="1em" borderRadius="md">
                 {Array.from(monitors).map(([monitorName, monitorProps]) => (
                   <ListItem key={monitorName}>
                     <MonitorComponent name={monitorName} info={monitorProps.info} events={monitorProps.events} stats={monitorProps.stats} />

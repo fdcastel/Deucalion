@@ -41,7 +41,7 @@ export const MonitorComponent = ({ name, info, events, stats }: MonitorProps) =>
   return (
     <Flex>
       {info.image ? <Image src={info.image} height="1.5em" marginRight="0.5em" /> : <div />}
-      <Text noOfLines={1} minWidth="5em" color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}>
+      <Text noOfLines={1} minWidth="8em" color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}>
         {info.href ? (
           <Link href={info.href} isExternal>
             {name}
@@ -52,7 +52,7 @@ export const MonitorComponent = ({ name, info, events, stats }: MonitorProps) =>
       </Text>
       <Spacer />
 
-      <Flex direction="row-reverse" overflowX={"clip"}>
+      <Flex direction="row-reverse" overflowX="hidden">
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
           <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" minWidth="4em">
             <Center width="100%">{stats?.averageResponseTime !== undefined ? stats.averageResponseTime.toFixed(0) : "... "}ms</Center>
