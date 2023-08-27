@@ -4,6 +4,7 @@ using Deucalion.Api.Options;
 using Deucalion.Api.Services;
 using Deucalion.Application.Configuration;
 using Deucalion.Monitors;
+using Deucalion.Network.Monitors;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Http.Json;
 
@@ -51,7 +52,7 @@ public static class Application
                 Name = m,
                 Info = new MonitorInfoDto(
                     Group: monitorConfiguration.Monitors[m].Group,
-                    Href: monitorConfiguration.Monitors[m].Href,
+                    Href: ExtractHref(monitorConfiguration.Monitors[m]),
                     Image: monitorConfiguration.Monitors[m].Image
                 ),
                 Events = from e in storage.GetLastEvents(m)
@@ -67,5 +68,20 @@ public static class Application
         // Setup SignalR hubs
         app.MapHub<MonitorHub>("/api/monitors/hub");
         return app;
+    }
+
+    private static string? ExtractHref(MonitorBase monitor)
+    {
+        if (monitor.Href is null && monitor is HttpMonitor hm)
+        {
+            return hm.Url.ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(monitor.Href))
+        {
+            return string.Empty;
+        }
+
+        return monitor.Href;
     }
 }
