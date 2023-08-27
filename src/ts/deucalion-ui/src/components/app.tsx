@@ -23,9 +23,11 @@ if (import.meta.env.PROD) {
   logger.disableLogger();
 }
 
+const SWR_OPTIONS = { suspense: true, revalidateOnMount: false, revalidateIfStale: false, revalidateOnFocus: false, revalidateOnReconnect: false };
+
 export const App = () => {
-  const { data: configuration } = useSWR(CONFIGURATION_URL, configurationFetcher, { suspense: true, revalidateOnMount: false });
-  const { data: monitors, mutate: mutateMonitors } = useSWR(MONITORS_URL, monitorsFetcher, { suspense: true, revalidateOnMount: false });
+  const { data: configuration } = useSWR(CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
+  const { data: monitors, mutate: mutateMonitors } = useSWR(MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
 
   const [hubConnectionError, setHubConnectionError] = useState<Error | undefined>(undefined);
   const toast = useToast();
@@ -34,10 +36,7 @@ export const App = () => {
     "MonitorChecked",
     (newEvent: MonitorEventDto) => {
       logger.log("[onMonitorChecked] e=", newEvent);
-      void mutateMonitors<Map<string, MonitorProps>>(
-        (oldMonitors) => oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined,
-        { revalidate: false }
-      );
+      void mutateMonitors<Map<string, MonitorProps>>((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined), { revalidate: false });
     },
     []
   );
