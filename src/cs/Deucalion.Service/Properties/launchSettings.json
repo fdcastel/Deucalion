@@ -8,8 +8,7 @@
       "launchUrl": "",
       "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "DEUCALION_PAGE_TITLE": "Deucalion (dev) 📡"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }

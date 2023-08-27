@@ -33,7 +33,7 @@ WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
     DEUCALION__STORAGEPATH="/storage" \
-    DEUCALION_PAGE_TITLE="Deucalion Status"
+    DEUCALION__PAGETITLE="Deucalion Status"
 
 COPY --from=build-net /app ./
 COPY --from=build-node /source/dist ./wwwroot/

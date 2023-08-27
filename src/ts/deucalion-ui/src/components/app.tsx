@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Container, useToast } from "@chakra-ui/react";
 import { createSignalRContext } from "react-signalr";
 
-import { MonitorChangedDto, MonitorEventDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS } from "../models";
+import { MonitorChangedDto, MonitorEventDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS, DeucalionOptions } from "../models";
 import { Header, Overview, MonitorList } from "./main/index";
 
-import { appendNewEvent, fetchMonitors, logger } from "../services";
+import { appendNewEvent, fetchConfiguration, fetchMonitors, logger } from "../services";
 
 const SignalRContext = createSignalRContext();
 
@@ -14,15 +14,29 @@ if (import.meta.env.PROD) {
   logger.disableLogger();
 }
 
-const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string;
-
+const CONFIGURATION_URL = "/api/configuration";
 const API_URL = "/api/monitors/*";
 const HUB_URL = "/api/monitors/hub";
 
 export const App = () => {
   const toast = useToast();
+  const [configuration, setConfiguration] = useState<DeucalionOptions | undefined>(undefined);
   const [monitors, setMonitors] = useState(EMPTY_MONITORS);
   const [hubConnectionError, setHubConnectionError] = useState<Error | undefined>(undefined);
+
+  useEffect(() => {
+    if (configuration === undefined) {
+      // Fetch configuration only once.
+      logger.log("Fetching configuration.");
+      fetchConfiguration(CONFIGURATION_URL)
+        .then((conf) => {
+          setConfiguration(conf);
+        })
+        .catch(() => {
+          setConfiguration(undefined);
+        });
+    }
+  }, [configuration]);
 
   useEffect(() => {
     if (monitors.size === 0) {
@@ -85,7 +99,7 @@ export const App = () => {
       }}
     >
       <Container padding="4" maxWidth="80em">
-        <Header title={DEUCALION_PAGE_TITLE} />
+        <Header title={configuration?.pageTitle ?? "Deucalion Status"} />
         <Overview monitors={monitors} hubConnection={SignalRContext.connection} hubConnectionError={hubConnectionError} />
         <MonitorList monitors={monitors} />
       </Container>

@@ -21,6 +21,7 @@ public static class Application
         // Configuration
         var deucalionOptions = new DeucalionOptions();
         builder.Configuration.GetSection("Deucalion").Bind(deucalionOptions);
+        builder.Services.AddSingleton(_ => deucalionOptions);
 
         var monitorConfiguration = MonitorConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
         builder.Services.AddSingleton(_ => monitorConfiguration);
@@ -47,6 +48,9 @@ public static class Application
         var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
 
         // Setup Api endpoints
+        app.MapGet("/api/configuration", (DeucalionOptions options) =>
+            new { options.PageTitle });
+
         app.MapGet("/api/monitors", (FasterStorage storage) =>
             monitorConfiguration.Monitors);
 
@@ -75,4 +79,3 @@ public static class Application
         return app;
     }
 }
-

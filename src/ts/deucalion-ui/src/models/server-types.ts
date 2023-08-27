@@ -25,6 +25,10 @@ export interface MonitorChangedDto {
   st: MonitorState;
 }
 
+export interface DeucalionOptions {
+  pageTitle: string;
+}
+
 export const monitorStateToStatus = (state: MonitorState) => {
   switch (state) {
     case MonitorState.Up:

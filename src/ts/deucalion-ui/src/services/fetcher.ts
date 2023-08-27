@@ -1,4 +1,4 @@
-import { MonitorEventDto, MonitorState, MonitorProps, EMPTY_MONITORS } from "../models";
+import { MonitorEventDto, MonitorState, MonitorProps, EMPTY_MONITORS, DeucalionOptions } from "../models";
 
 const addStats = (m: MonitorProps) => {
   if (m.events.length > 0) {
@@ -17,7 +17,17 @@ const addStats = (m: MonitorProps) => {
   return m;
 };
 
-export async function fetchMonitors(url: string) {
+export const fetchConfiguration = async (url: string) => {
+  const response = await fetch(url);
+
+  if (!response.ok) return undefined;
+
+  const json = (await response.json()) as unknown;
+
+  return json ? (json as DeucalionOptions) : undefined;
+};
+
+export const fetchMonitors = async (url: string) => {
   const response = await fetch(url);
 
   if (!response.ok) return EMPTY_MONITORS;
@@ -26,7 +36,7 @@ export async function fetchMonitors(url: string) {
 
   const initialData = json as MonitorProps[];
   return json ? new Map(initialData.map((x: MonitorProps) => [x.name, addStats(x)])) : EMPTY_MONITORS;
-}
+};
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: MonitorEventDto) => {
   const monitorName = newEvent.n ?? "";
@@ -50,4 +60,4 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: Mo
   }
 
   return monitors;
-}
+};

@@ -6,15 +6,3 @@ services:
     build:
       context: ./src/
       dockerfile: ./Dockerfile
-
-  deucalion-api:
-    image: ghcr.io/fdcastel/deucalion-api
-    build:
-      context: ./src/
-      dockerfile: ./Dockerfile.Api
-
-  deucalion-ui:
-    image: ghcr.io/fdcastel/deucalion-ui
-    build:
-      context: ./src/
-      dockerfile: ./Dockerfile.Ui
