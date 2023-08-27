@@ -1,4 +1,5 @@
 ﻿using Deucalion.Api;
+using Deucalion.Service;
 
 // During development use "wwwroot" from publish folder.
 var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == Environments.Development;
@@ -12,10 +13,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions()
 
 builder.Services.AddWindowsService();
 
-var app = builder.ConfigureApplicationBuilder()
+builder.ConfigureApplicationBuilder()
     .Build()
-    .ConfigureApplication();
-
-app.UseFileServer();
-
-app.Run();
+    .ConfigureApplication()
+    .UseCachedFileServer()
+    .Run();
