@@ -1,11 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Container, useToast } from "@chakra-ui/react";
 import { createSignalRContext } from "react-signalr";
 
-import { MonitorChangedDto, MonitorEventDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS, DeucalionOptions } from "../models";
+import { MonitorChangedDto, MonitorEventDto, monitorStateToDescription, monitorStateToStatus, MonitorProps, EMPTY_MONITORS } from "../models";
 import { Header, Overview, MonitorList } from "./main/index";
 
-import { appendNewEvent, fetchConfiguration, fetchMonitors, logger } from "../services";
+import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
+
+import useSWR, { preload } from "swr";
+
+const CONFIGURATION_URL = "/api/configuration";
+const MONITORS_URL = "/api/monitors/*";
+const HUB_URL = "/api/monitors/hub";
+
+void preload(CONFIGURATION_URL, configurationFetcher);
+void preload(MONITORS_URL, monitorsFetcher);
 
 const SignalRContext = createSignalRContext();
 
@@ -14,49 +23,21 @@ if (import.meta.env.PROD) {
   logger.disableLogger();
 }
 
-const CONFIGURATION_URL = "/api/configuration";
-const API_URL = "/api/monitors/*";
-const HUB_URL = "/api/monitors/hub";
-
 export const App = () => {
-  const toast = useToast();
-  const [configuration, setConfiguration] = useState<DeucalionOptions | undefined>(undefined);
-  const [monitors, setMonitors] = useState(EMPTY_MONITORS);
+  const { data: configuration } = useSWR(CONFIGURATION_URL, configurationFetcher, { suspense: true });
+  const { data: monitors, mutate: mutateMonitors } = useSWR(MONITORS_URL, monitorsFetcher, { suspense: true });
+
   const [hubConnectionError, setHubConnectionError] = useState<Error | undefined>(undefined);
-
-  useEffect(() => {
-    if (configuration === undefined) {
-      // Fetch configuration only once.
-      logger.log("Fetching configuration.");
-      fetchConfiguration(CONFIGURATION_URL)
-        .then((conf) => {
-          setConfiguration(conf);
-        })
-        .catch(() => {
-          setConfiguration(undefined);
-        });
-    }
-  }, [configuration]);
-
-  useEffect(() => {
-    if (monitors.size === 0) {
-      // Fetch initial data only once (when allMonitors is empty).
-      logger.log("Fetching initial data.");
-      fetchMonitors(API_URL)
-        .then((initialMonitors) => {
-          setMonitors(initialMonitors);
-        })
-        .catch(() => {
-          setMonitors(EMPTY_MONITORS);
-        });
-    }
-  }, [monitors.size]);
+  const toast = useToast();
 
   SignalRContext.useSignalREffect(
     "MonitorChecked",
     (newEvent: MonitorEventDto) => {
       logger.log("[onMonitorChecked] e=", newEvent);
-      setMonitors((monitors) => appendNewEvent(monitors, newEvent));
+      void mutateMonitors<Map<string, MonitorProps>>(
+        (oldMonitors) => oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined,
+        { revalidate: false }
+      );
     },
     []
   );
@@ -100,8 +81,8 @@ export const App = () => {
     >
       <Container padding="4" maxWidth="80em">
         <Header title={configuration?.pageTitle ?? "Deucalion Status"} />
-        <Overview monitors={monitors} hubConnection={SignalRContext.connection} hubConnectionError={hubConnectionError} />
-        <MonitorList monitors={monitors} />
+        <Overview monitors={monitors ?? EMPTY_MONITORS} hubConnection={SignalRContext.connection} hubConnectionError={hubConnectionError} />
+        <MonitorList monitors={monitors ?? EMPTY_MONITORS} />
       </Container>
     </SignalRContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { MonitorEventDto, MonitorState, MonitorProps, EMPTY_MONITORS, DeucalionOptions } from "../models";
+import { MonitorEventDto, MonitorState, MonitorProps, DeucalionOptions } from "../models";
 
 const addStats = (m: MonitorProps) => {
   if (m.events.length > 0) {
@@ -17,26 +17,19 @@ const addStats = (m: MonitorProps) => {
   return m;
 };
 
-export const fetchConfiguration = async (url: string) => {
-  const response = await fetch(url);
+export const configurationFetcher = (url: string) =>
+  fetch(url)
+    .then((response) => response.json())
+    .then((json) => json as DeucalionOptions | undefined)
+    .catch(() => undefined);
 
-  if (!response.ok) return undefined;
 
-  const json = (await response.json()) as unknown;
-
-  return json ? (json as DeucalionOptions) : undefined;
-};
-
-export const fetchMonitors = async (url: string) => {
-  const response = await fetch(url);
-
-  if (!response.ok) return EMPTY_MONITORS;
-
-  const json = (await response.json()) as unknown;
-
-  const initialData = json as MonitorProps[];
-  return json ? new Map(initialData.map((x: MonitorProps) => [x.name, addStats(x)])) : EMPTY_MONITORS;
-};
+export const monitorsFetcher = (url: string) =>
+  fetch(url)
+    .then((response) => response.json())
+    .then((json) => json as MonitorProps[] | undefined)
+    .then((arr) => (arr ? new Map(arr.map((x) => [x.name, addStats(x)])) : undefined))
+    .catch(() => undefined);
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: MonitorEventDto) => {
   const monitorName = newEvent.n ?? "";

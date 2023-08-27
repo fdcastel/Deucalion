@@ -1,4 +1,4 @@
 export * from "./converters";
-export * from "./fetcher";
+export * from "./fetchers";
 
 export * as logger from "./logger";
