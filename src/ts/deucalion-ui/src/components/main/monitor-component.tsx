@@ -24,16 +24,24 @@ const monitorStateToColor = (state?: MonitorState) => {
 
 interface MonitorComponentProps {
   monitor: MonitorProps;
+  usingImages?: boolean;
 }
 
-export const MonitorComponent = ({ monitor }: MonitorComponentProps) => {
+export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps) => {
   const { name, info, events, stats } = monitor;
+
+  const textOffset = usingImages && !info.image ? "2em" : "0.5em";
 
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex>
-      {info.image ? <Image src={info.image} height="1.5em" marginRight="0.5em" alt="icon" /> : <div />}
-      <Text noOfLines={1} minWidth="8em" color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}>
+      {info.image ? <Image src={info.image} width="1.5em" height="1.5em" alt="icon" /> : <div />}
+      <Text
+        marginLeft={textOffset}
+        noOfLines={1}
+        minWidth="8em"
+        color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}
+      >
         {info.href ? (
           <Link href={info.href} isExternal>
             {name}

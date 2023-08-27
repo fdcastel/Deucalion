@@ -8,7 +8,10 @@ interface MonitorListProps {
 }
 
 export const MonitorList = ({ monitors }: MonitorListProps) => {
-  const groupedMonitors = Array.from(monitors).reduce((groups, [monitorName, monitorProps]) => {
+  const monitorsArray = Array.from(monitors);
+  const usingImages = monitorsArray.findIndex(([_, mp]) => mp.info.image) !== -1;
+
+  const groupedMonitors = monitorsArray.reduce((groups, [monitorName, monitorProps]) => {
     const groupKey = monitorProps.info.group ?? "";
 
     let slot = groups.get(groupKey);
@@ -34,7 +37,7 @@ export const MonitorList = ({ monitors }: MonitorListProps) => {
             <List spacing="1em">
               {Array.from(monitors).map(([monitorName, monitorProps]) => (
                 <ListItem key={monitorName}>
-                  <MonitorComponent monitor={monitorProps} />
+                  <MonitorComponent monitor={monitorProps} usingImages={usingImages} />
                 </ListItem>
               ))}
             </List>
