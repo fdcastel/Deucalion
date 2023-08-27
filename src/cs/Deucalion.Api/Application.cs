@@ -15,7 +15,6 @@ public static class Application
     {
         // Web application
         builder.Services.Configure<JsonOptions>(options => options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull);
-        builder.Services.AddCors();
         builder.Services.AddSignalR();
 
         // Configuration
@@ -36,15 +35,6 @@ public static class Application
 
     public static WebApplication ConfigureApplication(this WebApplication app)
     {
-        // Setup CORS
-        app.UseCors(builder =>
-        {
-            builder
-                .SetIsOriginAllowed(origin => true) // Any origin
-                .AllowCredentials()
-                .AllowAnyHeader();
-        });
-
         var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
 
         // Setup Api endpoints
