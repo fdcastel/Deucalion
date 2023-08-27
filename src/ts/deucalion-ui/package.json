@@ -11,11 +11,12 @@
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.0",
-    "@microsoft/signalr": "^7.0.10",
+    "@microsoft/signalr": "6.0.21",
     "dayjs": "^1.11.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-icons": "^4.10.1"
+    "react-icons": "^4.10.1",
+    "react-signalr": "^0.2.17"
   },
   "devDependencies": {
     "@import-meta-env/cli": "^0.6.4",

@@ -1,21 +1,16 @@
 import * as React from "react";
 
 import { useColorMode, IconButton, IconButtonProps, Icon } from "@chakra-ui/react";
-
 import { MdDarkMode, MdLightMode } from "react-icons/md";
 
-type ThemeSwitcherComponentProps = Omit<IconButtonProps, "aria-label">;
+type ThemeSwitcherProps = Omit<IconButtonProps, "aria-label">;
 
-export const ThemeSwitcherComponent: React.FC<ThemeSwitcherComponentProps> = (props) => {
+export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = (props) => {
   const { colorMode, toggleColorMode } = useColorMode();
 
   return (
     <IconButton
-      size="md"
-      fontSize="lg"
       variant="ghost"
-      color="current"
-      marginLeft="2"
       onClick={toggleColorMode}
       icon={
         <Icon
@@ -30,4 +25,3 @@ export const ThemeSwitcherComponent: React.FC<ThemeSwitcherComponentProps> = (pr
     />
   );
 };
-
