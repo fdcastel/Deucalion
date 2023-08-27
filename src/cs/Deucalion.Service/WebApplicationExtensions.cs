@@ -14,7 +14,8 @@ public static class WebApplicationExtensions
                 headers.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
                 {
                     Public = true,
-                    MaxAge = TimeSpan.FromDays(7)
+                    MaxAge = TimeSpan.FromDays(7),
+                    SharedMaxAge = TimeSpan.FromHours(12)
                 };
             }
         };
