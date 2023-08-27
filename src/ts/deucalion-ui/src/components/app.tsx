@@ -24,8 +24,8 @@ if (import.meta.env.PROD) {
 }
 
 export const App = () => {
-  const { data: configuration } = useSWR(CONFIGURATION_URL, configurationFetcher, { suspense: true });
-  const { data: monitors, mutate: mutateMonitors } = useSWR(MONITORS_URL, monitorsFetcher, { suspense: true });
+  const { data: configuration } = useSWR(CONFIGURATION_URL, configurationFetcher, { suspense: true, revalidateOnMount: false });
+  const { data: monitors, mutate: mutateMonitors } = useSWR(MONITORS_URL, monitorsFetcher, { suspense: true, revalidateOnMount: false });
 
   const [hubConnectionError, setHubConnectionError] = useState<Error | undefined>(undefined);
   const toast = useToast();
