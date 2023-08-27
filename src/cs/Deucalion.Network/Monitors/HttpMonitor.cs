@@ -29,9 +29,12 @@ public class HttpMonitor : PullMonitor
 
     public override async Task<MonitorResponse> QueryAsync()
     {
-        HttpRequestMessage request = new(HttpMethod.Get, Url);
-        ProductInfoHeaderValue userAgentValue = new("Deucalion", "1.0");
-        request.Headers.UserAgent.Add(userAgentValue);
+        // Uses HEAD if response body is not needed. GET otherwise.
+        var method = ExpectedResponseBodyPattern is not null ? HttpMethod.Get : HttpMethod.Head;
+
+        var request = new HttpRequestMessage(method, Url);
+
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("Deucalion", "1.0"));
 
         var httpClient = IgnoreCertificateErrors ?? false
             ? CachedHttpClientIgnoreCertificate
