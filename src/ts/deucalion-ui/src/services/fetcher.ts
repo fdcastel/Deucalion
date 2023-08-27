@@ -17,7 +17,7 @@ const addStats = (m: MonitorProps) => {
   return m;
 };
 
-export async function fetchMonitors(url: URL) {
+export async function fetchMonitors(url: string) {
   const response = await fetch(url);
 
   if (!response.ok) return EMPTY_MONITORS;

@@ -21,7 +21,6 @@ FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 
 ENV DEUCALION_PAGE_TITLE="Deucalion Status" \
-    DEUCALION_API_URL="" \
     DEUCALION_PROXY_API_URL="http://deucalion-api"
 
 COPY --from=build /source/dist ./

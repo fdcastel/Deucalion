@@ -15,10 +15,9 @@ if (import.meta.env.PROD) {
 }
 
 const DEUCALION_PAGE_TITLE = import.meta.env.DEUCALION_PAGE_TITLE as string;
-const DEUCALION_API_URL = import.meta.env.DEUCALION_API_URL ? (import.meta.env.DEUCALION_API_URL as string) : window.location.origin;
 
-const API_URL = new URL("/api/monitors/*", DEUCALION_API_URL);
-const HUB_URL = new URL("/api/monitors/hub", DEUCALION_API_URL);
+const API_URL = "/api/monitors/*";
+const HUB_URL = "/api/monitors/hub";
 
 export const App = () => {
   const toast = useToast();

@@ -24,7 +24,6 @@ public static class WebApplicationExtensions
                 }
 
                 var pageTitle = Environment.GetEnvironmentVariable("DEUCALION_PAGE_TITLE") ?? string.Empty;
-                var apiUrl = Environment.GetEnvironmentVariable("DEUCALION_API_URL") ?? string.Empty;
 
                 var indexFile = app.Environment.WebRootFileProvider.GetFileInfo("/index.html").PhysicalPath;
                 if (indexFile is not null)
@@ -33,7 +32,7 @@ public static class WebApplicationExtensions
 
                     var newContent = indexContent.Replace(
                         "\"import_meta_env_placeholder\"",
-                        GetImportMetaEnvJson(pageTitle, apiUrl)
+                        GetImportMetaEnvJson(pageTitle)
                     );
 
                     using var bodyWriter = new StreamWriter(context.Response.Body);
@@ -49,10 +48,9 @@ public static class WebApplicationExtensions
         return app;
     }
 
-    private static string GetImportMetaEnvJson(string pageTitle, string apiUrl) =>
+    private static string GetImportMetaEnvJson(string pageTitle) =>
         JsonSerializer.Serialize(new
         {
             DEUCALION_PAGE_TITLE = pageTitle,
-            DEUCALION_API_URL = apiUrl,
         });
 }
