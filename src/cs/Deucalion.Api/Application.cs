@@ -31,6 +31,8 @@ public static class Application
         // Configuration
         var deucalionOptions = new DeucalionOptions();
         builder.Configuration.GetSection("Deucalion").Bind(deucalionOptions);
+        deucalionOptions.PageTitle ??= "Deucalion status";
+        deucalionOptions.PageDescription ??= "Deucalion. A high performance monitoring tool.";
         builder.Services.AddSingleton(_ => deucalionOptions);
 
         var monitorConfiguration = MonitorConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
@@ -52,7 +54,7 @@ public static class Application
 
         // Setup Api endpoints
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
-            new { options.PageTitle });
+            new { options.PageTitle, options.PageDescription });
 
         app.MapGet("/api/monitors", (FasterStorage storage) =>
             monitorConfiguration.Monitors);

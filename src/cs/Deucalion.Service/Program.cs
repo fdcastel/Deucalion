@@ -16,5 +16,6 @@ builder.Services.AddWindowsService();
 builder.ConfigureApplicationBuilder()
     .Build()
     .ConfigureApplication()
+    .UseIndexPage()    // Must be called before .UseCachedFileServer()
     .UseCachedFileServer()
     .Run();
