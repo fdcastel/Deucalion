@@ -7,6 +7,7 @@ using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Deucalion.Api;
 
@@ -17,6 +18,15 @@ public static class Application
         // Web application
         builder.Services.Configure<JsonOptions>(options => options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull);
         builder.Services.AddSignalR();
+
+        // Response compression
+        builder.Services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+            options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "image/svg+xml" });
+        });
 
         // Configuration
         var deucalionOptions = new DeucalionOptions();
@@ -37,6 +47,8 @@ public static class Application
     public static WebApplication ConfigureApplication(this WebApplication app)
     {
         var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
+
+        app.UseResponseCompression();
 
         // Setup Api endpoints
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
