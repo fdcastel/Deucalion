@@ -49,6 +49,7 @@ public class MonitorConfiguration
             .WithTagMapping("!http", typeof(HttpMonitor))
             .WithTagMapping("!ping", typeof(PingMonitor))
             .WithTagMapping("!tcp", typeof(TcpMonitor))
+            .WithTypeConverter(new HttpMethodConverter())
             .WithValidation()
             .Build();
 

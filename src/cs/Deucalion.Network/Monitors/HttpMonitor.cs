@@ -26,11 +26,13 @@ public class HttpMonitor : PullMonitor
     public HttpStatusCode? ExpectedStatusCode { get; set; }
     public string? ExpectedResponseBodyPattern { get; set; }
     public bool? IgnoreCertificateErrors { get; set; }
+    public HttpMethod? Method { get; set; }
 
     public override async Task<MonitorResponse> QueryAsync()
     {
-        // Uses HEAD if response body is not needed. GET otherwise.
-        var method = ExpectedResponseBodyPattern is not null ? HttpMethod.Get : HttpMethod.Head;
+        var method = Method ??
+            // Uses HEAD when response body is not needed. GET otherwise.
+            (ExpectedResponseBodyPattern is not null ? HttpMethod.Get : HttpMethod.Head);
 
         var request = new HttpRequestMessage(method, Url);
 
