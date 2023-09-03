@@ -1,4 +1,4 @@
-import { MonitorEventDto, MonitorState, MonitorProps, DeucalionOptions } from "../models";
+import { MonitorCheckedDto, MonitorState, MonitorProps, DeucalionOptions } from "../models";
 
 const addStats = (m: MonitorProps) => {
   if (m.events.length > 0) {
@@ -31,7 +31,7 @@ export const monitorsFetcher = (url: string) =>
     .then((arr) => (arr ? new Map(arr.map((x) => [x.name, addStats(x)])) : undefined))
     .catch(() => undefined);
 
-export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: MonitorEventDto) => {
+export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: MonitorCheckedDto) => {
   const monitorName = newEvent.n ?? "";
   const monitor = monitors.get(monitorName);
 

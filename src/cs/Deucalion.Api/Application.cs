@@ -70,7 +70,7 @@ public static class Application
                     Image: monitorConfiguration.Monitors[m].Image
                 ),
                 Events = from e in storage.GetLastEvents(m)
-                         select new MonitorEventDto(
+                         select new MonitorCheckedDto(
                              N: null,
                              At: e.At.ToUnixTimeSeconds(),
                              St: e.Response?.State ?? MonitorState.Unknown,

@@ -1,9 +1,9 @@
 import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import { dateTimeFromNow } from "../../services";
-import { MonitorEventDto, MonitorState, MonitorProps } from "../../models";
+import { MonitorCheckedDto, MonitorState, MonitorProps } from "../../models";
 
-const formatMonitorEvent = (e: MonitorEventDto) => {
+const formatMonitorEvent = (e: MonitorCheckedDto) => {
   const at = dateTimeFromNow(e.at);
   const timeStamp = e.ms ? `${at}: ${e.ms}ms` : at;
   return e.te ? `${timeStamp} (${e.te})` : timeStamp;

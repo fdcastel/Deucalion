@@ -1,41 +1,56 @@
 defaults:
-    intervalWhenUp: 00:00:03
-    intervalWhenDown: 00:00:03
+  intervalWhenUp: 00:00:03
+  intervalWhenDown: 00:00:03
 
 monitors:
-  ping-ms:
-    !ping
-    host: microsoft.com
-    
-  dns-cf:
-    !dns
+  # Cloudflare
+  dns-cf: !dns
     host: google.com
     recordType: A
     resolver: 1.1.1.1:53
     group: Cloudflare
-    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/cloudflare.svg
 
-  http-cf:
-    !http
+  http-cf: !http
     url: https://cloudflare.com
     warnTimeout: 00:00:00.250
     timeout: 00:00:02
+    href: https://example.com
     group: Cloudflare
-    href: https://cloudflare.com
-    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/cloudflare.svg
 
-  http-goog:
-    !http
-    url: https://google.com
-    expectedStatusCode: 200
-    expectedResponseBodyPattern: .*
-    ignoreCertificateErrors: true
+  # Google
+  dns-goog: !dns
+    host: google.com
+    recordType: A
+    resolver: 8.8.8.8:53
     group: Google
-    href: https://google.com
-    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/google.svg
 
-  ping-goog:
-    !ping
+  http-goog: !http
+    url: https://google.com
+    group: Google
+
+  ping-goog: !ping
     host: google.com
     group: Google
+
+  # Microsoft
+  ping-ms: !ping
+    host: microsoft.com
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/microsoft.svg
+    group: Microsoft
+
+  # Search engines
+  qry-bing: !http
+    url: https://bing.com/search?q=deucalion
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/bing.svg
+    group: Search engines
+
+  qry-duck: !http
+    url: https://duckduckgo.com/q=deucalion
+    image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/duckduckgo.svg
+    href: ""
+    group: Search engines
+
+  qry-goog: !http
+    url: https://google.com/search?q=deucalion
     image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/google.svg
+    group: Search engines

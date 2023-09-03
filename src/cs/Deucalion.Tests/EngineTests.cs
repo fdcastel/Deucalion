@@ -22,7 +22,7 @@ public class EngineTests
     {
         const string CheckedInEvent = "CheckedIn";
         const string CheckInMissedEvent = "CheckInMissed";
-        const string StateChangedEvent = "StateChanged";
+        const string MonitorStateChangedEvent = "MonitorStateChanged";
 
         var pulse = TimeSpan.FromMilliseconds(500);
 
@@ -40,7 +40,7 @@ public class EngineTests
             var eventType = monitorEvent switch
             {
                 MonitorChecked mr => mr.Response is null ? CheckInMissedEvent : CheckedInEvent,
-                MonitorStateChanged => StateChangedEvent,
+                MonitorStateChanged => MonitorStateChangedEvent,
                 _ => string.Empty
             };
             eventCount.AddOrUpdate(eventType, 1, (k, v) => Interlocked.Increment(ref v));
@@ -77,7 +77,7 @@ public class EngineTests
 
         Assert.Equal(6, eventCount[CheckedInEvent]);
         Assert.Equal(2, eventCount[CheckInMissedEvent]);
-        Assert.Equal(4, eventCount[StateChangedEvent]);
+        Assert.Equal(4, eventCount[MonitorStateChangedEvent]);
     }
 
     [Fact]

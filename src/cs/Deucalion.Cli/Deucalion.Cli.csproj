@@ -11,8 +11,4 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="7.0.10" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Deucalion.Core\Deucalion.Core.csproj" />
-  </ItemGroup>
-
 </Project>

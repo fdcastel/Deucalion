@@ -11,7 +11,7 @@ export interface MonitorInfoDto {
   image?: string;
 }
 
-export interface MonitorEventDto {
+export interface MonitorCheckedDto {
   n?: string;
   at: number;
   st: MonitorState;

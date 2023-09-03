@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Container, useToast } from "@chakra-ui/react";
 import { createSignalRContext } from "react-signalr";
 
-import { MonitorEventDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, MonitorProps, EMPTY_MONITORS } from "../models";
+import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, MonitorProps, EMPTY_MONITORS } from "../models";
 import { Header, Overview, MonitorList } from "./main/index";
 
 import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
@@ -34,7 +34,7 @@ export const App = () => {
 
   SignalRContext.useSignalREffect(
     "MonitorChecked",
-    (newEvent: MonitorEventDto) => {
+    (newEvent: MonitorCheckedDto) => {
       logger.log("[onMonitorChecked] e=", newEvent);
       void mutateMonitors<Map<string, MonitorProps>>((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined), { revalidate: false });
     },

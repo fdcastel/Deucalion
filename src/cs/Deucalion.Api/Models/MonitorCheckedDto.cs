@@ -2,7 +2,7 @@
 
 namespace Deucalion.Api.Models;
 
-public record MonitorEventDto(
+public record MonitorCheckedDto(
     string? N,
     long At,
     MonitorState St,
