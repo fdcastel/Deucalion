@@ -2,7 +2,7 @@
 
 namespace Deucalion.Api.Models;
 
-public record MonitorChangedDto(
+public record MonitorStateChangedDto(
     string N,
     DateTimeOffset At,
     MonitorState St

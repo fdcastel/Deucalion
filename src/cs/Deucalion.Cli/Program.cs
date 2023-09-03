@@ -8,8 +8,8 @@ var hubConnection = new HubConnectionBuilder()
     .WithAutomaticReconnect()
     .Build();
 
-hubConnection.On<StateChanged>("StateChanged", Console.WriteLine);
 hubConnection.On<MonitorChecked>("MonitorChecked", Console.WriteLine);
+hubConnection.On<MonitorStateChanged>("StateChanged", Console.WriteLine);
 
 await hubConnection.StartAsync();
 Console.WriteLine("Connected to hub. Press any key to close.");

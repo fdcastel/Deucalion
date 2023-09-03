@@ -87,7 +87,7 @@ public class Engine
                 if (hasStateChanged)
                 {
                     // Notify change
-                    callback(new StateChanged(name, at, newState));
+                    callback(new MonitorStateChanged(name, at, newState));
 
                     if (monitor is PullMonitor pullMonitor)
                     {

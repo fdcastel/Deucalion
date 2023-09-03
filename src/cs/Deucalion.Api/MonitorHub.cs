@@ -5,9 +5,9 @@ namespace Deucalion.Api;
 
 public class MonitorHub : Hub<IMonitorHubClient>
 {
-    public async Task MonitorChanged(MonitorChangedDto e) =>
-        await Clients.All.MonitorChanged(e);
-
     public async Task MonitorChecked(MonitorEventDto e) =>
         await Clients.All.MonitorChecked(e);
+
+    public async Task MonitorStateChanged(MonitorStateChangedDto e) =>
+        await Clients.All.MonitorStateChanged(e);
 }

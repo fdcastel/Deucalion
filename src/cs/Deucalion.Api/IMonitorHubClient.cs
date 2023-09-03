@@ -4,7 +4,6 @@ namespace Deucalion.Api;
 
 public interface IMonitorHubClient
 {
-    Task MonitorChanged(MonitorChangedDto e);
-
     Task MonitorChecked(MonitorEventDto e);
+    Task MonitorStateChanged(MonitorStateChangedDto e);
 }

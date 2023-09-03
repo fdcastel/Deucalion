@@ -39,8 +39,8 @@ public class EngineTests
 
             var eventType = monitorEvent switch
             {
-                StateChanged => StateChangedEvent,
                 MonitorChecked mr => mr.Response is null ? CheckInMissedEvent : CheckedInEvent,
+                MonitorStateChanged => StateChangedEvent,
                 _ => string.Empty
             };
             eventCount.AddOrUpdate(eventType, 1, (k, v) => Interlocked.Increment(ref v));
@@ -126,7 +126,7 @@ public class EngineTests
         }
 
         Assert.Equal(10, eventCount[typeof(MonitorChecked)]);
-        Assert.Equal(3, eventCount[typeof(StateChanged)]);
+        Assert.Equal(3, eventCount[typeof(MonitorStateChanged)]);
     }
 
     [Fact]
@@ -166,6 +166,6 @@ public class EngineTests
         }
 
         Assert.Equal(14, eventCount[typeof(MonitorChecked)]);
-        Assert.Equal(2, eventCount[typeof(StateChanged)]);
+        Assert.Equal(2, eventCount[typeof(MonitorStateChanged)]);
     }
 }

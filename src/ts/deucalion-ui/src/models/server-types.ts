@@ -19,7 +19,7 @@ export interface MonitorEventDto {
   te?: string;
 }
 
-export interface MonitorChangedDto {
+export interface MonitorStateChangedDto {
   n: string;
   at: number;
   st: MonitorState;
