@@ -104,6 +104,22 @@ public class MonitorConfigurationTests
         Assert.Equal(65000, tcpMonitor.Port);
     }
 
+    [Fact]
+    public void MonitorCheckIn_CanDeserialize_FromConfiguration()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mcheckin:
+                !checkin
+                secret: passw0rd
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var checkInMonitor = Assert.IsType<CheckInMonitor>(monitor);
+        Assert.Equal("mcheckin", checkInMonitor.Name);
+        Assert.Equal("passw0rd", checkInMonitor.Secret);
+    }
+
     private static ConfigurationErrorException CatchConfigurationException(string configuration) =>
         Assert.Throws<ConfigurationErrorException>(() =>
         {

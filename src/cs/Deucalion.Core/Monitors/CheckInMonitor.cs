@@ -6,6 +6,8 @@ public sealed class CheckInMonitor : PushMonitor, IDisposable
     private Timer? _resetTimer;
     private bool _disposed;
 
+    public string? Secret { get; set; }
+
     public event EventHandler? CheckedInEvent;
     public event EventHandler? TimedOutEvent;
 
