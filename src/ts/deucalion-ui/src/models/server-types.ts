@@ -51,6 +51,6 @@ export const monitorStateToDescription = (state: MonitorState) => {
     case MonitorState.Down:
       return "Is down.";
     default:
-      return "---";
+      return "Is unknown";
   }
 };

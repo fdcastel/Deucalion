@@ -54,3 +54,8 @@ monitors:
     url: https://google.com/search?q=deucalion
     image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/google.svg
     group: Search engines
+
+  # Check-in monitors
+  chk-test: !checkin
+    secret: passw0rd
+    group: Others

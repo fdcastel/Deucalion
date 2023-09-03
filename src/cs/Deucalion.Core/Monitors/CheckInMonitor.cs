@@ -29,25 +29,26 @@ public sealed class CheckInMonitor : PushMonitor, IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (!_disposed)
         {
-            return;
+            _resetTimer?.Dispose();
+            _disposed = true;
         }
-
-        _resetTimer?.Dispose();
-        _disposed = true;
     }
 
     private void OnCheckedInEvent(MonitorResponse? response = null)
     {
-        // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-publish-events-that-conform-to-net-framework-guidelines#example
+        // Make a temporary copy of the event -- https://t.ly/9iROC
         var checkedInEvent = CheckedInEvent;
+
         checkedInEvent?.Invoke(this, response ?? EventArgs.Empty);
     }
 
     private void OnTimedOutEvent()
     {
+        // Make a temporary copy of the event -- https://t.ly/9iROC
         var timedOutEvent = TimedOutEvent;
+
         timedOutEvent?.Invoke(this, EventArgs.Empty);
     }
 

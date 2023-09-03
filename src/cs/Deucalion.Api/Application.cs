@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Deucalion.Api.Http;
 using Deucalion.Api.Models;
 using Deucalion.Api.Options;
 using Deucalion.Api.Services;
@@ -6,7 +7,7 @@ using Deucalion.Application.Configuration;
 using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Deucalion.Storage;
-using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Deucalion.Api;
@@ -15,8 +16,17 @@ public static class Application
 {
     public static WebApplicationBuilder ConfigureApplicationBuilder(this WebApplicationBuilder builder)
     {
-        // Web application
-        builder.Services.Configure<JsonOptions>(options => options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull);
+        // Json
+        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+        {
+            // Adds enum deserialization -- https://stackoverflow.com/a/73980661/33244
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+            // Ignore nulls -- https://stackoverflow.com/a/60005662/33244
+            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
+        });
+
+        // SignalR
         builder.Services.AddSignalR();
 
         // Response compression
@@ -28,7 +38,7 @@ public static class Application
             options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "image/svg+xml" });
         });
 
-        // Configuration
+        // Application configuration
         var deucalionOptions = new DeucalionOptions();
         builder.Configuration.GetSection("Deucalion").Bind(deucalionOptions);
         deucalionOptions.PageTitle ??= "Deucalion status";
@@ -48,11 +58,14 @@ public static class Application
 
     public static WebApplication ConfigureApplication(this WebApplication app)
     {
-        var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
+        app.UseExceptionHandler(exceptionHandlerApp =>
+            exceptionHandlerApp.Run(async context => await Results.Problem().ExecuteAsync(context))
+        );
 
         app.UseResponseCompression();
 
         // Setup Api endpoints
+        var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
             new { options.PageTitle, options.PageDescription });
 
@@ -78,6 +91,30 @@ public static class Application
                              Te: e.Response?.ResponseText
                          )
             });
+
+        app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, [FromBody] MonitorCheckInDto arguments) =>
+        {
+            if (monitorConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
+            {
+                var instanceUri = $"/api/monitors/{monitorName}";
+
+                if (monitor is CheckInMonitor cim)
+                {
+                    if (cim.Secret is not null && cim.Secret != arguments.Secret)
+                    {
+                        return DeucalionResults.InvalidCheckInSecret(monitorName, instanceUri);
+                    }
+
+                    cim.CheckIn(arguments.ToMonitorResponse());
+
+                    return Results.Ok();
+                }
+
+                return DeucalionResults.NotCheckInMonitor(monitorName, instanceUri);
+            }
+
+            return DeucalionResults.MonitorNotFound(monitorName);
+        });
 
         // Setup SignalR hubs
         app.MapHub<MonitorHub>("/api/monitors/hub");
