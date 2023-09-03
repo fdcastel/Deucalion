@@ -98,7 +98,12 @@ public class Engine
 
                         // Subtract from next dueTime the elapsed time since the current timer event.
                         var deltaUntilNow = DateTimeOffset.UtcNow - timerEventAt;
-                        status.QueryTimer?.Change(dueTime - deltaUntilNow, dueTime);
+                        var remaining = dueTime - deltaUntilNow;
+
+                        // Avoid exception when debugging with breakpoints.
+                        remaining = remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+
+                        status.QueryTimer?.Change(remaining, dueTime);
                     }
                 }
 
