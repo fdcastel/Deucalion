@@ -1,5 +1,5 @@
 # build image for .net
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-net
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-net
 WORKDIR /source
 
 COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
@@ -28,7 +28,7 @@ COPY ts/deucalion-ui/ .
 RUN npm run build
 
 # final image
-FROM mcr.microsoft.com/dotnet/aspnet:7.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
