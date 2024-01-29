@@ -23,7 +23,7 @@ services:
     container_name: deucalion
     image: ghcr.io/fdcastel/deucalion:latest
     ports:
-     - 80:80
+     - 80:8080
     environment:
       - DEUCALION__PAGETITLE=Deucalion status
     volumes:
@@ -79,7 +79,7 @@ monitors:
 
 Open `Deucalion.sln` with Visual Studio 2022. 
 
-Start both `Deucalion.Api` and `deucalion-ui` projects. Solution is already configured to start both projects on `F5`.
+Start both `Deucalion.Api` and `deucalion-ui` projects. You may [set multiple startup projects](https://learn.microsoft.com/en-us/visualstudio/ide/how-to-set-multiple-startup-projects) for this.
 
 Do not use `Deucalion.Service` for debugging. It uses a static (pre-built) version of UI (you should run `Invoke-Build` first).
 
