@@ -19,9 +19,6 @@ public static class Application
         // Json
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
         {
-            // Adds enum deserialization -- https://stackoverflow.com/a/73980661/33244
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-
             // Ignore nulls -- https://stackoverflow.com/a/60005662/33244
             options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
         });
