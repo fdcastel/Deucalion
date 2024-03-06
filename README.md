@@ -20,6 +20,7 @@ version: "3.9"
 
 services:
   deucalion:
+    user: root
     container_name: deucalion
     image: ghcr.io/fdcastel/deucalion:latest
     ports:
@@ -90,6 +91,3 @@ Install [`Invoke-Build`](https://github.com/nightroman/Invoke-Build).
 `Invoke-Build`  or `Invoke-Build build` will put all artifacts in `./publish` folder.
 
 `Invoke-Build test` will build and start a production version using `./deucalion-sample.yaml` configuration.
-
- To build docker images use `docker-compose build`.
- 

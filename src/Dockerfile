@@ -1,5 +1,8 @@
+# Reference: https://github.com/dotnet/dotnet-docker/blob/main/samples/aspnetapp/Dockerfile
+
 # build image for .net
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-net
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build-net
+ARG TARGETARCH
 WORKDIR /source
 
 COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
@@ -9,14 +12,14 @@ COPY cs/Deucalion.Network/*.csproj ./Deucalion.Network/
 COPY cs/Deucalion.Storage/*.csproj ./Deucalion.Storage/
 COPY cs/Deucalion.Service/*.csproj ./Deucalion.Service/
 
-RUN dotnet restore Deucalion.Service
+RUN dotnet restore Deucalion.Service -a $TARGETARCH
 
 COPY cs/ .
 WORKDIR /source/Deucalion.Service
-RUN dotnet publish -c release -o /app -p:DebugType=None --no-restore
+RUN dotnet publish -c release -o /app -p:DebugType=None --no-restore -a $TARGETARCH
 
 # build image for NodeJs
-FROM node:lts-alpine AS build-node
+FROM --platform=$BUILDPLATFORM node:lts-alpine AS build-node
 WORKDIR /source
 
 RUN npm install -g vite
@@ -38,4 +41,5 @@ ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
 COPY --from=build-net /app ./
 COPY --from=build-node /source/dist ./wwwroot/
 
+USER $APP_UID
 ENTRYPOINT ["dotnet", "Deucalion.Service.dll"]
