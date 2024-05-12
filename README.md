@@ -2,7 +2,7 @@
 
 Minimal project for systems monitoring. When Grafana + Prometheus is overkill.
 
-This is not a "Status Page" project. There is no intention to add alerts, incidents history, push notifications, or CRUD UIs to configure everything. 
+This is not a "Status Page" project. There is no intention to add alerts, incident histories, push notifications, or CRUD UIs to configure everything.
 
 Just put up a simple configuration file, start the service, and you are done.
 
@@ -47,7 +47,7 @@ monitors:
     port: 443
     intervalWhenUp: 00:00:03
     group: Cloudflare
-    
+
   dns-example:
     !dns
     host: google.com
@@ -76,13 +76,31 @@ monitors:
   - [K.I.S.S.](https://en.wikipedia.org/wiki/KISS_principle)
   - [Do One Thing And Do It Well](https://en.wikipedia.org/wiki/Unix_philosophy): Not a "Status Page" (with incidents, justifications, etc)
 
+
+
+## Projects overview:
+
+  - `Deucalion.Core`: Base types and events shared between servers and clients.
+  - `Deucalion.Application`: Core engine and configuration.
+  - `Deucalion.Network`: Base network monitors.
+  - `Deucalion.Storage`: Persistence and statistics.
+  - `Deucalion.Api`: Server-side Asp.Net Web Api application.
+  - `Deucalion.Service`: Service Host for `Deucalion.Api`. Can run as a Service on Windows.
+  - `deucalion-ui`: Client-side React application.
+  - `Deucalion.Tests`: xUnit tests.
+  - `Deucalion.Cli`: Sample command-line SignalR client.
+
+
+
 ## How to debug
 
-Open `Deucalion.sln` with Visual Studio 2022. 
+Open `Deucalion.sln` with Visual Studio 2022.
 
 Start both `Deucalion.Api` and `deucalion-ui` projects. You may [set multiple startup projects](https://learn.microsoft.com/en-us/visualstudio/ide/how-to-set-multiple-startup-projects) for this.
 
 Do not use `Deucalion.Service` for debugging. It uses a static (pre-built) version of UI (you should run `Invoke-Build` first).
+
+
 
 ## How to build
 
