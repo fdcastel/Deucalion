@@ -74,7 +74,7 @@ public static class Application
             select new
             {
                 Name = m,
-                Info = new MonitorInfoDto(
+                Config = new MonitorConfigurationDto(
                     Group: monitorConfiguration.Monitors[m].Group,
                     Href: ExtractHref(monitorConfiguration.Monitors[m]),
                     Image: monitorConfiguration.Monitors[m].Image

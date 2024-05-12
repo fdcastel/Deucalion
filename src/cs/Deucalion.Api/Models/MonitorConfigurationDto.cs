@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Api.Models;
 
-public record MonitorInfoDto(
+public record MonitorConfigurationDto(
     string? Group,
     string? Href,
     string? Image

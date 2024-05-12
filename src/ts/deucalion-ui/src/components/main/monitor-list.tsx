@@ -9,10 +9,10 @@ interface MonitorListProps {
 
 export const MonitorList = ({ monitors }: MonitorListProps) => {
   const monitorsArray = Array.from(monitors);
-  const usingImages = monitorsArray.findIndex(([_, mp]) => mp.info.image) !== -1;
+  const usingImages = monitorsArray.findIndex(([_, mp]) => mp.config.image) !== -1;
 
   const groupedMonitors = monitorsArray.reduce((groups, [monitorName, monitorProps]) => {
-    const groupKey = monitorProps.info.group ?? "";
+    const groupKey = monitorProps.config.group ?? "";
 
     let slot = groups.get(groupKey);
     if (slot === undefined) {

@@ -42,7 +42,7 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: Mo
 
       const newMonitorProps = addStats({
         name: monitorName,
-        info: monitor.info,
+        config: monitor.config,
         events: [...monitor.events, newEvent].slice(-60), // keep only the last 60
       });
 

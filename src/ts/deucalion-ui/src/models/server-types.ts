@@ -5,7 +5,7 @@ export enum MonitorState {
   Warn = 2,
 }
 
-export interface MonitorInfoDto {
+export interface MonitorConfigurationDto {
   group?: string;
   href?: string;
   image?: string;
