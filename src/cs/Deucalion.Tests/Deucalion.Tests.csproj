@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Deucalion.Application\Deucalion.Application.csproj" />
     <ProjectReference Include="..\Deucalion.Core\Deucalion.Core.csproj" />
     <ProjectReference Include="..\Deucalion.Network\Deucalion.Network.csproj" />
+    <ProjectReference Include="..\Deucalion.Storage\Deucalion.Storage.csproj" />
   </ItemGroup>
 
 </Project>
