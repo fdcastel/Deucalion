@@ -56,6 +56,7 @@ public class EngineBackgroundService : BackgroundService
                 break;
 
             case MonitorStateChanged sc:
+                _storage.AddStateChangeEvent(sc.Name, sc.At, sc.NewState);
                 await _hubContext.Clients.All.MonitorStateChanged(new MonitorStateChangedDto(
                     N: sc.Name,
                     At: sc.At,

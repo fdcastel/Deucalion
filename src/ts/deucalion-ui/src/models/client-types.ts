@@ -1,4 +1,4 @@
-import { MonitorCheckedDto, MonitorConfigurationDto, MonitorState } from "./server-types";
+import { MonitorCheckedDto, MonitorConfigurationDto, MonitorState, MonitorSummaryDto } from "./server-types";
 
 export const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
@@ -12,6 +12,7 @@ export interface MonitorStats {
 export interface MonitorProps {
   name: string;
   config: MonitorConfigurationDto;
+  summary: MonitorSummaryDto;
   events: MonitorCheckedDto[];
   stats?: MonitorStats;
 }

@@ -67,17 +67,20 @@ public static class Application
             new { options.PageTitle, options.PageDescription });
 
         app.MapGet("/api/monitors", (FasterStorage storage) =>
-            monitorConfiguration.Monitors);
-
-        app.MapGet("/api/monitors/*", (FasterStorage storage) =>
             from m in monitorConfiguration.Monitors.Keys
+            let c = monitorConfiguration.Monitors[m]
+            let s = storage.GetSummary(m)
             select new
             {
                 Name = m,
                 Config = new MonitorConfigurationDto(
-                    Group: monitorConfiguration.Monitors[m].Group,
-                    Href: ExtractHref(monitorConfiguration.Monitors[m]),
-                    Image: monitorConfiguration.Monitors[m].Image
+                    Group: c.Group,
+                    Href: ExtractHref(c),
+                    Image: c.Image
+                ),
+                Summary = new MonitorSummaryDto(
+                    s.LastUp?.ToUnixTimeSeconds(),
+                    s.LastDown?.ToUnixTimeSeconds()
                 ),
                 Events = from e in storage.GetLastEvents(m)
                          select new MonitorCheckedDto(

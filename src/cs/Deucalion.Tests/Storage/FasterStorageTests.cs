@@ -10,7 +10,7 @@ public class FasterStorageTests
     [Fact]
     public async Task FasterStorage_Works()
     {
-        var storagePath = Path.Join(Path.GetTempPath(), "Deucalion.Tests.Storage");
+        var storagePath = Path.Combine(Path.GetTempPath(), "Deucalion.Tests.Storage");
         if (Directory.Exists(storagePath))
         {
             Directory.Delete(storagePath, true);
@@ -20,12 +20,14 @@ public class FasterStorageTests
 
         var e1 = new MonitorChecked("m1", DateTimeOffset.Now, MonitorResponse.Up(TimeSpan.FromSeconds(1), "test"));
         storage.AddEvent(e1.Name, StoredEvent.From(e1));
+        storage.AddStateChangeEvent(e1.Name, e1.At, MonitorState.Up);
 
         var e2 = new MonitorChecked("m2", DateTimeOffset.Now, MonitorResponse.Warn(TimeSpan.FromSeconds(2), "warn"));
         storage.AddEvent(e2.Name, StoredEvent.From(e2));
 
         var e3 = new MonitorChecked("m2", DateTimeOffset.Now, MonitorResponse.Down());
         storage.AddEvent(e3.Name, StoredEvent.From(e3));
+        storage.AddStateChangeEvent(e3.Name, e3.At, MonitorState.Down);
 
         await storage.CommitAllAsync();
 
@@ -40,7 +42,22 @@ public class FasterStorageTests
         var ee3 = StoredEvent.From(e3);
         Assert.Equal(ee3, evs2.Skip(1).First());
 
-        var mons = storage.GetMonitors().ToList();
-        Assert.Equal(2, mons.Count);
+        var s1 = storage.GetSummary("m1");
+        Assert.Equal(e1.At.Truncate(), s1.LastUp);
+        Assert.Null(s1.LastDown);
+
+        var s2 = storage.GetSummary("m2");
+        Assert.Null(s2.LastUp);
+        Assert.Equal(e3.At.Truncate(), s2.LastDown);
+    }
+}
+
+public static class DateTimeOffsetExtensions
+{
+    public static DateTimeOffset Truncate(this DateTimeOffset dateTime, TimeSpan? timeSpan = null)
+    {
+        // https://stackoverflow.com/a/1005222/33244
+        timeSpan ??= TimeSpan.FromSeconds(1);
+        return dateTime.AddTicks(-(dateTime.Ticks % timeSpan.Value.Ticks));
     }
 }

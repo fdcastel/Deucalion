@@ -1,4 +1,4 @@
-import { MonitorCheckedDto, MonitorState, MonitorProps, DeucalionOptions } from "../models";
+import { DeucalionOptions, MonitorState, MonitorProps, MonitorCheckedDto, MonitorStateChangedDto } from "../models";
 
 const addStats = (m: MonitorProps) => {
   if (m.events.length > 0) {
@@ -43,6 +43,7 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: Mo
       const newMonitorProps = addStats({
         name: monitorName,
         config: monitor.config,
+        summary: monitor.summary,
         events: [...monitor.events, newEvent].slice(-60), // keep only the last 60
       });
 
@@ -50,6 +51,32 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, newEvent: Mo
 
       return newMonitors;
     }
+  }
+
+  return monitors;
+};
+
+export const updateSummary = (monitors: Map<string, MonitorProps>, newEvent: MonitorStateChangedDto) => {
+  const monitorName = newEvent.n ?? "";
+  const monitor = monitors.get(monitorName);
+
+  if (monitor) {
+      const newMonitors = new Map(monitors);
+
+      const newSummary = {
+        lastUp: monitor.summary.lastUp,
+        lastDown: monitor.summary.lastDown
+      }    
+
+      const newMonitorProps = {
+        name: monitorName,
+        config: monitor.config,
+        summary: newSummary,
+        events: monitor.events
+      }
+      
+      newMonitors.set(monitorName, newMonitorProps)
+      return newMonitors;
   }
 
   return monitors;

@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using Deucalion.Monitors;
 using FASTER.core;
 
 namespace Deucalion.Storage;
@@ -18,12 +20,16 @@ public class FasterStorage : IDisposable
 
     public FasterStorage(string? storagePath = null, TimeSpan? commitInterval = null)
     {
-        _storagePath = storagePath ?? Path.Join(Path.GetTempPath(), "Deucalion");
+        _storagePath = storagePath ?? Path.Combine(Path.GetTempPath(), "Deucalion");
 
         _commitTimer = new Timer(CommitCallbackAsync, null, TimeSpan.Zero, commitInterval ?? DefaultCommitInterval);
     }
 
-    public IEnumerable<string> GetMonitors() => _monitors.Keys;
+    public MonitorSummary GetSummary(string monitorName) =>
+        new(
+            ReadLastStateFromFile(GetMonitorPath(monitorName, "last-down")),
+            ReadLastStateFromFile(GetMonitorPath(monitorName, "last-up"))
+        );
 
     public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60)
     {
@@ -55,6 +61,20 @@ public class FasterStorage : IDisposable
         log.Enqueue(rawBytes);
     }
 
+    public void AddStateChangeEvent(string monitorName, DateTimeOffset at, MonitorState state)
+    {
+        switch (state)
+        {
+            case MonitorState.Up:
+                File.WriteAllText(GetMonitorPath(monitorName, "last-up"), at.ToString("u"));
+                break;
+
+            case MonitorState.Down:
+                File.WriteAllText(GetMonitorPath(monitorName, "last-down"), at.ToString("u"));
+                break;
+        }
+    }
+
     public async Task CommitAllAsync()
     {
         foreach (var monitorName in _monitors.Keys)
@@ -72,14 +92,28 @@ public class FasterStorage : IDisposable
         }
     }
 
-    private static T? Deserialize<T>(byte[] raw) => JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(raw));
-
-    private static byte[] Serialize<T>(T obj) => Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj));
-
     private async void CommitCallbackAsync(object? _)
     {
         await CommitAllAsync();
     }
+
+    private static T? Deserialize<T>(byte[] raw) => JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(raw));
+
+    private static byte[] Serialize<T>(T obj) => Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj));
+
+    private string GetMonitorPath(string monitorName) => Path.Combine(_storagePath, monitorName.EncodePath());
+    private string GetMonitorPath(string monitorName, string fileName) => Path.Combine(_storagePath, monitorName.EncodePath(), fileName);
+
+    private static DateTimeOffset? ReadLastStateFromFile(string fileName) =>
+        DateTimeOffset.TryParseExact(
+            File.Exists(fileName) ? File.ReadAllText(fileName) : string.Empty,
+            "u",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var result
+        )
+            ? result
+            : null;
 
     private FasterLog GetLogFor(string monitorName)
     {
@@ -89,9 +123,7 @@ public class FasterStorage : IDisposable
             return log;
         }
 
-        var monitorPath = Path.Join(_storagePath, monitorName.EncodePath());
-
-        var newSetttings = new FasterLogSettings(monitorPath)
+        var newSetttings = new FasterLogSettings(GetMonitorPath(monitorName))
         {
             PageSize = LogPageSize
         };

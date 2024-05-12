@@ -2,15 +2,15 @@ import { useState } from "react";
 import { Container, useToast } from "@chakra-ui/react";
 import { createSignalRContext } from "react-signalr";
 
-import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, MonitorProps, EMPTY_MONITORS } from "../models";
+import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS } from "../models";
 import { Header, Overview, MonitorList } from "./main/index";
 
-import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
+import { appendNewEvent, configurationFetcher, monitorsFetcher, logger, updateSummary } from "../services";
 
 import useSWR, { preload } from "swr";
 
 const CONFIGURATION_URL = "/api/configuration";
-const MONITORS_URL = "/api/monitors/*";
+const MONITORS_URL = "/api/monitors";
 const HUB_URL = "/api/monitors/hub";
 
 void preload(CONFIGURATION_URL, configurationFetcher);
@@ -36,7 +36,7 @@ export const App = () => {
     "MonitorChecked",
     (newEvent: MonitorCheckedDto) => {
       logger.log("[onMonitorChecked] e=", newEvent);
-      void mutateMonitors<Map<string, MonitorProps>>((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined), { revalidate: false });
+      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined), { revalidate: false });
     },
     []
   );
@@ -45,6 +45,7 @@ export const App = () => {
     "MonitorStateChanged",
     (e: MonitorStateChangedDto) => {
       logger.log("[MonitorStateChanged]", e);
+      void mutateMonitors((oldMonitors) => (oldMonitors ? updateSummary(oldMonitors, e) : undefined), { revalidate: false });
       toast({
         title: e.n,
         description: monitorStateToDescription(e.st),

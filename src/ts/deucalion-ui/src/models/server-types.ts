@@ -11,6 +11,11 @@ export interface MonitorConfigurationDto {
   image?: string;
 }
 
+export interface MonitorSummaryDto {
+  lastUp?: number;
+  lastDown?: number;
+}
+
 export interface MonitorCheckedDto {
   n?: string;
   at: number;

@@ -1,7 +1,26 @@
 import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import { dateTimeFromNow } from "../../services";
-import { MonitorCheckedDto, MonitorState, MonitorProps } from "../../models";
+import { MonitorCheckedDto, MonitorState, MonitorProps, MonitorSummaryDto } from "../../models";
+
+const formatLastSeen = (state: MonitorState, m: MonitorSummaryDto) => {
+  switch (state) {
+    case MonitorState.Up:
+    case MonitorState.Warn:
+      if (m.lastDown) {
+        const lastDownAt = dateTimeFromNow(m.lastDown);
+        return `Last down at: ${lastDownAt}`;
+      }
+      break;
+
+    case MonitorState.Down:
+      if (m.lastUp) {
+        const lastUpAt = dateTimeFromNow(m.lastUp);
+        return `Last up at: ${lastUpAt}`;
+      }
+      break;
+  }
+};
 
 const formatMonitorEvent = (e: MonitorCheckedDto) => {
   const at = dateTimeFromNow(e.at);
@@ -29,33 +48,28 @@ interface MonitorComponentProps {
 
 export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps) => {
   const { name, config, events, stats } = monitor;
-
+  const lastState = stats?.lastState ?? MonitorState.Unknown;
   const textOffset = usingImages && !config.image ? "2em" : "0.5em";
 
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex>
       {config.image ? <Image src={config.image} width="1.5em" height="1.5em" alt="icon" /> : <div />}
-      <Text
-        marginLeft={textOffset}
-        noOfLines={1}
-        minWidth="8em"
-        color={stats?.lastState !== MonitorState.Up ? monitorStateToColor(stats?.lastState) : undefined}
-      >
-        {config.href ? (
-          <Link href={config.href} isExternal>
-            {name}
-          </Link>
-        ) : (
-          name
-        )}
-      </Text>
+      <Tooltip hasArrow label={formatLastSeen(lastState, monitor.summary)} isDisabled={lastState === MonitorState.Unknown} placement="bottom-end">
+        <Text marginLeft={textOffset} noOfLines={1} minWidth="8em" color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
+          {config.href ? (
+            <Link href={config.href} isExternal>
+              {name}
+            </Link>
+          ) : (
+            name
+          )}
+        </Text>
+      </Tooltip>
       <Spacer />
 
-      {/* ToDo: 
-            overflowX="clip" don't work in Firefox. 
-            overflowX="hidden" works. But clip hover animation.
-        */}
+      {/* ToDo: overflowX="clip" doesn't work in Firefox. 
+                overflowX="hidden" works. But clips hover animation. */}
       <Flex direction="row-reverse" overflowX="clip">
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
           <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" minWidth="4em">
