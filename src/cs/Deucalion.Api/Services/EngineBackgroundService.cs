@@ -45,7 +45,7 @@ public class EngineBackgroundService : BackgroundService
         switch (e)
         {
             case MonitorChecked mc:
-                _storage.AddEvent(mc);
+                _storage.AddEvent(mc.Name, StoredEvent.From(mc));
                 await _hubContext.Clients.All.MonitorChecked(new MonitorCheckedDto(
                      N: mc.Name,
                      At: mc.At.ToUnixTimeSeconds(),

@@ -55,7 +55,7 @@ public class CheckInMonitorTests
         Assert.Equal(newResponse.ResponseText, currentResponse.ResponseText);
         Assert.Equal(newResponse.ResponseTime, currentResponse.ResponseTime);
 
-        newResponse.State = MonitorState.Up;
+        newResponse = newResponse with { State = MonitorState.Up };
         checkInMonitor.CheckIn(newResponse);
         Assert.NotNull(currentResponse);
         Assert.Equal(newResponse.State, currentResponse.State);

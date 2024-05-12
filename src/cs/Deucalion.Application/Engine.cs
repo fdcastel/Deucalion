@@ -66,7 +66,10 @@ public class Engine
                 var response = await pullMonitor.QueryAsync();
                 stopwatch.Stop();
 
-                response.ResponseTime ??= stopwatch.Elapsed;
+                if (response.ResponseTime is null)
+                {
+                    response = response with { ResponseTime = stopwatch.Elapsed };
+                }
 
                 UpdateMonitorState(pullMonitor, response, timerEventAt);
             }

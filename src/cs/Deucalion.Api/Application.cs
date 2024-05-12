@@ -83,9 +83,9 @@ public static class Application
                          select new MonitorCheckedDto(
                              N: null,
                              At: e.At.ToUnixTimeSeconds(),
-                             St: e.Response?.State ?? MonitorState.Unknown,
-                             Ms: e.Response?.ResponseTime?.Milliseconds,
-                             Te: e.Response?.ResponseText
+                             St: e.St ?? MonitorState.Unknown,
+                             Ms: e.Ms,
+                             Te: e.Te
                          )
             });
 

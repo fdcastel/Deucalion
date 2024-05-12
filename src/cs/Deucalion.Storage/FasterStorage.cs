@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using Deucalion.Monitors.Events;
 using FASTER.core;
 
 namespace Deucalion.Storage;
@@ -26,7 +25,7 @@ public class FasterStorage : IDisposable
 
     public IEnumerable<string> GetMonitors() => _monitors.Keys;
 
-    public IEnumerable<MonitorChecked> GetLastEvents(string monitorName, int count = 60)
+    public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60)
     {
         var result = new Queue<byte[]>(count);
 
@@ -46,14 +45,14 @@ public class FasterStorage : IDisposable
         }
 
         return result
-            .Select(re => Deserialize<MonitorChecked>(re)!);
+            .Select(re => Deserialize<StoredEvent>(re)!);
     }
 
-    public void AddEvent(MonitorChecked ev)
+    public void AddEvent(string monitorName, StoredEvent entry)
     {
-        var log = GetLogFor(ev.Name);
-        var valueBytes = Serialize(ev);
-        log.Enqueue(valueBytes);
+        var log = GetLogFor(monitorName);
+        var rawBytes = Serialize(entry);
+        log.Enqueue(rawBytes);
     }
 
     public async Task CommitAllAsync()
