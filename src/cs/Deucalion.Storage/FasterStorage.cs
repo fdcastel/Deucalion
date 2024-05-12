@@ -28,30 +28,25 @@ public class FasterStorage : IDisposable
 
     public IEnumerable<MonitorChecked> GetLastEvents(string monitorName, int count = 60)
     {
+        var result = new Queue<byte[]>(count);
+
+        // Scan from last commited page -- https://github.com/microsoft/FASTER/discussions/610
         var log = GetLogFor(monitorName);
-
-        var result = new List<MonitorChecked>();
-
-        // Read from 2 last pages -- https://github.com/microsoft/FASTER/discussions/610
-        var committedUntilAddress = log.CommittedUntilAddress;
-        var committedPageStart = committedUntilAddress & ~(LogPageSize - 1);
-        if (committedPageStart == committedUntilAddress) // corner case: committed until page boundary
-            committedPageStart -= LogPageSize;
-
-        committedPageStart -= LogPageSize;
+        var committedPageStart = log.CommittedUntilAddress & ~(LogPageSize - 1);
         committedPageStart = Math.Max(committedPageStart, 0); // avoid negative values
 
-        using var iter = log.Scan(committedPageStart, committedUntilAddress);
+        using var iter = log.Scan(committedPageStart, log.TailAddress);
         while (iter.GetNext(out var rawEvent, out _, out _))
         {
-            var ev = Deserialize<MonitorChecked>(rawEvent);
-            if (ev is not null)
+            if (result.Count == count)
             {
-                result.Add(ev);
+                result.TryDequeue(out var _);
             }
+            result.Enqueue(rawEvent!);
         }
 
-        return result.TakeLast(count);
+        return result
+            .Select(re => Deserialize<MonitorChecked>(re)!);
     }
 
     public void AddEvent(MonitorChecked ev)
@@ -116,12 +111,11 @@ public class FasterStorage : IDisposable
             {
                 _commitTimer.Dispose();
 
-                foreach (var existing in _monitors)
+                foreach (var key in _monitors.Keys)
                 {
-                    _monitors.Remove(existing.Key, out var _);
+                    _monitors.Remove(key, out var value);
 
-                    var (log, settings) = existing.Value;
-
+                    var (log, settings) = value;
                     log?.Dispose();
                     settings?.Dispose();
                 }
