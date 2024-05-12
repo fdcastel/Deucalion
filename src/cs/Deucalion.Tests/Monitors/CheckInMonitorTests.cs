@@ -39,8 +39,8 @@ public class CheckInMonitorTests
         using CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
 
         MonitorResponse? currentResponse = null;
-        checkInMonitor.CheckedInEvent += (s, a) => currentResponse = a is MonitorResponse mr ? mr : throw new InvalidOperationException();
-        checkInMonitor.TimedOutEvent += (s, a) => currentResponse = MonitorResponse.Down();
+        checkInMonitor.CheckedInEvent += (s, ea) => currentResponse = ea is MonitorResponseEventArgs mrea ? mrea.Response : throw new InvalidOperationException();
+        checkInMonitor.TimedOutEvent += (s, ea) => currentResponse = MonitorResponse.Down();
 
         var newResponse = new MonitorResponse()
         {

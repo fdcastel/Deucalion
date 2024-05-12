@@ -43,7 +43,7 @@ public class Engine
         {
             if (sender is PushMonitor pushMonitor)
             {
-                var monitorResponse = args is MonitorResponse mr ? mr : MonitorResponse.Up();
+                var monitorResponse = args is MonitorResponseEventArgs mrea ? mrea.Response : MonitorResponse.Up();
                 UpdateMonitorState(pushMonitor, monitorResponse);
             }
         }

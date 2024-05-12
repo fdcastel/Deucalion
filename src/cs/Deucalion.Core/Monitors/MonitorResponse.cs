@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Monitors;
 
-public class MonitorResponse : EventArgs
+public record MonitorResponse
 {
     public MonitorState State { get; set; } = MonitorState.Unknown;
     public TimeSpan? ResponseTime { get; set; }

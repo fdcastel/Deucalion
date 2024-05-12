@@ -41,7 +41,7 @@ public sealed class CheckInMonitor : PushMonitor, IDisposable
         // Make a temporary copy of the event -- https://t.ly/9iROC
         var checkedInEvent = CheckedInEvent;
 
-        checkedInEvent?.Invoke(this, response ?? EventArgs.Empty);
+        checkedInEvent?.Invoke(this, response is null ? EventArgs.Empty : new MonitorResponseEventArgs(response));
     }
 
     private void OnTimedOutEvent()
