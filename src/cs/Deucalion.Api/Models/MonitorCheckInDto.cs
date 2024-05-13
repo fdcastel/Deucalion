@@ -11,10 +11,11 @@ public record MonitorCheckInDto(
     string? Secret
 )
 {
-    internal MonitorResponse? ToMonitorResponse() => new()
-    {
-        State = State,
-        ResponseTime = ResponseTime,
-        ResponseText = ResponseText
-    };
+    internal MonitorResponse? ToMonitorResponse() =>
+        new()
+        {
+            State = State,
+            ResponseTime = ResponseTime,
+            ResponseText = ResponseText
+        };
 }

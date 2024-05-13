@@ -45,18 +45,29 @@ public class EngineBackgroundService : BackgroundService
         switch (e)
         {
             case MonitorChecked mc:
-                _storage.AddEvent(mc.Name, StoredEvent.From(mc));
+                _storage.SaveEvent(mc.Name, StoredEvent.From(mc));
+
+                var newStats = _storage.GetStats(mc.Name)!;
+
                 await _hubContext.Clients.All.MonitorChecked(new MonitorCheckedDto(
                      N: mc.Name,
                      At: mc.At.ToUnixTimeSeconds(),
                      St: mc.Response?.State ?? MonitorState.Unknown,
-                     Ms: mc.Response?.ResponseTime?.Milliseconds,
-                     Te: mc.Response?.ResponseText
+                     Ms: (int?)mc.Response?.ResponseTime?.TotalMilliseconds,
+                     Te: mc.Response?.ResponseText,
+                     Ns: new MonitorStatsDto(
+                         newStats.LastState,
+                         newStats.LastUpdate.ToUnixTimeSeconds(),
+                         newStats.Availability,
+                         (int)newStats.AverageResponseTime.TotalMilliseconds,
+                         newStats.LastSeenUp?.ToUnixTimeSeconds(),
+                         newStats.LastSeenDown?.ToUnixTimeSeconds())
                 ));
                 break;
 
             case MonitorStateChanged sc:
-                _storage.AddStateChangeEvent(sc.Name, sc.At, sc.NewState);
+                _storage.SaveLastStateChange(sc.Name, sc.At, sc.NewState);
+
                 await _hubContext.Clients.All.MonitorStateChanged(new MonitorStateChangedDto(
                     N: sc.Name,
                     At: sc.At,

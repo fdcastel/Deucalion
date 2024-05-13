@@ -5,7 +5,7 @@ import { createSignalRContext } from "react-signalr";
 import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS } from "../models";
 import { Header, Overview, MonitorList } from "./main/index";
 
-import { appendNewEvent, configurationFetcher, monitorsFetcher, logger, updateSummary } from "../services";
+import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
 
 import useSWR, { preload } from "swr";
 
@@ -34,9 +34,9 @@ export const App = () => {
 
   SignalRContext.useSignalREffect(
     "MonitorChecked",
-    (newEvent: MonitorCheckedDto) => {
-      logger.log("[onMonitorChecked] e=", newEvent);
-      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, newEvent) : undefined), { revalidate: false });
+    (e: MonitorCheckedDto) => {
+      logger.log("[onMonitorChecked]", e);
+      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
     },
     []
   );
@@ -45,7 +45,6 @@ export const App = () => {
     "MonitorStateChanged",
     (e: MonitorStateChangedDto) => {
       logger.log("[MonitorStateChanged]", e);
-      void mutateMonitors((oldMonitors) => (oldMonitors ? updateSummary(oldMonitors, e) : undefined), { revalidate: false });
       toast({
         title: e.n,
         description: monitorStateToDescription(e.st),

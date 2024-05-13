@@ -1,28 +1,32 @@
 import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import { dateTimeFromNow } from "../../services";
-import { MonitorCheckedDto, MonitorState, MonitorProps, MonitorSummaryDto } from "../../models";
+import { MonitorState, MonitorProps, MonitorStatsDto, MonitorEventDto } from "../../models";
 
-const formatLastSeen = (state: MonitorState, m: MonitorSummaryDto) => {
+const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
+  if (!m) {
+    return undefined;
+  }
+
   switch (state) {
     case MonitorState.Up:
     case MonitorState.Warn:
-      if (m.lastDown) {
-        const lastDownAt = dateTimeFromNow(m.lastDown);
-        return `Last down at: ${lastDownAt}`;
+      if (m.lastSeenDown) {
+        const lastSeenDownAt = dateTimeFromNow(m.lastSeenDown);
+        return `Last seen down ${lastSeenDownAt}`;
       }
       break;
 
     case MonitorState.Down:
-      if (m.lastUp) {
-        const lastUpAt = dateTimeFromNow(m.lastUp);
-        return `Last up at: ${lastUpAt}`;
+      if (m.lastSeenUp) {
+        const lastSeenUpAt = dateTimeFromNow(m.lastSeenUp);
+        return `Last seen up ${lastSeenUpAt}`;
       }
       break;
   }
 };
 
-const formatMonitorEvent = (e: MonitorCheckedDto) => {
+const formatMonitorEvent = (e: MonitorEventDto) => {
   const at = dateTimeFromNow(e.at);
   const timeStamp = e.ms ? `${at}: ${e.ms}ms` : at;
   return e.te ? `${timeStamp} (${e.te})` : timeStamp;
@@ -47,7 +51,7 @@ interface MonitorComponentProps {
 }
 
 export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps) => {
-  const { name, config, events, stats } = monitor;
+  const { name, config, stats, events } = monitor;
   const lastState = stats?.lastState ?? MonitorState.Unknown;
   const textOffset = usingImages && !config.image ? "2em" : "0.5em";
 
@@ -55,7 +59,7 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
   return (
     <Flex>
       {config.image ? <Image src={config.image} width="1.5em" height="1.5em" alt="icon" /> : <div />}
-      <Tooltip hasArrow label={formatLastSeen(lastState, monitor.summary)} isDisabled={lastState === MonitorState.Unknown} placement="bottom-end">
+      <Tooltip hasArrow label={formatLastSeen(lastState, monitor.stats)} isDisabled={lastState === MonitorState.Unknown} placement="bottom-end">
         <Text marginLeft={textOffset} noOfLines={1} minWidth="8em" color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
           {config.href ? (
             <Link href={config.href} isExternal>
@@ -73,7 +77,7 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
       <Flex direction="row-reverse" overflowX="clip">
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
           <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" minWidth="4em">
-            <Center width="100%">{stats?.averageResponseTime !== undefined ? stats.averageResponseTime.toFixed(0) : "... "}ms</Center>
+            <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
           </Tag>
         </Tooltip>
 

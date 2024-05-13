@@ -6,15 +6,16 @@ import { dateTimeFromNow, dateTimeToString } from "../../services";
 
 interface OverviewProps {
   monitors: Map<string, MonitorProps>;
-  hubConnection: HubConnection | null;
+  hubConnection: HubConnection | null /* use null, not undefined (from react-signalr) */;
   hubConnectionError: Error | undefined;
 }
 
 export const Overview = ({ monitors, hubConnection, hubConnectionError }: OverviewProps) => {
   const allServicesCount = monitors.size;
 
-  let firstUpdateAt = 0;
+  let firstUpdateAt = Number.MAX_VALUE;
   let lastUpdateAt = 0;
+
   let onlineServicesCount = 0;
   let eventCount = 0;
   let totalAvailability = 0;
@@ -22,11 +23,12 @@ export const Overview = ({ monitors, hubConnection, hubConnectionError }: Overvi
     const isOnline = mp.stats?.lastState == MonitorState.Up || mp.stats?.lastState == MonitorState.Warn;
 
     onlineServicesCount += isOnline ? 1 : 0;
+
     eventCount += mp.events.length;
     totalAvailability += ((mp.stats?.availability ?? 0) * mp.events.length) / 100;
 
-    if (firstUpdateAt === 0 || firstUpdateAt > (mp.events[0]?.at ?? 0)) firstUpdateAt = mp.events[0]?.at ?? 0;
-    if (lastUpdateAt < (mp.stats?.lastUpdate ?? 0)) lastUpdateAt = mp.stats?.lastUpdate ?? 0;
+    firstUpdateAt = mp.events[0]?.at ? Math.min(firstUpdateAt, mp.events[0]?.at) : firstUpdateAt;
+    lastUpdateAt = mp.stats?.lastUpdate ? Math.max(lastUpdateAt, mp.stats?.lastUpdate) : lastUpdateAt;
   }
   totalAvailability = (100 * totalAvailability) / eventCount;
 
@@ -54,7 +56,7 @@ export const Overview = ({ monitors, hubConnection, hubConnectionError }: Overvi
         <Box filter="auto" blur={isNaN(totalAvailability) ? "6px" : "0px"}>
           <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
         </Box>
-        <Box filter="auto" blur={firstUpdateAt === 0 ? "6px" : "0px"}>
+        <Box filter="auto" blur={firstUpdateAt === Number.MAX_VALUE ? "6px" : "0px"}>
           <StatHelpText>From {dateTimeFromNow(firstUpdateAt, true)}</StatHelpText>
         </Box>
       </Stat>

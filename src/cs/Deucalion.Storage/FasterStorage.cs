@@ -7,15 +7,30 @@ using FASTER.core;
 
 namespace Deucalion.Storage;
 
+internal record MonitorEntry(
+    FasterLog Log,
+    FasterLogSettings LogSettings,
+    MonitorStats? Stats
+);
+
 public class FasterStorage : IDisposable
 {
+    private const string LastSeenDownFileName = "last-seen-down";
+    private const string LastSeenUpFileName = "last-seen-up";
+
+    // Average log entry size: 150 bytes (worst case: DNS with text).
+
+    private const long LogPageSize = 1 << 16; // 64 KB
+    private const long LogMemorySize = 1 << 18; // 256 KB -- Keep ~1.2 days in memory
+    private const long LogSegmentSize = 1 << 24; // 16 MB
+    private const long LogMaxSize = 1 << 26; // 64 MB -- Truncate (discard) log data older than ~10 months
+
     public static readonly TimeSpan DefaultCommitInterval = TimeSpan.FromMinutes(1);
-    public static readonly long LogPageSize = 1L << 16;
 
     private readonly string _storagePath;
     private readonly Timer _commitTimer;
 
-    private readonly ConcurrentDictionary<string, (FasterLog, FasterLogSettings)> _monitors = new();
+    private readonly ConcurrentDictionary<string, MonitorEntry> _monitors = new();
     private bool _disposedValue;
 
     public FasterStorage(string? storagePath = null, TimeSpan? commitInterval = null)
@@ -25,53 +40,64 @@ public class FasterStorage : IDisposable
         _commitTimer = new Timer(CommitCallbackAsync, null, TimeSpan.Zero, commitInterval ?? DefaultCommitInterval);
     }
 
-    public MonitorSummary GetSummary(string monitorName) =>
-        new(
-            ReadLastStateFromFile(GetMonitorPath(monitorName, "last-down")),
-            ReadLastStateFromFile(GetMonitorPath(monitorName, "last-up"))
-        );
+    public MonitorStats? GetStats(string monitorName) =>
+        GetEntryFor(monitorName).Stats;
 
-    public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60)
+    public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60) =>
+        ScanLastEvents(GetEntryFor(monitorName).Log, count);
+
+    public void SaveEvent(string monitorName, StoredEvent storedEvent)
     {
-        var result = new Queue<byte[]>(count);
+        var entry = GetEntryFor(monitorName);
 
-        // Scan from last commited page -- https://github.com/microsoft/FASTER/discussions/610
-        var log = GetLogFor(monitorName);
-        var committedPageStart = log.CommittedUntilAddress & ~(LogPageSize - 1);
-        committedPageStart = Math.Max(committedPageStart, 0); // avoid negative values
+        // Append event to log
+        var rawBytes = Serialize(storedEvent);
+        entry.Log.Enqueue(rawBytes);
 
-        using var iter = log.Scan(committedPageStart, log.TailAddress);
-        while (iter.GetNext(out var rawEvent, out _, out _))
+        // Recalculate statistics
+        var newStats = RecomputeStats(entry.Log, monitorName);
+        if (newStats is not null)
         {
-            if (result.Count == count)
+            newStats = newStats with
             {
-                result.TryDequeue(out var _);
-            }
-            result.Enqueue(rawEvent!);
+                LastSeenUp = entry.Stats?.LastSeenUp,
+                LastSeenDown = entry.Stats?.LastSeenDown
+            };
         }
 
-        return result
-            .Select(re => Deserialize<StoredEvent>(re)!);
+        var newEntry = entry with { Stats = newStats };
+
+        _monitors.TryUpdate(monitorName, newEntry, entry);
     }
 
-    public void AddEvent(string monitorName, StoredEvent entry)
+    public void SaveLastStateChange(string monitorName, DateTimeOffset at, MonitorState state)
     {
-        var log = GetLogFor(monitorName);
-        var rawBytes = Serialize(entry);
-        log.Enqueue(rawBytes);
-    }
+        var entry = GetEntryFor(monitorName);
 
-    public void AddStateChangeEvent(string monitorName, DateTimeOffset at, MonitorState state)
-    {
+        MonitorStats? newStats = null;
         switch (state)
         {
             case MonitorState.Up:
-                File.WriteAllText(GetMonitorPath(monitorName, "last-up"), at.ToString("u"));
+                WriteLastStateChangeToFile(at, monitorName, LastSeenUpFileName);
+                if (entry.Stats is not null)
+                {
+                    newStats = entry.Stats with { LastSeenUp = at };
+                }
                 break;
 
             case MonitorState.Down:
-                File.WriteAllText(GetMonitorPath(monitorName, "last-down"), at.ToString("u"));
+                WriteLastStateChangeToFile(at, monitorName, LastSeenDownFileName);
+                if (entry.Stats is not null)
+                {
+                    newStats = entry.Stats with { LastSeenDown = at };
+                }
                 break;
+        }
+
+        if (newStats is not null)
+        {
+            var newEntry = entry with { Stats = newStats };
+            _monitors.TryUpdate(monitorName, newEntry, entry);
         }
     }
 
@@ -79,11 +105,16 @@ public class FasterStorage : IDisposable
     {
         foreach (var monitorName in _monitors.Keys)
         {
-            var log = GetLogFor(monitorName);
-
+            var log = GetEntryFor(monitorName).Log;
             try
             {
                 await log.CommitAsync();
+
+                // Truncate the log to last LogMaxSize bytes.
+                if (log.CommittedUntilAddress - LogMaxSize > 0)
+                {
+                    log.TruncateUntilPageStart(log.CommittedUntilAddress - LogMaxSize);
+                }
             }
             catch (CommitFailureException)
             {
@@ -104,7 +135,7 @@ public class FasterStorage : IDisposable
     private string GetMonitorPath(string monitorName) => Path.Combine(_storagePath, monitorName.EncodePath());
     private string GetMonitorPath(string monitorName, string fileName) => Path.Combine(_storagePath, monitorName.EncodePath(), fileName);
 
-    private static DateTimeOffset? ReadLastStateFromFile(string fileName) =>
+    private static DateTimeOffset? ReadLastStateChangeFromFile(string fileName) =>
         DateTimeOffset.TryParseExact(
             File.Exists(fileName) ? File.ReadAllText(fileName) : string.Empty,
             "u",
@@ -115,23 +146,80 @@ public class FasterStorage : IDisposable
             ? result
             : null;
 
-    private FasterLog GetLogFor(string monitorName)
+    private void WriteLastStateChangeToFile(DateTimeOffset at, string monitorName, string fileName)
     {
-        if (_monitors.TryGetValue(monitorName, out var existing))
+        File.WriteAllText(
+            GetMonitorPath(monitorName, fileName),
+            at.ToString("u")
+        );
+    }
+
+    private MonitorEntry GetEntryFor(string monitorName) =>
+        _monitors.GetOrAdd(monitorName, (key) =>
+            {
+                var newSetttings = new FasterLogSettings(GetMonitorPath(monitorName))
+                {
+                    PageSize = LogPageSize,
+                    MemorySize = LogMemorySize,
+                    SegmentSize = LogSegmentSize,
+
+                    AutoRefreshSafeTailAddress = true /* needed for ScanUncommited */
+                };
+
+                var newLog = new FasterLog(newSetttings);
+                var newSummary = RecomputeStats(newLog, monitorName, includeLastSeen: true);
+                return new MonitorEntry(newLog, newSetttings, newSummary);
+            });
+
+    private MonitorStats? RecomputeStats(FasterLog log, string monitorName, bool includeLastSeen = false)
+    {
+        var evs = ScanLastEvents(log).ToList();
+        if (evs.Count == 0)
         {
-            var (log, _) = existing;
-            return log;
+            return null;
         }
 
-        var newSetttings = new FasterLogSettings(GetMonitorPath(monitorName))
+        var lastEvent = evs[^1];
+
+        var unknownCount = evs.Count(e => e.State == MonitorState.Unknown);
+        var downCount = evs.Count(e => e.State == MonitorState.Down);
+        var eventsWithResponseTime = evs.Where(e => e.ResponseTime.HasValue).ToList();
+
+        return new(
+            LastState: lastEvent.State,
+            LastUpdate: lastEvent.At,
+
+            Availability: 100 * (evs.Count - downCount) / (evs.Count - unknownCount),
+            AverageResponseTime: eventsWithResponseTime.Count > 0
+                ? TimeSpan.FromMilliseconds(eventsWithResponseTime.Average(e => e.ResponseTime!.Value.TotalMilliseconds))
+                : TimeSpan.Zero,
+
+            LastSeenDown: includeLastSeen ? ReadLastStateChangeFromFile(GetMonitorPath(monitorName, LastSeenDownFileName)) : null,
+            LastSeenUp: includeLastSeen ? ReadLastStateChangeFromFile(GetMonitorPath(monitorName, LastSeenUpFileName)) : null
+        );
+    }
+
+    public static IEnumerable<StoredEvent> ScanLastEvents(FasterLog log, int count = 60)
+    {
+        var result = new Queue<byte[]>(count);
+
+        // Scan from last commited page -- https://github.com/microsoft/FASTER/discussions/610
+        var committedPageStart = log.CommittedUntilAddress & ~(LogPageSize - 1);
+        committedPageStart = Math.Max(committedPageStart, 0); // avoid negative values
+
+        using var iter = log.Scan(committedPageStart, long.MaxValue, scanUncommitted: true);
+        // ToDo: Use MemoryPool<byte>
+        while (iter.GetNext(out var rawEvent, out _, out _))
         {
-            PageSize = LogPageSize
-        };
+            if (result.Count == count)
+            {
+                result.TryDequeue(out var _);
+            }
+            result.Enqueue(rawEvent!);
+        }
 
-        var newLog = new FasterLog(newSetttings);
-
-        _monitors.AddOrUpdate(monitorName, (newLog, newSetttings), (name, log) => log);
-        return newLog;
+        return result
+            .Select(re => Deserialize<StoredEvent>(re)!);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -144,11 +232,9 @@ public class FasterStorage : IDisposable
 
                 foreach (var key in _monitors.Keys)
                 {
-                    _monitors.Remove(key, out var value);
-
-                    var (log, settings) = value;
-                    log?.Dispose();
-                    settings?.Dispose();
+                    _monitors.Remove(key, out var entry);
+                    entry?.Log.Dispose();
+                    entry?.LogSettings.Dispose();
                 }
             }
 

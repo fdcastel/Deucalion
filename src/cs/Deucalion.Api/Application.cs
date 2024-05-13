@@ -69,7 +69,7 @@ public static class Application
         app.MapGet("/api/monitors", (FasterStorage storage) =>
             from m in monitorConfiguration.Monitors.Keys
             let c = monitorConfiguration.Monitors[m]
-            let s = storage.GetSummary(m)
+            let s = storage.GetStats(m)
             select new
             {
                 Name = m,
@@ -78,17 +78,20 @@ public static class Application
                     Href: ExtractHref(c),
                     Image: c.Image
                 ),
-                Summary = new MonitorSummaryDto(
-                    s.LastUp?.ToUnixTimeSeconds(),
-                    s.LastDown?.ToUnixTimeSeconds()
+                Stats = s is null ? null : new MonitorStatsDto(
+                    s.LastState,
+                    s.LastUpdate.ToUnixTimeSeconds(),
+                    s.Availability,
+                    (int)s.AverageResponseTime.TotalMilliseconds,
+                    s.LastSeenUp?.ToUnixTimeSeconds(),
+                    s.LastSeenDown?.ToUnixTimeSeconds()
                 ),
                 Events = from e in storage.GetLastEvents(m)
-                         select new MonitorCheckedDto(
-                             N: null,
+                         select new MonitorEventDto(
                              At: e.At.ToUnixTimeSeconds(),
-                             St: e.St ?? MonitorState.Unknown,
-                             Ms: e.Ms,
-                             Te: e.Te
+                             St: e.State,
+                             Ms: (int?)e.ResponseTime?.TotalMilliseconds,
+                             Te: e.ResponseText
                          )
             });
 
