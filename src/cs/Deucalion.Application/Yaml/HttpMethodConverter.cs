@@ -3,14 +3,9 @@ using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
 namespace Deucalion.Application.Yaml;
-internal class HttpMethodConverter : IYamlTypeConverter
+internal class HttpMethodConverter(bool doubleQuotes = false) : IYamlTypeConverter
 {
-    private readonly bool doubleQuotes;
-
-    public HttpMethodConverter(bool doubleQuotes = false)
-    {
-        this.doubleQuotes = doubleQuotes;
-    }
+    private readonly bool _doubleQuotes = doubleQuotes;
 
     public bool Accepts(Type type)
     {
@@ -24,6 +19,6 @@ internal class HttpMethodConverter : IYamlTypeConverter
     {
         var m = (HttpMethod)value!;
         var formatted = m.ToString();
-        emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, formatted, doubleQuotes ? ScalarStyle.DoubleQuoted : ScalarStyle.Any, true, false));
+        emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, formatted, _doubleQuotes ? ScalarStyle.DoubleQuoted : ScalarStyle.Any, true, false));
     }
 }

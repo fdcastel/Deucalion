@@ -8,14 +8,9 @@ using Xunit.Abstractions;
 
 namespace Deucalion.Tests;
 
-public class EngineTests
+public class EngineTests(ITestOutputHelper output)
 {
-    private readonly ITestOutputHelper _output;
-
-    public EngineTests(ITestOutputHelper output)
-    {
-        _output = output;
-    }
+    private readonly ITestOutputHelper _output = output;
 
     [Fact]
     public void Engine_ReceiveEventsFromPushMonitors()

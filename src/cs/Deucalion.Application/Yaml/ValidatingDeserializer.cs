@@ -10,14 +10,9 @@ namespace Deucalion.Application.Yaml;
 /// <remarks>
 /// Source: https://github.com/aaubry/YamlDotNet/issues/202#issuecomment-830712803
 /// </remarks>
-public class ValidationDeserializer : INodeDeserializer
+internal class ValidationDeserializer(INodeDeserializer nodeDeserializer) : INodeDeserializer
 {
-    private readonly INodeDeserializer _nodeDeserializer;
-
-    public ValidationDeserializer(INodeDeserializer nodeDeserializer)
-    {
-        _nodeDeserializer = nodeDeserializer;
-    }
+    private readonly INodeDeserializer _nodeDeserializer = nodeDeserializer;
 
     public bool Deserialize(IParser parser, Type expectedType,
         Func<IParser, Type, object?> nestedObjectDeserializer, out object? value)

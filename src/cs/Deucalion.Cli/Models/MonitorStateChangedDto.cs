@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Cli.Models;
 
-public record MonitorStateChangedDto(
+internal record MonitorStateChangedDto(
     string N,
     DateTimeOffset At,
     MonitorState St

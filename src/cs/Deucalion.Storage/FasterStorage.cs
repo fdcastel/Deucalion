@@ -46,7 +46,7 @@ public class FasterStorage : IDisposable
     public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60) =>
         ScanLastEvents(GetEntryFor(monitorName).Log, count);
 
-    public void SaveEvent(string monitorName, StoredEvent storedEvent)
+    public MonitorStats SaveEvent(string monitorName, StoredEvent storedEvent)
     {
         var entry = GetEntryFor(monitorName);
 
@@ -55,19 +55,19 @@ public class FasterStorage : IDisposable
         entry.Log.Enqueue(rawBytes);
 
         // Recalculate statistics
-        var newStats = RecomputeStats(entry.Log, monitorName);
-        if (newStats is not null)
+        //   null-forgiving: After .Enqueue(), RecomputeStats cannot return null.
+        var newStats = RecomputeStats(entry.Log, monitorName)! with
         {
-            newStats = newStats with
-            {
-                LastSeenUp = entry.Stats?.LastSeenUp,
-                LastSeenDown = entry.Stats?.LastSeenDown
-            };
-        }
+            LastSeenUp = entry.Stats?.LastSeenUp,
+            LastSeenDown = entry.Stats?.LastSeenDown
+        };
 
+        // Update dictionary
         var newEntry = entry with { Stats = newStats };
-
         _monitors.TryUpdate(monitorName, newEntry, entry);
+
+        // Return updated stats
+        return newStats;
     }
 
     public void SaveLastStateChange(string monitorName, DateTimeOffset at, MonitorState state)
@@ -215,7 +215,8 @@ public class FasterStorage : IDisposable
             {
                 result.TryDequeue(out var _);
             }
-            result.Enqueue(rawEvent!);
+
+            result.Enqueue(rawEvent);
         }
 
         return result

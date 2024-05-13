@@ -2,16 +2,10 @@
 
 namespace Deucalion.Tests.Mocks;
 
-internal class PullMonitorMock : PullMonitor
+internal class PullMonitorMock(params (MonitorState, TimeSpan)[] timeline) : PullMonitor
 {
-    private MonitorState CurrentState { get; set; }
-    public (MonitorState, TimeSpan)[] Timeline { get; }
-
-    public PullMonitorMock(params (MonitorState, TimeSpan)[] timeline)
-    {
-        CurrentState = MonitorState.Unknown;
-        Timeline = timeline;
-    }
+    private MonitorState CurrentState { get; set; } = MonitorState.Unknown;
+    public (MonitorState, TimeSpan)[] Timeline { get; } = timeline;
 
     public void Start()
     {

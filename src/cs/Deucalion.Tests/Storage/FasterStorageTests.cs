@@ -50,9 +50,9 @@ public class FasterStorageTests
     }
 }
 
-public static class DateTimeOffsetExtensions
+internal static class DateTimeOffsetExtensions
 {
-    public static DateTimeOffset Truncate(this DateTimeOffset dateTime, TimeSpan? timeSpan = null)
+    internal static DateTimeOffset Truncate(this DateTimeOffset dateTime, TimeSpan? timeSpan = null)
     {
         // https://stackoverflow.com/a/1005222/33244
         timeSpan ??= TimeSpan.FromSeconds(1);

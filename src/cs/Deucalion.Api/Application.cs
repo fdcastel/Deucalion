@@ -5,7 +5,6 @@ using Deucalion.Api.Options;
 using Deucalion.Api.Services;
 using Deucalion.Application.Configuration;
 using Deucalion.Monitors;
-using Deucalion.Network.Monitors;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -32,7 +31,7 @@ public static class Application
             options.EnableForHttps = true;
             options.Providers.Add<BrotliCompressionProvider>();
             options.Providers.Add<GzipCompressionProvider>();
-            options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "image/svg+xml" });
+            options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["image/svg+xml"]);
         });
 
         // Application configuration
@@ -64,78 +63,61 @@ public static class Application
         // Setup Api endpoints
         var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
-            new { options.PageTitle, options.PageDescription });
-
-        app.MapGet("/api/monitors", (FasterStorage storage) =>
-            from m in monitorConfiguration.Monitors.Keys
-            let c = monitorConfiguration.Monitors[m]
-            let s = storage.GetStats(m)
-            select new
+            Results.Ok(new
             {
-                Name = m,
-                Config = new MonitorConfigurationDto(
-                    Group: c.Group,
-                    Href: ExtractHref(c),
-                    Image: c.Image
-                ),
-                Stats = s is null ? null : new MonitorStatsDto(
-                    s.LastState,
-                    s.LastUpdate.ToUnixTimeSeconds(),
-                    s.Availability,
-                    (int)s.AverageResponseTime.TotalMilliseconds,
-                    s.LastSeenUp?.ToUnixTimeSeconds(),
-                    s.LastSeenDown?.ToUnixTimeSeconds()
-                ),
-                Events = from e in storage.GetLastEvents(m)
-                         select new MonitorEventDto(
-                             At: e.At.ToUnixTimeSeconds(),
-                             St: e.State,
-                             Ms: (int?)e.ResponseTime?.TotalMilliseconds,
-                             Te: e.ResponseText
-                         )
-            });
+                options.PageTitle,
+                options.PageDescription
+            }));
 
-        app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, [FromBody] MonitorCheckInDto arguments) =>
+        app.MapGet("/api/monitors/{monitorName?}", (FasterStorage storage, string? monitorName) =>
         {
-            if (monitorConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
+            if (monitorName is null)
             {
-                var instanceUri = $"/api/monitors/{monitorName}";
-
-                if (monitor is CheckInMonitor cim)
-                {
-                    if (cim.Secret is not null && cim.Secret != arguments.Secret)
-                    {
-                        return DeucalionResults.InvalidCheckInSecret(monitorName, instanceUri);
-                    }
-
-                    cim.CheckIn(arguments.ToMonitorResponse());
-
-                    return Results.Ok();
-                }
-
-                return DeucalionResults.NotCheckInMonitor(monitorName, instanceUri);
+                return Results.Ok(from kvp in monitorConfiguration.Monitors
+                                  select BuildMonitorDto(storage, kvp.Value, kvp.Key));
             }
 
-            return DeucalionResults.MonitorNotFound(monitorName);
+            if (!monitorConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
+            {
+                return DeucalionResults.MonitorNotFound(monitorName);
+            }
+
+            return Results.Ok(BuildMonitorDto(storage, monitor, monitorName));
         });
+
+        app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, [FromBody] MonitorCheckInDto arguments) =>
+            {
+                if (!monitorConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
+                {
+                    return DeucalionResults.MonitorNotFound(monitorName);
+                }
+
+                if (monitor is not CheckInMonitor cim)
+                {
+                    return DeucalionResults.NotCheckInMonitor(monitorName, $"/api/monitors/{monitorName}");
+                }
+
+                if (cim.Secret is not null && cim.Secret != arguments.Secret)
+                {
+                    return DeucalionResults.InvalidCheckInSecret(monitorName, $"/api/monitors/{monitorName}");
+                }
+
+                cim.CheckIn(arguments.ToMonitorResponse());
+
+                return Results.Ok();
+            });
 
         // Setup SignalR hubs
         app.MapHub<MonitorHub>("/api/monitors/hub");
         return app;
     }
 
-    private static string? ExtractHref(MonitorBase monitor)
-    {
-        if (monitor.Href is null && monitor is HttpMonitor hm)
-        {
-            return hm.Url.ToString();
-        }
-
-        if (string.IsNullOrWhiteSpace(monitor.Href))
-        {
-            return string.Empty;
-        }
-
-        return monitor.Href;
-    }
+    private static MonitorDto BuildMonitorDto(FasterStorage storage, MonitorBase m, string mn) =>
+        new(
+            Name: mn,
+            Config: MonitorConfigurationDto.From(m),
+            Stats: MonitorStatsDto.From(storage.GetStats(mn)),
+            Events: from e in storage.GetLastEvents(mn)
+                    select MonitorEventDto.From(e)
+        );
 }

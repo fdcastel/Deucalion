@@ -2,7 +2,7 @@
 
 namespace Deucalion.Api.Models;
 
-public record MonitorCheckInDto(
+internal record MonitorCheckInDto(
     MonitorState State,
 
     TimeSpan? ResponseTime,
@@ -12,10 +12,9 @@ public record MonitorCheckInDto(
 )
 {
     internal MonitorResponse? ToMonitorResponse() =>
-        new()
-        {
-            State = State,
-            ResponseTime = ResponseTime,
-            ResponseText = ResponseText
-        };
+        new(
+            State: State,
+            ResponseTime: ResponseTime,
+            ResponseText: ResponseText
+        );
 }

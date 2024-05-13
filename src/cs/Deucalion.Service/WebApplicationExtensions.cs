@@ -4,12 +4,12 @@ using Microsoft.AspNetCore.Http.Features;
 
 namespace Deucalion.Service;
 
-public static class WebApplicationExtensions
+internal static class WebApplicationExtensions
 {
     /// <summary>
     /// Use file server with response cache for all static files in '/assets'.
     /// </summary>
-    public static WebApplication UseCachedFileServer(this WebApplication app)
+    internal static WebApplication UseCachedFileServer(this WebApplication app)
     {
         var fso = new FileServerOptions();
         fso.StaticFileOptions.OnPrepareResponse = (context) =>
@@ -35,7 +35,7 @@ public static class WebApplicationExtensions
     /// <summary>
     /// Serve 'index.html' replacing SEO elements with values from app configuration.
     /// </summary>
-    public static WebApplication UseIndexPage(this WebApplication app)
+    internal static WebApplication UseIndexPage(this WebApplication app)
     {
         app.Use(async (context, next) =>
         {

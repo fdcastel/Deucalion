@@ -133,9 +133,9 @@ public class MonitorConfigurationTests
         return MonitorConfiguration.ReadFromStream(reader);
     }
 
-    private static MonitorBase ReadSingleMonitorFromConfiguration(string ConfigurationContent)
+    private static MonitorBase ReadSingleMonitorFromConfiguration(string configurationContent)
     {
-        var configuration = ReadConfiguration(ConfigurationContent);
+        var configuration = ReadConfiguration(configurationContent);
         Assert.Single(configuration.Monitors);
 
         var monitor = configuration.Monitors.First().Value;

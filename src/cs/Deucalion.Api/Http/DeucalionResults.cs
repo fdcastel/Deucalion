@@ -2,9 +2,9 @@
 
 namespace Deucalion.Api.Http;
 
-public static class DeucalionResults
+internal static class DeucalionResults
 {
-    public static IResult MonitorNotFound(string monitorName) =>
+    internal static IResult MonitorNotFound(string monitorName) =>
         Results.Problem(
             type: "/api/errors/monitor-not-found",
             title: "Monitor not found.",
@@ -12,7 +12,7 @@ public static class DeucalionResults
             detail: $"Monitor '{monitorName}' not found."
         );
 
-    public static IResult NotCheckInMonitor(string monitorName, string instanceUri) =>
+    internal static IResult NotCheckInMonitor(string monitorName, string instanceUri) =>
         Results.Problem(
             type: "/api/errors/not-checkin-monitor",
             title: "Not a check-in monitor.",
@@ -21,7 +21,7 @@ public static class DeucalionResults
             instance: instanceUri
         );
 
-    public static IResult InvalidCheckInSecret(string monitorName, string instanceUri) =>
+    internal static IResult InvalidCheckInSecret(string monitorName, string instanceUri) =>
         Results.Problem(
             type: "/api/errors/invalid-checkin-monitor-secret",
             title: "Invalid check-in monitor secret.",

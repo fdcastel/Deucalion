@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Cli.Models;
 
-public record MonitorCheckedDto(
+internal record MonitorCheckedDto(
     string? N,
     long At,
     MonitorState St,

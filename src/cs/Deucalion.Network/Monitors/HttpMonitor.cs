@@ -11,6 +11,7 @@ public class HttpMonitor : PullMonitor
 {
     private static readonly TimeSpan DefaultHttpTimeout = TimeSpan.FromSeconds(1);
 
+    // https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines#recommended-use
     private static HttpClient? _httpClient;
     private static HttpClient? _httpClientIgnoreCertificate;
 

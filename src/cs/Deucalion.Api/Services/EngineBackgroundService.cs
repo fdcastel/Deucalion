@@ -1,31 +1,22 @@
 ﻿using Deucalion.Api.Models;
 using Deucalion.Application;
 using Deucalion.Application.Configuration;
-using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Deucalion.Api.Services;
 
-public class EngineBackgroundService : BackgroundService
+internal class EngineBackgroundService(
+    MonitorConfiguration configuration,
+    FasterStorage storage,
+    IHubContext<MonitorHub, IMonitorHubClient> hubContext,
+    ILogger<EngineBackgroundService> logger) : BackgroundService
 {
-    private readonly MonitorConfiguration _configuration;
-    private readonly FasterStorage _storage;
-    private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext;
-    private readonly ILogger<EngineBackgroundService> _logger;
-
-    public EngineBackgroundService(
-        MonitorConfiguration configuration,
-        FasterStorage storage,
-        IHubContext<MonitorHub, IMonitorHubClient> hubContext,
-        ILogger<EngineBackgroundService> logger)
-    {
-        _configuration = configuration;
-        _storage = storage;
-        _hubContext = hubContext;
-        _logger = logger;
-    }
+    private readonly MonitorConfiguration _configuration = configuration;
+    private readonly FasterStorage _storage = storage;
+    private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext = hubContext;
+    private readonly ILogger<EngineBackgroundService> _logger = logger;
 
     protected override Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -45,34 +36,13 @@ public class EngineBackgroundService : BackgroundService
         switch (e)
         {
             case MonitorChecked mc:
-                _storage.SaveEvent(mc.Name, StoredEvent.From(mc));
-
-                var newStats = _storage.GetStats(mc.Name)!;
-
-                await _hubContext.Clients.All.MonitorChecked(new MonitorCheckedDto(
-                     N: mc.Name,
-                     At: mc.At.ToUnixTimeSeconds(),
-                     St: mc.Response?.State ?? MonitorState.Unknown,
-                     Ms: (int?)mc.Response?.ResponseTime?.TotalMilliseconds,
-                     Te: mc.Response?.ResponseText,
-                     Ns: new MonitorStatsDto(
-                         newStats.LastState,
-                         newStats.LastUpdate.ToUnixTimeSeconds(),
-                         newStats.Availability,
-                         (int)newStats.AverageResponseTime.TotalMilliseconds,
-                         newStats.LastSeenUp?.ToUnixTimeSeconds(),
-                         newStats.LastSeenDown?.ToUnixTimeSeconds())
-                ));
+                var newStats = _storage.SaveEvent(mc.Name, StoredEvent.From(mc));
+                await _hubContext.Clients.All.MonitorChecked(MonitorCheckedDto.From(mc, newStats));
                 break;
 
-            case MonitorStateChanged sc:
-                _storage.SaveLastStateChange(sc.Name, sc.At, sc.NewState);
-
-                await _hubContext.Clients.All.MonitorStateChanged(new MonitorStateChangedDto(
-                    N: sc.Name,
-                    At: sc.At,
-                    St: sc.NewState
-                ));
+            case MonitorStateChanged msc:
+                _storage.SaveLastStateChange(msc.Name, msc.At, msc.NewState);
+                await _hubContext.Clients.All.MonitorStateChanged(MonitorStateChangedDto.From(msc));
                 break;
 
             default:
