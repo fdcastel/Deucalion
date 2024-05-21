@@ -203,8 +203,11 @@ public class FasterStorage : IDisposable
     {
         var result = new Queue<byte[]>(count);
 
-        // Scan from last commited page -- https://github.com/microsoft/FASTER/discussions/610
+        // Scan from last 2 commited pages -- https://github.com/microsoft/FASTER/discussions/610
         var committedPageStart = log.CommittedUntilAddress & ~(LogPageSize - 1);
+        if (committedPageStart == log.CommittedUntilAddress) // corner case: committed until page boundary
+            committedPageStart -= LogPageSize;
+        committedPageStart -= LogPageSize;
         committedPageStart = Math.Max(committedPageStart, 0); // avoid negative values
 
         using var iter = log.Scan(committedPageStart, long.MaxValue, scanUncommitted: true);
