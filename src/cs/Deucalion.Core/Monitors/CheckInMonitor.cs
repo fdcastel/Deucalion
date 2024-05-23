@@ -16,7 +16,7 @@ public sealed class CheckInMonitor : PushMonitor, IDisposable
         _checkInEvent.Set();
         OnCheckedInEvent(response);
 
-        var resetIn = IntervalToDownOrDefault;
+        var resetIn = IntervalToDown!.Value;
         if (_resetTimer is null)
         {
             _resetTimer = new(Reset, null, resetIn, Timeout.InfiniteTimeSpan);

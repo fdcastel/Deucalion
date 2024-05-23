@@ -17,21 +17,10 @@ public class MonitorConfiguration
         public const string ConfigurationMonitorCannotBeEmpty = "Monitor '{0}' cannot be empty.";
     }
 
-    public class DefaultConfiguration
-    {
-        public int? IgnoreFailCount { get; set; }
-        public bool? UpsideDown { get; set; }
-
-        public TimeSpan? IntervalWhenDown { get; set; }
-        public TimeSpan? IntervalWhenUp { get; set; }
-
-        public TimeSpan? IntervalToDown { get; set; }
-    }
-
     public string? Version { get; set; }
 
     public OrderedDictionary<string, MonitorBase> Monitors { get; set; } = default!;
-    public DefaultConfiguration? Defaults { get; set; } = default!;
+    public AllMonitorTypesDefaults? Defaults { get; set; } = default!;
 
     public static MonitorConfiguration ReadFromFile(string configurationFile)
     {
@@ -57,29 +46,91 @@ public class MonitorConfiguration
 
         result.Monitors = result.Monitors ?? throw new ConfigurationErrorException(Messages.ConfigurationMustHaveMonitorsSection);
 
-        if (result.Defaults is not null)
+        foreach (var m in result.Monitors)
         {
-            // Set monitor defaults
-            MonitorBase.DefaultIgnoreFailCount = result.Defaults.IgnoreFailCount ?? MonitorBase.DefaultIgnoreFailCount;
-            MonitorBase.DefaultUpsideDown = result.Defaults.UpsideDown ?? MonitorBase.DefaultUpsideDown;
-
-            PullMonitor.DefaultIntervalWhenDown = result.Defaults.IntervalWhenDown ?? PullMonitor.DefaultIntervalWhenDown;
-            PullMonitor.DefaultIntervalWhenUp = result.Defaults.IntervalWhenUp ?? PullMonitor.DefaultIntervalWhenUp;
-
-            PushMonitor.DefaultIntervalToDown = result.Defaults.IntervalToDown ?? PushMonitor.DefaultIntervalToDown;
-        }
-
-        foreach (var d in result.Monitors)
-        {
-            if (d.Value is null)
+            // Check monitor is not empty
+            if (m.Value is null)
             {
-                // Monitor is empty
-                throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, d.Key));
+                throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, m.Key));
             }
 
-            d.Value.Name = d.Key;
+            // Set monitor name
+            m.Value.Name = m.Key;
+
+            // Set user-configured defaults
+            if (result.Defaults is not null)
+            {
+                ApplyUserDefaults(result.Defaults, m);
+            }
+
+            // Set system defaults
+            if (m.Value is DnsMonitor dnsMonitor)
+            {
+                dnsMonitor.Timeout ??= DnsMonitor.DefaultDnsTimeout;
+                dnsMonitor.WarnTimeout ??= DnsMonitor.DefaultDnsWarnTimeout;
+            }
+
+            if (m.Value is PingMonitor pingMonitor)
+            {
+                pingMonitor.Timeout ??= PingMonitor.DefaultPingTimeout;
+                pingMonitor.WarnTimeout ??= PingMonitor.DefaultPingWarnTimeout;
+
+            }
+
+            if (m.Value is PullMonitor pullMonitor)
+            {
+                pullMonitor.IntervalWhenDown ??= PullMonitor.DefaultIntervalWhenDown;
+                pullMonitor.IntervalWhenUp ??= PullMonitor.DefaultIntervalWhenUp;
+                pullMonitor.Timeout ??= PullMonitor.DefaultTimeout;
+                pullMonitor.WarnTimeout ??= PullMonitor.DefaultWarnTimeout;
+            }
+
+            if (m.Value is PushMonitor pushMonitor)
+            {
+                pushMonitor.IntervalToDown ??= PushMonitor.DefaultIntervalToDown;
+            }
         }
 
         return result;
+    }
+
+    private static void ApplyUserDefaults(AllMonitorTypesDefaults defaults, KeyValuePair<string, MonitorBase> m)
+    {
+        if (defaults is not null)
+        {
+            if (defaults.Dns is not null && m.Value is DnsMonitor dnsMonitor)
+            {
+                dnsMonitor.Timeout ??= defaults.Dns.Timeout;
+                dnsMonitor.WarnTimeout ??= defaults.Dns.WarnTimeout;
+            }
+
+            if (defaults.Http is not null && m.Value is HttpMonitor httpMonitor)
+            {
+                httpMonitor.Timeout ??= defaults.Http.Timeout;
+                httpMonitor.WarnTimeout ??= defaults.Http.WarnTimeout;
+            }
+
+            if (defaults.Ping is not null && m.Value is PingMonitor pingMonitor)
+            {
+                pingMonitor.Timeout ??= defaults.Ping.Timeout;
+                pingMonitor.WarnTimeout ??= defaults.Ping.WarnTimeout;
+            }
+
+            if (defaults.Tcp is not null && m.Value is TcpMonitor tcpMonitor)
+            {
+                tcpMonitor.Timeout ??= defaults.Tcp.Timeout;
+                tcpMonitor.WarnTimeout ??= defaults.Tcp.WarnTimeout;
+            }
+
+            if (m.Value is PullMonitor pullMonitor)
+            {
+                pullMonitor.IntervalWhenDown ??= defaults.IntervalWhenDown;
+                pullMonitor.IntervalWhenUp ??= defaults.IntervalWhenUp;
+                pullMonitor.Timeout ??= defaults.Timeout;
+                pullMonitor.WarnTimeout ??= defaults.WarnTimeout;
+            }
+
+            // ToDo: PushMonitor
+        }
     }
 }

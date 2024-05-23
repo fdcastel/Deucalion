@@ -29,7 +29,7 @@ public class MonitorConfigurationTests
     }
 
     [Fact]
-    public void MonitorDns_CanDeserialize_FromConfiguration()
+    public void MonitorDns_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -46,10 +46,12 @@ public class MonitorConfigurationTests
         Assert.Equal("google.com", dnsMonitor.Host);
         Assert.Equal(QueryType.A, dnsMonitor.RecordType);
         Assert.Equal(IPEndPoint.Parse("1.1.1.1:53"), dnsMonitor.Resolver);
+        Assert.Equal(DnsMonitor.DefaultDnsTimeout, dnsMonitor.Timeout);
+        Assert.Equal(DnsMonitor.DefaultDnsWarnTimeout, dnsMonitor.WarnTimeout);
     }
 
     [Fact]
-    public void MonitorHttp_CanDeserialize_FromConfiguration()
+    public void MonitorHttp_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -71,7 +73,7 @@ public class MonitorConfigurationTests
     }
 
     [Fact]
-    public void MonitorPing_CanDeserialize_FromConfiguration()
+    public void MonitorPing_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -84,10 +86,12 @@ public class MonitorConfigurationTests
         var pingMonitor = Assert.IsType<PingMonitor>(monitor);
         Assert.Equal("mping", pingMonitor.Name);
         Assert.Equal("192.168.1.1", pingMonitor.Host);
+        Assert.Equal(PingMonitor.DefaultPingTimeout, pingMonitor.Timeout);
+        Assert.Equal(PingMonitor.DefaultPingWarnTimeout, pingMonitor.WarnTimeout);
     }
 
     [Fact]
-    public void MonitorTcp_CanDeserialize_FromConfiguration()
+    public void MonitorTcp_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -105,7 +109,7 @@ public class MonitorConfigurationTests
     }
 
     [Fact]
-    public void MonitorCheckIn_CanDeserialize_FromConfiguration()
+    public void MonitorCheckIn_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -119,6 +123,54 @@ public class MonitorConfigurationTests
         Assert.Equal("mcheckin", checkInMonitor.Name);
         Assert.Equal("passw0rd", checkInMonitor.Secret);
     }
+
+    [Fact]
+    public void DeserializedMonitor_CanUseDefaultValues()
+    {
+        const string ConfigurationContent = @"
+            defaults:
+              intervalWhenDown: 00:00:10
+              intervalWhenUp: 00:00:20
+              ping:
+                warnTimeout: 00:00:30
+                timeout: 00:00:40
+
+            monitors:
+              mping:
+                !ping
+                host: 192.168.1.1
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var pingMonitor = Assert.IsType<PingMonitor>(monitor);
+        Assert.Equal(TimeSpan.FromSeconds(10), pingMonitor.IntervalWhenDown);
+        Assert.Equal(TimeSpan.FromSeconds(20), pingMonitor.IntervalWhenUp);
+        Assert.Equal(TimeSpan.FromSeconds(30), pingMonitor.WarnTimeout);
+        Assert.Equal(TimeSpan.FromSeconds(40), pingMonitor.Timeout);
+    }
+
+    [Fact]
+    public void DeserializedMonitor_CanUseCustomValues()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mping:
+                !ping
+                host: 192.168.1.1
+                intervalWhenDown: 00:00:10
+                intervalWhenUp: 00:00:20
+                warnTimeout: 00:00:30
+                timeout: 00:00:40
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var pingMonitor = Assert.IsType<PingMonitor>(monitor);
+        Assert.Equal(TimeSpan.FromSeconds(10), pingMonitor.IntervalWhenDown);
+        Assert.Equal(TimeSpan.FromSeconds(20), pingMonitor.IntervalWhenUp);
+        Assert.Equal(TimeSpan.FromSeconds(30), pingMonitor.WarnTimeout);
+        Assert.Equal(TimeSpan.FromSeconds(40), pingMonitor.Timeout);
+    }
+
 
     private static ConfigurationErrorException CatchConfigurationException(string configuration) =>
         Assert.Throws<ConfigurationErrorException>(() =>

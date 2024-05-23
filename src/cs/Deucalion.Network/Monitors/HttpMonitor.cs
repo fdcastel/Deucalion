@@ -9,8 +9,6 @@ namespace Deucalion.Network.Monitors;
 
 public class HttpMonitor : PullMonitor
 {
-    private static readonly TimeSpan DefaultHttpTimeout = TimeSpan.FromSeconds(1);
-
     // https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines#recommended-use
     private static HttpClient? _httpClient;
     private static HttpClient? _httpClientIgnoreCertificate;
@@ -43,9 +41,7 @@ public class HttpMonitor : PullMonitor
             ? CachedHttpClientIgnoreCertificate
             : CachedHttpClient;
 
-        var timeout = Timeout ?? DefaultHttpTimeout;
-
-        using CancellationTokenSource cts = new(timeout);
+        using CancellationTokenSource cts = new(Timeout!.Value);
 
         var stopwatch = Stopwatch.StartNew();
         try
@@ -82,7 +78,7 @@ public class HttpMonitor : PullMonitor
                 };
             }
 
-            return MonitorResponse.Up(elapsed: stopwatch.Elapsed, warnElapsed: WarnTimeout);
+            return MonitorResponse.Up(stopwatch.Elapsed, warnElapsed: WarnTimeout);
         }
         catch (HttpRequestException e)
         {
@@ -90,7 +86,7 @@ public class HttpMonitor : PullMonitor
         }
         catch (OperationCanceledException)
         {
-            return MonitorResponse.Down(timeout, "Timeout");
+            return MonitorResponse.Down(Timeout, "Timeout");
         }
     }
 }

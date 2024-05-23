@@ -6,7 +6,8 @@ namespace Deucalion.Network.Monitors;
 
 public class PingMonitor : PullMonitor
 {
-    private static readonly TimeSpan DefaultPingTimeout = TimeSpan.FromSeconds(1);
+    public static readonly TimeSpan DefaultPingTimeout = TimeSpan.FromSeconds(1);
+    public static readonly TimeSpan DefaultPingWarnTimeout = TimeSpan.FromMilliseconds(500);
 
     [Required]
     public string Host { get; set; } = default!;
@@ -16,13 +17,12 @@ public class PingMonitor : PullMonitor
         try
         {
             using Ping pinger = new();
-            var timeout = (Timeout ?? DefaultPingTimeout).TotalMilliseconds;
-            var reply = await pinger.SendPingAsync(Host, (int)timeout);
+            var reply = await pinger.SendPingAsync(Host, (int)Timeout!.Value.TotalMilliseconds);
             var elapsed = TimeSpan.FromMilliseconds(reply.RoundtripTime);
 
             return reply.Status == IPStatus.Success
                 ? MonitorResponse.Up(elapsed, warnElapsed: WarnTimeout)
-                : MonitorResponse.Down(elapsed, reply.Status.ToString());
+                : MonitorResponse.Down(elapsed, text: reply.Status.ToString());
         }
         catch (PingException e)
         {

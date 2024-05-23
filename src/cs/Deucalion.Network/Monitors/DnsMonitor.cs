@@ -8,7 +8,8 @@ namespace Deucalion.Network.Monitors;
 
 public class DnsMonitor : PullMonitor
 {
-    private static readonly TimeSpan DefaultDnsTimeout = TimeSpan.FromMilliseconds(500);
+    public static readonly TimeSpan DefaultDnsTimeout = TimeSpan.FromSeconds(1);
+    public static readonly TimeSpan DefaultDnsWarnTimeout = TimeSpan.FromMilliseconds(500);
 
     public static readonly int DefaultDnsPort = 53;
     public static readonly QueryType DefaultRecordType = QueryType.A;
@@ -29,22 +30,20 @@ public class DnsMonitor : PullMonitor
             : null;
     }
 
-    public QueryType RecordTypeOrDefault => RecordType ?? DefaultRecordType;
-
     public override async Task<MonitorResponse> QueryAsync()
     {
         LookupClientOptions options = Resolver is not null
             ? new(Resolver)
             : new();
 
-        options.Timeout = Timeout ?? DefaultDnsTimeout;
+        options.Timeout = Timeout!.Value;
 
         LookupClient lookup = new(options);
 
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            var result = await lookup.QueryAsync(Host, RecordType ?? QueryType.A);
+            var result = await lookup.QueryAsync(Host, RecordType ?? DefaultRecordType);
             stopwatch.Stop();
 
             return result.HasError

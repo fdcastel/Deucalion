@@ -23,7 +23,7 @@ public class Engine
             }
             else if (monitor is PullMonitor pullMonitor)
             {
-                status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, pullMonitor.IntervalWhenUpOrDefault);
+                status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, pullMonitor.IntervalWhenUp!.Value);
             }
         }
 
@@ -96,8 +96,8 @@ public class Engine
                     {
                         // Update timer interval
                         var dueTime = newState == MonitorState.Up
-                            ? pullMonitor.IntervalWhenUpOrDefault
-                            : pullMonitor.IntervalWhenDownOrDefault;
+                            ? pullMonitor.IntervalWhenUp!.Value
+                            : pullMonitor.IntervalWhenDown!.Value;
 
                         // Subtract from next dueTime the elapsed time since the current timer event.
                         var deltaUntilNow = DateTimeOffset.UtcNow - timerEventAt;

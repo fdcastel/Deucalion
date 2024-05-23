@@ -28,7 +28,7 @@ public class CheckInMonitorTests
         checkInMonitor.CheckIn();
         Assert.Equal(MonitorState.Up, result);
 
-        await Task.Delay(checkInMonitor.IntervalToDownOrDefault * 2);
+        await Task.Delay(checkInMonitor.IntervalToDown!.Value * 2);
 
         Assert.Equal(MonitorState.Down, result);
     }
@@ -60,7 +60,7 @@ public class CheckInMonitorTests
         Assert.NotNull(currentResponse);
         Assert.Equal(newResponse.State, currentResponse.State);
 
-        await Task.Delay(checkInMonitor.IntervalToDownOrDefault * 2);
+        await Task.Delay(checkInMonitor.IntervalToDown!.Value * 2);
 
         Assert.Equal(MonitorState.Down, currentResponse.State);
     }

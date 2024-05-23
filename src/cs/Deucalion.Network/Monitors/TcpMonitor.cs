@@ -7,8 +7,6 @@ namespace Deucalion.Network.Monitors;
 
 public class TcpMonitor : PullMonitor
 {
-    private static readonly TimeSpan DefaultTcpTimeout = TimeSpan.FromMilliseconds(500);
-
     [Required]
     public string Host { get; set; } = default!;
     [Required]
@@ -17,8 +15,7 @@ public class TcpMonitor : PullMonitor
     public override async Task<MonitorResponse> QueryAsync()
     {
         using TcpClient tcpClient = new();
-        var timeout = Timeout ?? DefaultTcpTimeout;
-        using CancellationTokenSource cts = new(timeout);
+        using CancellationTokenSource cts = new(Timeout!.Value);
 
         var stopwatch = Stopwatch.StartNew();
         try
@@ -26,7 +23,7 @@ public class TcpMonitor : PullMonitor
             await tcpClient.ConnectAsync(Host, Port, cts.Token);
             stopwatch.Stop();
 
-            return MonitorResponse.Up(elapsed: stopwatch.Elapsed, warnElapsed: WarnTimeout);
+            return MonitorResponse.Up(stopwatch.Elapsed, warnElapsed: WarnTimeout);
         }
         catch (SocketException e)
         {
@@ -34,7 +31,7 @@ public class TcpMonitor : PullMonitor
         }
         catch (OperationCanceledException)
         {
-            return MonitorResponse.Down(timeout, "Timeout");
+            return MonitorResponse.Down(Timeout, "Timeout");
         }
     }
 }
