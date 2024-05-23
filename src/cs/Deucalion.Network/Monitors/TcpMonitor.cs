@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net.Sockets;
 using Deucalion.Monitors;
 
@@ -7,15 +6,13 @@ namespace Deucalion.Network.Monitors;
 
 public class TcpMonitor : PullMonitor
 {
-    [Required]
-    public string Host { get; set; } = default!;
-    [Required]
-    public int Port { get; set; } = default!;
+    public required string Host { get; set; }
+    public required int Port { get; set; }
 
     public override async Task<MonitorResponse> QueryAsync()
     {
         using TcpClient tcpClient = new();
-        using CancellationTokenSource cts = new(Timeout!.Value);
+        using CancellationTokenSource cts = new(Timeout);
 
         var stopwatch = Stopwatch.StartNew();
         try

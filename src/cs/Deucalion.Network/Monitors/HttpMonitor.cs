@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
@@ -19,8 +18,7 @@ public class HttpMonitor : PullMonitor
         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
     });
 
-    [Required]
-    public Uri Url { get; set; } = default!;
+    public required Uri Url { get; set; }
 
     public HttpStatusCode? ExpectedStatusCode { get; set; }
     public string? ExpectedResponseBodyPattern { get; set; }
@@ -41,7 +39,7 @@ public class HttpMonitor : PullMonitor
             ? CachedHttpClientIgnoreCertificate
             : CachedHttpClient;
 
-        using CancellationTokenSource cts = new(Timeout!.Value);
+        using CancellationTokenSource cts = new(Timeout);
 
         var stopwatch = Stopwatch.StartNew();
         try

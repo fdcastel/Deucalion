@@ -1,19 +1,19 @@
 ﻿using System.Net;
 using Deucalion.Application.Configuration;
-using Deucalion.Monitors;
+using Deucalion.Monitors.Configuration;
 using Deucalion.Network.Monitors;
 using DnsClient;
 using Xunit;
 
 namespace Deucalion.Tests.Configuration;
 
-public class MonitorConfigurationTests
+public class ConfigurationTests
 {
     [Fact]
     public void EmptyConfiguration_Throws()
     {
         var exception = CatchConfigurationException(string.Empty);
-        Assert.Equal(MonitorConfiguration.Messages.ConfigurationMustNotBeEmpty, exception.Message);
+        Assert.Equal(ApplicationConfiguration.Messages.ConfigurationMustNotBeEmpty, exception.Message);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class MonitorConfigurationTests
         ";
 
         var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(string.Format(MonitorConfiguration.Messages.ConfigurationMonitorCannotBeEmpty, "m1"), exception.Message);
+        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationMonitorCannotBeEmpty, "m1"), exception.Message);
     }
 
     [Fact]
@@ -41,13 +41,28 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var dnsMonitor = Assert.IsType<DnsMonitor>(monitor);
+        var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitor);
         Assert.Equal("mdns", dnsMonitor.Name);
         Assert.Equal("google.com", dnsMonitor.Host);
         Assert.Equal(QueryType.A, dnsMonitor.RecordType);
-        Assert.Equal(IPEndPoint.Parse("1.1.1.1:53"), dnsMonitor.Resolver);
-        Assert.Equal(DnsMonitor.DefaultDnsTimeout, dnsMonitor.Timeout);
-        Assert.Equal(DnsMonitor.DefaultDnsWarnTimeout, dnsMonitor.WarnTimeout);
+        Assert.Equal(IPEndPoint.Parse("1.1.1.1"), dnsMonitor.Resolver);
+    }
+
+    [Fact]
+    public void MonitorDns_CanDeserializeResolverPort()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mdns:
+                !dns
+                host: google.com
+                recordType: A
+                resolver: 1.1.1.1:66
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitor);
+        Assert.Equal(IPEndPoint.Parse("1.1.1.1:66"), dnsMonitor.Resolver);
     }
 
     [Fact]
@@ -64,7 +79,7 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var httpMonitor = Assert.IsType<HttpMonitor>(monitor);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitor);
         Assert.Equal("mhttp", httpMonitor.Name);
         Assert.Equal(new Uri("http://github.com/api"), httpMonitor.Url);
         Assert.Equal(HttpStatusCode.Accepted, httpMonitor.ExpectedStatusCode);
@@ -83,11 +98,9 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var pingMonitor = Assert.IsType<PingMonitor>(monitor);
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitor);
         Assert.Equal("mping", pingMonitor.Name);
         Assert.Equal("192.168.1.1", pingMonitor.Host);
-        Assert.Equal(PingMonitor.DefaultPingTimeout, pingMonitor.Timeout);
-        Assert.Equal(PingMonitor.DefaultPingWarnTimeout, pingMonitor.WarnTimeout);
     }
 
     [Fact]
@@ -102,7 +115,7 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var tcpMonitor = Assert.IsType<TcpMonitor>(monitor);
+        var tcpMonitor = Assert.IsType<TcpMonitorConfiguration>(monitor);
         Assert.Equal("mtcp", tcpMonitor.Name);
         Assert.Equal("192.168.1.2", tcpMonitor.Host);
         Assert.Equal(65000, tcpMonitor.Port);
@@ -119,7 +132,7 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var checkInMonitor = Assert.IsType<CheckInMonitor>(monitor);
+        var checkInMonitor = Assert.IsType<CheckInMonitorConfiguration>(monitor);
         Assert.Equal("mcheckin", checkInMonitor.Name);
         Assert.Equal("passw0rd", checkInMonitor.Secret);
     }
@@ -142,7 +155,7 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var pingMonitor = Assert.IsType<PingMonitor>(monitor);
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitor);
         Assert.Equal(TimeSpan.FromSeconds(10), pingMonitor.IntervalWhenDown);
         Assert.Equal(TimeSpan.FromSeconds(20), pingMonitor.IntervalWhenUp);
         Assert.Equal(TimeSpan.FromSeconds(30), pingMonitor.WarnTimeout);
@@ -164,7 +177,7 @@ public class MonitorConfigurationTests
         ";
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var pingMonitor = Assert.IsType<PingMonitor>(monitor);
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitor);
         Assert.Equal(TimeSpan.FromSeconds(10), pingMonitor.IntervalWhenDown);
         Assert.Equal(TimeSpan.FromSeconds(20), pingMonitor.IntervalWhenUp);
         Assert.Equal(TimeSpan.FromSeconds(30), pingMonitor.WarnTimeout);
@@ -176,16 +189,16 @@ public class MonitorConfigurationTests
         Assert.Throws<ConfigurationErrorException>(() =>
         {
             using var reader = new StringReader(configuration);
-            MonitorConfiguration.ReadFromStream(reader);
+            ApplicationConfiguration.ReadFromStream(reader);
         });
 
-    private static MonitorConfiguration ReadConfiguration(string configuration)
+    private static ApplicationConfiguration ReadConfiguration(string configuration)
     {
         using var reader = new StringReader(configuration);
-        return MonitorConfiguration.ReadFromStream(reader);
+        return ApplicationConfiguration.ReadFromStream(reader);
     }
 
-    private static MonitorBase ReadSingleMonitorFromConfiguration(string configurationContent)
+    private static MonitorConfiguration ReadSingleMonitorFromConfiguration(string configurationContent)
     {
         var configuration = ReadConfiguration(configurationContent);
         Assert.Single(configuration.Monitors);

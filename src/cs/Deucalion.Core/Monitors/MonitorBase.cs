@@ -1,15 +1,10 @@
 ﻿namespace Deucalion.Monitors;
 
+// ToDo: Rename to Monitor
 public abstract class MonitorBase
 {
-    public static readonly int DefaultIgnoreFailCount = 0;
-    public static readonly bool DefaultUpsideDown = false;
+    public string Name { get; set; } = string.Empty;
 
-    public string Name { get; set; } = default!;
-    public string? Group { get; set; }
-    public string? Href { get; set; }
-    public string? Image { get; set; }
-
-    public int? IgnoreFailCount { get; set; }
-    public bool? UpsideDown { get; set; }
+    public int IgnoreFailCount { get; set; }
+    public bool UpsideDown { get; set; }
 }

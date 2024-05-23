@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using Deucalion.Monitors;
 using DnsClient;
@@ -11,13 +10,11 @@ public class DnsMonitor : PullMonitor
     public static readonly TimeSpan DefaultDnsTimeout = TimeSpan.FromSeconds(1);
     public static readonly TimeSpan DefaultDnsWarnTimeout = TimeSpan.FromMilliseconds(500);
 
-    public static readonly int DefaultDnsPort = 53;
-    public static readonly QueryType DefaultRecordType = QueryType.A;
+    public static readonly QueryType DefaultDnsRecordType = QueryType.A;
 
-    [Required]
-    public string Host { get; set; } = default!;
+    public required string Host { get; set; }
 
-    public QueryType? RecordType { get; set; }
+    public QueryType RecordType { get; set; } = DefaultDnsRecordType;
 
     private IPEndPoint? _resolver;
     public IPEndPoint? Resolver
@@ -25,9 +22,15 @@ public class DnsMonitor : PullMonitor
         get => _resolver;
         set => _resolver = value is not null
             ? value.Port == 0
-                ? new IPEndPoint(value.Address, DefaultDnsPort)
+                ? new IPEndPoint(value.Address, 53)
                 : value
             : null;
+    }
+
+    public DnsMonitor()
+    {
+        Timeout = DefaultDnsTimeout;
+        WarnTimeout = DefaultDnsWarnTimeout;
     }
 
     public override async Task<MonitorResponse> QueryAsync()
@@ -36,14 +39,14 @@ public class DnsMonitor : PullMonitor
             ? new(Resolver)
             : new();
 
-        options.Timeout = Timeout!.Value;
+        options.Timeout = Timeout;
 
         LookupClient lookup = new(options);
 
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            var result = await lookup.QueryAsync(Host, RecordType ?? DefaultRecordType);
+            var result = await lookup.QueryAsync(Host, RecordType);
             stopwatch.Stop();
 
             return result.HasError

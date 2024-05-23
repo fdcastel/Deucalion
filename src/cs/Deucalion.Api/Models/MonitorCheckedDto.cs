@@ -20,6 +20,6 @@ public record MonitorCheckedDto(
             St: mc.Response?.State ?? MonitorState.Unknown,
             Ms: (int?)mc.Response?.ResponseTime?.TotalMilliseconds,
             Te: mc.Response?.ResponseText,
-            Ns: MonitorStatsDto.From(stats)
+            Ns: MonitorStatsDto.From(stats)!
         );
 }

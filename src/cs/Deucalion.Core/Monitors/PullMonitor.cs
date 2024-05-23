@@ -9,11 +9,11 @@ public abstract class PullMonitor : MonitorBase
     public static readonly TimeSpan DefaultWarnTimeout = TimeSpan.FromSeconds(1);
 
 
-    public TimeSpan? IntervalWhenUp { get; set; }
-    public TimeSpan? IntervalWhenDown { get; set; }
+    public TimeSpan IntervalWhenUp { get; set; } = DefaultIntervalWhenUp;
+    public TimeSpan IntervalWhenDown { get; set; } = DefaultIntervalWhenDown;
 
-    public TimeSpan? Timeout { get; set; }
-    public TimeSpan? WarnTimeout { get; set; }
+    public TimeSpan Timeout { get; set; } = DefaultTimeout;
+    public TimeSpan WarnTimeout { get; set; } = DefaultWarnTimeout;
 
     public abstract Task<MonitorResponse> QueryAsync();
 }

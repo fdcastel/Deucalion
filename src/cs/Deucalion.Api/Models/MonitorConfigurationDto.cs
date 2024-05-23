@@ -1,4 +1,4 @@
-﻿using Deucalion.Monitors;
+﻿using Deucalion.Monitors.Configuration;
 using Deucalion.Network.Monitors;
 
 namespace Deucalion.Api.Models;
@@ -9,16 +9,16 @@ internal record MonitorConfigurationDto(
     string? Image
 )
 {
-    internal static MonitorConfigurationDto From(MonitorBase c) =>
+    internal static MonitorConfigurationDto From(MonitorConfiguration c) =>
         new(
             Group: c.Group,
             Href: ExtractHref(c),
             Image: c.Image
         );
 
-    private static string? ExtractHref(MonitorBase monitor)
+    private static string? ExtractHref(MonitorConfiguration monitor)
     {
-        if (monitor.Href is null && monitor is HttpMonitor hm)
+        if (monitor.Href is null && monitor is HttpMonitorConfiguration hm)
         {
             return hm.Url.ToString();
         }

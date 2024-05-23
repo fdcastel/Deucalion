@@ -5,6 +5,7 @@ using Deucalion.Api.Options;
 using Deucalion.Api.Services;
 using Deucalion.Application.Configuration;
 using Deucalion.Monitors;
+using Deucalion.Monitors.Configuration;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -41,8 +42,12 @@ public static class Application
         deucalionOptions.PageDescription ??= "Deucalion. A high performance monitoring tool.";
         builder.Services.AddSingleton(_ => deucalionOptions);
 
-        var monitorConfiguration = MonitorConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
-        builder.Services.AddSingleton(_ => monitorConfiguration);
+        var applicationConfiguration = ApplicationConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
+        builder.Services.AddSingleton(_ => applicationConfiguration);
+
+        // Build monitors from configuration
+        var applicationMonitors = ApplicationMonitors.BuildFrom(applicationConfiguration);
+        builder.Services.AddSingleton(_ => applicationMonitors);
 
         // Application services
         var storage = new FasterStorage(deucalionOptions.StoragePath, deucalionOptions.CommitInterval);
@@ -60,8 +65,10 @@ public static class Application
 
         app.UseResponseCompression();
 
+        var applicationConfiguration = app.Services.GetRequiredService<ApplicationConfiguration>();
+        var applicationMonitors = app.Services.GetRequiredService<ApplicationMonitors>();
+
         // Setup Api endpoints
-        var monitorConfiguration = app.Services.GetRequiredService<MonitorConfiguration>();
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
             Results.Ok(new
             {
@@ -73,11 +80,11 @@ public static class Application
         {
             if (monitorName is null)
             {
-                return Results.Ok(from kvp in monitorConfiguration.Monitors
+                return Results.Ok(from kvp in applicationConfiguration.Monitors
                                   select BuildMonitorDto(storage, kvp.Value, kvp.Key));
             }
 
-            if (!monitorConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
+            if (!applicationConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
             {
                 return DeucalionResults.MonitorNotFound(monitorName);
             }
@@ -87,7 +94,7 @@ public static class Application
 
         app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, [FromBody] MonitorCheckInDto arguments) =>
             {
-                if (!monitorConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
+                if (!applicationMonitors.Monitors.TryGetValue(monitorName, out var monitor))
                 {
                     return DeucalionResults.MonitorNotFound(monitorName);
                 }
@@ -112,7 +119,7 @@ public static class Application
         return app;
     }
 
-    private static MonitorDto BuildMonitorDto(FasterStorage storage, MonitorBase m, string mn) =>
+    private static MonitorDto BuildMonitorDto(FasterStorage storage, MonitorConfiguration m, string mn) =>
         new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
