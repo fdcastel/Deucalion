@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Deucalion.Monitors.Configuration;
+using Deucalion.Configuration;
 
-namespace Deucalion.Network.Monitors;
+namespace Deucalion.Network.Configuration;
 
 public record PingMonitorConfiguration : PullMonitorConfiguration
 {

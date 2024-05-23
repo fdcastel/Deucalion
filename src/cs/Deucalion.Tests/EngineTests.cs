@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Deucalion.Application;
-using Deucalion.Monitors;
-using Deucalion.Monitors.Events;
+using Deucalion.Events;
+using Deucalion.Network.Monitors;
 using Deucalion.Tests.Mocks;
 using Xunit;
 using Xunit.Abstractions;

@@ -1,4 +1,6 @@
-﻿namespace Deucalion.Monitors;
+﻿using Deucalion.Monitors;
+
+namespace Deucalion.Network.Monitors;
 
 public sealed class CheckInMonitor : PushMonitor, IDisposable
 {

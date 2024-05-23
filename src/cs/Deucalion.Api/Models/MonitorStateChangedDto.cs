@@ -1,5 +1,4 @@
-﻿using Deucalion.Monitors;
-using Deucalion.Monitors.Events;
+﻿using Deucalion.Events;
 
 namespace Deucalion.Api.Models;
 

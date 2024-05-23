@@ -1,5 +1,6 @@
-﻿using Deucalion.Monitors;
-using Deucalion.Monitors.Configuration;
+﻿using Deucalion.Configuration;
+using Deucalion.Monitors;
+using Deucalion.Network.Configuration;
 using Deucalion.Network.Monitors;
 
 namespace Deucalion.Application.Configuration;

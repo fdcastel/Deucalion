@@ -1,6 +1,4 @@
-﻿using Deucalion.Monitors;
-
-namespace Deucalion.Api.Models;
+﻿namespace Deucalion.Api.Models;
 
 internal record MonitorCheckInDto(
     MonitorState State,

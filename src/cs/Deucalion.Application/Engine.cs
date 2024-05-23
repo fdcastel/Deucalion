@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
+using Deucalion.Events;
 using Deucalion.Monitors;
-using Deucalion.Monitors.Events;
+using Deucalion.Network.Monitors;
 
 namespace Deucalion.Application;
 

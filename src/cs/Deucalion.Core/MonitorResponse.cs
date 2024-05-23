@@ -1,4 +1,4 @@
-﻿namespace Deucalion.Monitors;
+﻿namespace Deucalion;
 
 public record MonitorResponse(
     MonitorState State = MonitorState.Unknown,
@@ -37,4 +37,9 @@ public record MonitorResponse(
             ResponseTime: elapsed,
             ResponseText: text
         );
+}
+
+public class MonitorResponseEventArgs(MonitorResponse? response) : EventArgs
+{
+    public MonitorResponse? Response { get; set; } = response;
 }

@@ -1,4 +1,4 @@
-﻿namespace Deucalion.Monitors.Events;
+﻿namespace Deucalion.Events;
 
 public record MonitorStateChanged(
     string Name,

@@ -1,5 +1,5 @@
-﻿using Deucalion.Monitors.Configuration;
-using Deucalion.Network.Monitors;
+﻿using Deucalion.Configuration;
+using Deucalion.Network.Configuration;
 
 namespace Deucalion.Api.Models;
 

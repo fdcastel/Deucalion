@@ -1,5 +1,4 @@
-﻿using Deucalion.Monitors;
-using Deucalion.Monitors.Events;
+﻿using Deucalion.Events;
 using Deucalion.Storage;
 using Xunit;
 

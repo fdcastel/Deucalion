@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Deucalion.Application.Configuration;
-using Deucalion.Monitors.Configuration;
-using Deucalion.Network.Monitors;
+using Deucalion.Configuration;
+using Deucalion.Network.Configuration;
 using DnsClient;
 using Xunit;
 

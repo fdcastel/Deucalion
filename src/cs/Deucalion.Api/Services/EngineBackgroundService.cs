@@ -1,6 +1,6 @@
 ﻿using Deucalion.Api.Models;
 using Deucalion.Application;
-using Deucalion.Monitors.Events;
+using Deucalion.Events;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.SignalR;
 
@@ -43,7 +43,7 @@ internal class EngineBackgroundService(
                 break;
 
             default:
-                _logger.LogWarning("Ignoring unknown event class ({className}).", nameof(e));
+                _logger.LogWarning("Unknown event: {event}.", e);
                 break;
         }
     }

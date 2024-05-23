@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Net;
-using Deucalion.Monitors.Configuration;
+using Deucalion.Configuration;
 
-namespace Deucalion.Network.Monitors;
+namespace Deucalion.Network.Configuration;
 
 public record HttpMonitorOptionalConfiguration : PullMonitorConfiguration
 {

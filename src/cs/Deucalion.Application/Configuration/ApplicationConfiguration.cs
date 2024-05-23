@@ -1,7 +1,7 @@
 ﻿using Deucalion.Application.Collections;
 using Deucalion.Application.Yaml;
-using Deucalion.Monitors.Configuration;
-using Deucalion.Network.Monitors;
+using Deucalion.Configuration;
+using Deucalion.Network.Configuration;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 

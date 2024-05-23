@@ -1,6 +1,4 @@
-﻿using Deucalion.Monitors;
-
-namespace Deucalion.Storage;
+﻿namespace Deucalion.Storage;
 
 public record MonitorStats(
     MonitorState LastState,

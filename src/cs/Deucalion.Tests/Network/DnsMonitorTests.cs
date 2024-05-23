@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Xunit;
 

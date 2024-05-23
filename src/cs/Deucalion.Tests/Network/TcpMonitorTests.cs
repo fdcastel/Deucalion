@@ -1,5 +1,4 @@
-﻿using Deucalion.Monitors;
-using Deucalion.Network.Monitors;
+﻿using Deucalion.Network.Monitors;
 using Xunit;
 
 namespace Deucalion.Tests.Network;

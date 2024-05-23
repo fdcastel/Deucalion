@@ -1,4 +1,6 @@
-﻿namespace Deucalion.Monitors.Configuration;
+﻿using Deucalion.Configuration;
+
+namespace Deucalion.Network.Configuration;
 
 public record CheckInMonitorConfiguration : PushMonitorConfiguration
 {

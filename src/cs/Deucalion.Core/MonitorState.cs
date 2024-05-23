@@ -1,4 +1,4 @@
-﻿namespace Deucalion.Monitors;
+﻿namespace Deucalion;
 
 public enum MonitorState
 {
