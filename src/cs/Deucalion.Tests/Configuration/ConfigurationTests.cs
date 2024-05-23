@@ -29,7 +29,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void MonitorDns_CanDeserialize()
+    public void DnsMonitor_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -49,7 +49,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void MonitorDns_CanDeserializeResolverPort()
+    public void DnsMonitor_CanDeserializeResolverPort()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -66,7 +66,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void MonitorHttp_CanDeserialize()
+    public void HttpMonitor_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -88,7 +88,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void MonitorPing_CanDeserialize()
+    public void PingMonitor_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -104,7 +104,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void MonitorTcp_CanDeserialize()
+    public void TcpMonitor_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -122,7 +122,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void MonitorCheckIn_CanDeserialize()
+    public void CheckInMonitor_CanDeserialize()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -138,7 +138,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void DeserializedMonitor_CanUseDefaultValues()
+    public void Monitors_CanUseDefaultValues()
     {
         const string ConfigurationContent = @"
             defaults:
@@ -163,7 +163,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void DeserializedMonitor_CanUseCustomValues()
+    public void Monitors_CanUseCustomValues()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -184,18 +184,42 @@ public class ConfigurationTests
         Assert.Equal(TimeSpan.FromSeconds(40), pingMonitor.Timeout);
     }
 
-
-    private static ConfigurationErrorException CatchConfigurationException(string configuration) =>
-        Assert.Throws<ConfigurationErrorException>(() =>
-        {
-            using var reader = new StringReader(configuration);
-            ApplicationConfiguration.ReadFromStream(reader);
-        });
-
-    private static ApplicationConfiguration ReadConfiguration(string configuration)
+    [Fact]
+    public void Monitors_CanUseInterpolation()
     {
-        using var reader = new StringReader(configuration);
-        return ApplicationConfiguration.ReadFromStream(reader);
+        const string ConfigurationContent = """
+            monitors:
+              cloudflare: !dns
+                recordType: A
+                host: ${MONITOR_NAME}.com
+
+              bing: !ping
+                timeout: 00:00:40
+                host: "${MONITOR_NAME}.com"
+
+              google: !http
+                url: https://${MONITOR_NAME}.com
+        """;
+
+        var monitors = ReadConfiguration(ConfigurationContent);
+
+        var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitors.Monitors[0]);
+        Assert.Equal("cloudflare.com", dnsMonitor.Host);
+
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitors.Monitors[1]);
+        Assert.Equal("bing.com", pingMonitor.Host);
+
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors[2]);
+        Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
+
+    }
+
+    private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>
+        Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
+
+    private static ApplicationConfiguration ReadConfiguration(string configurationContent)
+    {
+        return ApplicationConfiguration.ReadFromString(configurationContent);
     }
 
     private static MonitorConfiguration ReadSingleMonitorFromConfiguration(string configurationContent)

@@ -33,11 +33,11 @@ public record ApplicationConfiguration
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {
-        using var reader = new StreamReader(configurationFile);
-        return ReadFromStream(reader);
+        var content = File.ReadAllText(configurationFile);
+        return ReadFromString(content);
     }
 
-    public static ApplicationConfiguration ReadFromStream(TextReader reader)
+    public static ApplicationConfiguration ReadFromString(string content)
     {
         var deserializer = new DeserializerBuilder()
             .IgnoreUnmatchedProperties()
@@ -47,11 +47,12 @@ public record ApplicationConfiguration
             .WithTagMapping("!http", typeof(HttpMonitorConfiguration))
             .WithTagMapping("!ping", typeof(PingMonitorConfiguration))
             .WithTagMapping("!tcp", typeof(TcpMonitorConfiguration))
+            .WithTypeConverter(new InterpolatedStringConverter())
             .WithTypeConverter(new HttpMethodConverter())
             .WithValidation()
             .Build();
 
-        var result = deserializer.Deserialize<ApplicationConfiguration>(reader) ?? throw new ConfigurationErrorException(Messages.ConfigurationMustNotBeEmpty);
+        var result = deserializer.Deserialize<ApplicationConfiguration>(content) ?? throw new ConfigurationErrorException(Messages.ConfigurationMustNotBeEmpty);
 
         result.Monitors = result.Monitors ?? throw new ConfigurationErrorException(Messages.ConfigurationMustHaveMonitorsSection);
 
