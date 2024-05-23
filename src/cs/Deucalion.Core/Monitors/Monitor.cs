@@ -1,7 +1,6 @@
 ﻿namespace Deucalion.Monitors;
 
-// ToDo: Rename to Monitor
-public abstract class MonitorBase
+public abstract class Monitor
 {
     public string Name { get; set; } = string.Empty;
 

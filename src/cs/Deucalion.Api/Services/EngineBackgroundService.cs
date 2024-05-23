@@ -1,6 +1,5 @@
 ﻿using Deucalion.Api.Models;
 using Deucalion.Application;
-using Deucalion.Monitors;
 using Deucalion.Monitors.Events;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.SignalR;
@@ -8,12 +7,12 @@ using Microsoft.AspNetCore.SignalR;
 namespace Deucalion.Api.Services;
 
 internal class EngineBackgroundService(
-    IEnumerable<MonitorBase> monitors,
+    IEnumerable<Monitors.Monitor> monitors,
     FasterStorage storage,
     IHubContext<MonitorHub, IMonitorHubClient> hubContext,
     ILogger<EngineBackgroundService> logger) : BackgroundService
 {
-    private readonly List<MonitorBase> _monitors = monitors.ToList();
+    private readonly List<Monitors.Monitor> _monitors = monitors.ToList();
     private readonly FasterStorage _storage = storage;
     private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext = hubContext;
     private readonly ILogger<EngineBackgroundService> _logger = logger;

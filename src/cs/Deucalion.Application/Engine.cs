@@ -6,7 +6,7 @@ namespace Deucalion.Application;
 
 public class Engine
 {
-    public void Run(IEnumerable<MonitorBase> monitors, Action<MonitorEventBase> callback, CancellationToken stopToken)
+    public void Run(IEnumerable<Monitors.Monitor> monitors, Action<MonitorEventBase> callback, CancellationToken stopToken)
     {
         var start = DateTimeOffset.UtcNow;
 
@@ -75,7 +75,7 @@ public class Engine
             }
         }
 
-        void UpdateMonitorState(MonitorBase monitor, MonitorResponse? monitorResponse, DateTimeOffset timerEventAt = default)
+        void UpdateMonitorState(Monitors.Monitor monitor, MonitorResponse? monitorResponse, DateTimeOffset timerEventAt = default)
         {
             var name = monitor.Name;
             var at = DateTimeOffset.UtcNow;
@@ -117,7 +117,7 @@ public class Engine
 
     internal class MonitorStatus
     {
-        internal required MonitorBase Monitor { get; init; }
+        internal required Monitors.Monitor Monitor { get; init; }
         internal Timer? QueryTimer { get; set; }
         internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
     }

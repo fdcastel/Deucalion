@@ -62,7 +62,7 @@ public class EngineTests(ITestOutputHelper output)
         try
         {
             using CancellationTokenSource cts = new(pulse * 4.5);
-            var monitors = new List<MonitorBase>() { m1, m2 };
+            var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)
@@ -112,7 +112,7 @@ public class EngineTests(ITestOutputHelper output)
             m2.Start();
 
             using CancellationTokenSource cts = new(pulse * 4.5);
-            var monitors = new List<MonitorBase>() { m1, m2 };
+            var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)
@@ -152,7 +152,7 @@ public class EngineTests(ITestOutputHelper output)
             m1.Start();
 
             using CancellationTokenSource cts = new(pulse * 7.5);
-            var monitors = new List<MonitorBase>() { m1 };
+            var monitors = new List<Deucalion.Monitors.Monitor>() { m1 };
             engine.Run(monitors, MonitorCallback, cts.Token);
         }
         catch (OperationCanceledException)

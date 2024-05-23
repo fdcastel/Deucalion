@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Monitors;
 
-public abstract class PushMonitor : MonitorBase
+public abstract class PushMonitor : Monitor
 {
     public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromSeconds(60);
 

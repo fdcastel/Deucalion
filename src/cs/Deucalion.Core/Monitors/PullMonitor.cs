@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Monitors;
 
-public abstract class PullMonitor : MonitorBase
+public abstract class PullMonitor : Monitor
 {
     public static readonly TimeSpan DefaultIntervalWhenUp = TimeSpan.FromMinutes(1);
     public static readonly TimeSpan DefaultIntervalWhenDown = TimeSpan.FromSeconds(15);
