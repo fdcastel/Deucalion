@@ -94,11 +94,25 @@ monitors:
 
 ## How to debug
 
+### Using Visual Studio 2022
+
 Open `Deucalion.sln` with Visual Studio 2022.
 
 Start both `Deucalion.Api` and `deucalion-ui` projects. You may [set multiple startup projects](https://learn.microsoft.com/en-us/visualstudio/ide/how-to-set-multiple-startup-projects) for this.
 
-Do not use `Deucalion.Service` for debugging. It uses a static (pre-built) version of UI (you should run `Invoke-Build` first).
+> Do not use `Deucalion.Service` for debugging. It uses a static (pre-built) version of UI (you need to run `Invoke-Build Build` first).
+
+
+
+### Using Visual Studio Code
+
+Run
+
+```powershell
+Invoke-Build Dev
+```
+
+This will start both `Deucalion.Api` and `deucalion-ui` projects in development mode. Any source file changes will be detected and reloaded.
 
 
 
