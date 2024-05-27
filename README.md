@@ -116,6 +116,18 @@ This will start both `Deucalion.Api` and `deucalion-ui` projects in development 
 
 
 
+## Logging
+
+In **Development** environment the log level for `Deucalion.Api` namespace is `Debug`. This generates a log entry for each message received from `EngineBackgroundService`.
+
+For **Production** environments the log level is `Information` (the default). To change this, you can run the application with
+
+`--Logging:LogLevel:Deucalion=Debug`
+
+in command-line. Or change the appropriate value in `appsettings.json`.
+
+
+
 ## How to build
 
 Install [`Invoke-Build`](https://github.com/nightroman/Invoke-Build).

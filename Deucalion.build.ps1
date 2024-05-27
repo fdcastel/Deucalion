@@ -41,7 +41,7 @@ task Prod {
     Set-Location './publish'
     Start-Process 'http://localhost:5000'
 
-    exec { ./Deucalion.Service.exe /Deucalion:ConfigurationFile=../deucalion-sample.yaml }
+    exec { ./Deucalion.Service.exe --Deucalion:ConfigurationFile=../deucalion-sample.yaml }
 }
 
 # synopsis: Run test suite.

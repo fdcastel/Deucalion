@@ -34,11 +34,13 @@ internal class EngineBackgroundService(
         switch (e)
         {
             case MonitorChecked mc:
+                _logger.LogDebug("{event}.", mc);
                 var newStats = _storage.SaveEvent(mc.Name, StoredEvent.From(mc));
                 await _hubContext.Clients.All.MonitorChecked(MonitorCheckedDto.From(mc, newStats));
                 break;
 
             case MonitorStateChanged msc:
+                _logger.LogDebug("{event}.", msc);
                 _storage.SaveLastStateChange(msc.Name, msc.At, msc.NewState);
                 await _hubContext.Clients.All.MonitorStateChanged(MonitorStateChangedDto.From(msc));
                 break;
