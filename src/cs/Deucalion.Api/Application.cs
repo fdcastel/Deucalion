@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Reflection;
+using System.Text.Json.Serialization;
 using Deucalion.Api.Http;
 using Deucalion.Api.Models;
 using Deucalion.Api.Options;
@@ -116,6 +117,23 @@ public static class Application
 
         // Setup SignalR hubs
         app.MapHub<MonitorHub>("/api/monitors/hub");
+
+        // Log application version and command-line arguments.
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+        // Get version info from assembly -- https://stackoverflow.com/a/64793765/33244
+        //   SourceRevisionId included since .NET 8 SDK -- https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/8.0/source-link
+        var appVersion = Assembly.GetEntryAssembly()
+            ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        var cmdLineArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+        logger.LogInformation("Application Version = {version}.", appVersion);
+        if (cmdLineArgs.Length > 0)
+        {
+            logger.LogInformation("Command-line = {args}", cmdLineArgs);
+        }
+
         return app;
     }
 
