@@ -76,7 +76,7 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
                 overflowX="hidden" works. But clips hover animation. */}
       <Flex direction="row-reverse" overflowX="clip">
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
-          <Tag colorScheme="cyan" variant="solid" borderRadius="lg" marginLeft="0.25em" minWidth="4em">
+          <Tag colorScheme="cyan" variant="solid" borderRadius="none" marginLeft="0.25em" minWidth="5em">
             <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
           </Tag>
         </Tooltip>
