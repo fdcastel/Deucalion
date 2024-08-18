@@ -52,7 +52,7 @@ public class DnsMonitor : PullMonitor
             return result.HasError
                 ? MonitorResponse.Down(stopwatch.Elapsed, result.ErrorMessage)
                 : MonitorResponse.Up(elapsed: stopwatch.Elapsed,
-                                     text: result.Answers[0].ToString(),
+                                     text: result.Answers.Count > 0 ? result.Answers[0].ToString() : null,
                                      warnElapsed: WarnTimeout);
         }
         catch (DnsResponseException e)
