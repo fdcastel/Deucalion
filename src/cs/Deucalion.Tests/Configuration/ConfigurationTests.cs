@@ -66,6 +66,27 @@ public class ConfigurationTests
     }
 
     [Fact]
+    public void DnsMonitor_CanUseDefaultValues()
+    {
+        const string ConfigurationContent = @"
+            defaults:
+              dns:
+                recordType: AAAA
+                resolver: 8.8.8.8
+
+            monitors:
+              mdns:
+                !dns
+                host: google.com
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitor);
+        Assert.Equal(QueryType.AAAA, dnsMonitor.RecordType);
+        Assert.Equal(IPEndPoint.Parse("8.8.8.8"), dnsMonitor.Resolver);
+    }
+
+    [Fact]
     public void HttpMonitor_CanDeserialize()
     {
         const string ConfigurationContent = @"
@@ -85,6 +106,27 @@ public class ConfigurationTests
         Assert.Equal(HttpStatusCode.Accepted, httpMonitor.ExpectedStatusCode);
         Assert.Equal(".*", httpMonitor.ExpectedResponseBodyPattern);
         Assert.Equal(true, httpMonitor.IgnoreCertificateErrors);
+    }
+
+    [Fact]
+    public void HttpMonitor_CanUseDefaultValues()
+    {
+        const string ConfigurationContent = @"
+            defaults:
+              http:
+                expectedStatusCode: 202
+                ignoreCertificateErrors: true
+
+            monitors:
+              mhttp:
+                !http
+                url: https://google.com
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitor);
+        Assert.Equal(true, httpMonitor.IgnoreCertificateErrors);
+        Assert.Equal(HttpStatusCode.Accepted, httpMonitor.ExpectedStatusCode);
     }
 
     [Fact]
@@ -152,14 +194,27 @@ public class ConfigurationTests
               mping:
                 !ping
                 host: 192.168.1.1
+
+              mhttp:
+                !http
+                url: https://google.com
         ";
 
-        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitor);
+        var monitors = ReadConfiguration(ConfigurationContent);
+
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitors.Monitors[0]);
+        Assert.Equal("192.168.1.1", pingMonitor.Host);
         Assert.Equal(TimeSpan.FromSeconds(10), pingMonitor.IntervalWhenDown);
         Assert.Equal(TimeSpan.FromSeconds(20), pingMonitor.IntervalWhenUp);
         Assert.Equal(TimeSpan.FromSeconds(30), pingMonitor.WarnTimeout);
         Assert.Equal(TimeSpan.FromSeconds(40), pingMonitor.Timeout);
+
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors[1]);
+        Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
+        Assert.Equal(TimeSpan.FromSeconds(10), httpMonitor.IntervalWhenDown);
+        Assert.Equal(TimeSpan.FromSeconds(20), httpMonitor.IntervalWhenUp);
+        Assert.Null(httpMonitor.WarnTimeout);
+        Assert.Null(httpMonitor.Timeout);
     }
 
     [Fact]
@@ -211,7 +266,6 @@ public class ConfigurationTests
 
         var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors[2]);
         Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
-
     }
 
     private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>

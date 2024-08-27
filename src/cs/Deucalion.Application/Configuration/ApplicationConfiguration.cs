@@ -83,12 +83,20 @@ public record ApplicationConfiguration
         {
             dnsMonitorConfiguration.Timeout ??= defaults.Dns.Timeout;
             dnsMonitorConfiguration.WarnTimeout ??= defaults.Dns.WarnTimeout;
+
+            dnsMonitorConfiguration.RecordType ??= defaults.Dns.RecordType;
+            dnsMonitorConfiguration.Resolver ??= defaults.Dns.Resolver;
         }
 
         if (defaults.Http is not null && monitorConfiguration.Value is HttpMonitorConfiguration httpMonitorConfiguration)
         {
             httpMonitorConfiguration.Timeout ??= defaults.Http.Timeout;
             httpMonitorConfiguration.WarnTimeout ??= defaults.Http.WarnTimeout;
+
+            httpMonitorConfiguration.ExpectedStatusCode ??= defaults.Http.ExpectedStatusCode;
+            httpMonitorConfiguration.ExpectedResponseBodyPattern ??= defaults.Http.ExpectedResponseBodyPattern;
+            httpMonitorConfiguration.IgnoreCertificateErrors ??= defaults.Http.IgnoreCertificateErrors;
+            httpMonitorConfiguration.Method ??= defaults.Http.Method;
         }
 
         if (defaults.Ping is not null && monitorConfiguration.Value is PingMonitorConfiguration pingMonitorConfiguration)
