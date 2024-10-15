@@ -202,14 +202,14 @@ public class ConfigurationTests
 
         var monitors = ReadConfiguration(ConfigurationContent);
 
-        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitors.Monitors[0]);
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitors.Monitors.ElementAt(0).Value);
         Assert.Equal("192.168.1.1", pingMonitor.Host);
         Assert.Equal(TimeSpan.FromSeconds(10), pingMonitor.IntervalWhenDown);
         Assert.Equal(TimeSpan.FromSeconds(20), pingMonitor.IntervalWhenUp);
         Assert.Equal(TimeSpan.FromSeconds(30), pingMonitor.WarnTimeout);
         Assert.Equal(TimeSpan.FromSeconds(40), pingMonitor.Timeout);
 
-        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors[1]);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors.ElementAt(1).Value);
         Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
         Assert.Equal(TimeSpan.FromSeconds(10), httpMonitor.IntervalWhenDown);
         Assert.Equal(TimeSpan.FromSeconds(20), httpMonitor.IntervalWhenUp);
@@ -258,13 +258,13 @@ public class ConfigurationTests
 
         var monitors = ReadConfiguration(ConfigurationContent);
 
-        var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitors.Monitors[0]);
+        var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitors.Monitors.ElementAt(0).Value);
         Assert.Equal("cloudflare.com", dnsMonitor.Host);
 
-        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitors.Monitors[1]);
+        var pingMonitor = Assert.IsType<PingMonitorConfiguration>(monitors.Monitors.ElementAt(1).Value);
         Assert.Equal("bing.com", pingMonitor.Host);
 
-        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors[2]);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors.ElementAt(2).Value);
         Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
     }
 

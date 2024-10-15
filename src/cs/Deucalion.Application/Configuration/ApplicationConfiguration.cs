@@ -1,5 +1,4 @@
-﻿using Deucalion.Application.Collections;
-using Deucalion.Application.Yaml;
+﻿using Deucalion.Application.Yaml;
 using Deucalion.Configuration;
 using Deucalion.Network.Configuration;
 using YamlDotNet.Serialization;
