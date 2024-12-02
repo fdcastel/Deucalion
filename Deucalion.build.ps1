@@ -27,7 +27,9 @@ task Build Clear, {
     exec { dotnet publish './src/cs/Deucalion.Service/Deucalion.Service.csproj' -c $configuration -o $publishFolder -p:DebugType=None --self-contained }
 
     exec { npm --prefix './src/ts/deucalion-ui' ci }
-    exec { npm --prefix './src/ts/deucalion-ui' run build -- --outDir "../../../$publishFolder/wwwroot" }
+
+    # Quote '--' https://stackoverflow.com/a/72260631/332443
+    exec { npm --prefix './src/ts/deucalion-ui' run build '--' --outDir "../../../$publishFolder/wwwroot" }
 }
 
 # synopsis: Start a development environment.
