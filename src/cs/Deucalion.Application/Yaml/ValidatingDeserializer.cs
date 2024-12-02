@@ -14,10 +14,16 @@ internal class ValidationDeserializer(INodeDeserializer nodeDeserializer) : INod
 {
     private readonly INodeDeserializer _nodeDeserializer = nodeDeserializer;
 
-    public bool Deserialize(IParser parser, Type expectedType,
-        Func<IParser, Type, object?> nestedObjectDeserializer, out object? value)
+    public bool Deserialize(
+        IParser parser,
+        Type expectedType,
+        Func<IParser, Type, object?> nestedObjectDeserializer,
+        out object? value,
+        ObjectDeserializer rootDeserializer
+    )
+
     {
-        if (_nodeDeserializer.Deserialize(parser, expectedType, nestedObjectDeserializer, out value) && value is not null)
+        if (_nodeDeserializer.Deserialize(parser, expectedType, nestedObjectDeserializer, out value, rootDeserializer) && value is not null)
         {
             var context = new ValidationContext(value, null, null);
             try

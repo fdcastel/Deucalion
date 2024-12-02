@@ -11,10 +11,10 @@ internal class HttpMethodConverter : IYamlTypeConverter
         return type == typeof(HttpMethod);
     }
 
-    public object ReadYaml(IParser parser, Type type) =>
+    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer) =>
         new HttpMethod(parser.Consume<Scalar>().Value);
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type)
+    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
         // Not used
     }

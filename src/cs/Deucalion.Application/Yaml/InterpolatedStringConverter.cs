@@ -13,7 +13,7 @@ internal class InterpolatedStringConverter : IYamlTypeConverter
         type == typeof(string) ||
         type == typeof(Uri);
 
-    public object ReadYaml(IParser parser, Type type)
+    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
         if (parser.Current is Scalar sc)
         {
@@ -32,7 +32,7 @@ internal class InterpolatedStringConverter : IYamlTypeConverter
             : interpolated;
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type)
+    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
         // Not used
     }
