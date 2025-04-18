@@ -27,6 +27,9 @@ public static class Application
         // SignalR
         builder.Services.AddSignalR();
 
+        // CORS
+        builder.Services.AddCors();
+
         // Response compression
         builder.Services.AddResponseCompression(options =>
         {
@@ -63,6 +66,8 @@ public static class Application
         app.UseExceptionHandler(exceptionHandlerApp =>
             exceptionHandlerApp.Run(async context => await Results.Problem().ExecuteAsync(context))
         );
+
+        app.UseCors(x => x.AllowAnyOrigin());
 
         app.UseResponseCompression();
 
