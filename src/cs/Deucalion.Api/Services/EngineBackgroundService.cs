@@ -9,12 +9,12 @@ namespace Deucalion.Api.Services;
 
 internal class EngineBackgroundService(
     ApplicationMonitors monitors,
-    FasterStorage storage,
+    SqliteStorage storage,
     IHubContext<MonitorHub, IMonitorHubClient> hubContext,
     ILogger<EngineBackgroundService> logger) : BackgroundService
 {
     private readonly ApplicationMonitors _monitors = monitors;
-    private readonly FasterStorage _storage = storage;
+    private readonly SqliteStorage _storage = storage;
     private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext = hubContext;
     private readonly ILogger<EngineBackgroundService> _logger = logger;
 
@@ -35,8 +35,18 @@ internal class EngineBackgroundService(
         {
             case MonitorChecked mc:
                 _logger.LogDebug("{event}.", mc);
-                var newStats = _storage.SaveEvent(mc.Name, StoredEvent.From(mc));
-                await _hubContext.Clients.All.MonitorChecked(MonitorCheckedDto.From(mc, newStats));
+                _storage.SaveEvent(mc.Name, StoredEvent.From(mc));
+
+                var newStats = _storage.GetStats(mc.Name);
+                if (newStats != null)
+                {
+                    await _hubContext.Clients.All.MonitorChecked(MonitorCheckedDto.From(mc, newStats));
+                }
+                else
+                {
+                    // Handle the case where stats couldn't be calculated (e.g., log a warning)
+                    _logger.LogWarning("Could not calculate stats after saving event for monitor {MonitorName}", mc.Name);
+                }
                 break;
 
             case MonitorStateChanged msc:

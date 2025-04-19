@@ -1,0 +1,252 @@
+using Microsoft.Data.Sqlite;
+
+namespace Deucalion.Storage;
+
+public class SqliteStorage
+{
+    private const string EventsTableName = "Events";
+    private const string MonitorStateChangesTableName = "MonitorStateChanges";
+
+    private readonly string _connectionString;
+
+    public SqliteStorage(string? storagePath = null)
+    {
+        var dbPath = storagePath ?? Path.Combine(Path.GetTempPath(), "Deucalion");
+        // Ensure the directory exists
+        Directory.CreateDirectory(dbPath);
+
+        var dbFile = Path.Combine(dbPath, "deucalion.sqlite.db");
+        // Enable connection pooling (Cache=Shared) and WAL mode for better concurrency
+        _connectionString = $"Data Source={dbFile};Mode=ReadWriteCreate;Cache=Shared";
+
+        InitializeDatabase();
+    }
+
+    private void InitializeDatabase()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"""
+            -- Enable Write-Ahead Logging for better concurrency
+            PRAGMA journal_mode=WAL;
+
+            CREATE TABLE IF NOT EXISTS {EventsTableName} (
+                MonitorName TEXT NOT NULL,
+                TimestampTicks INTEGER NOT NULL,
+                State INTEGER NOT NULL,
+                ResponseTimeTicks INTEGER NULL,
+                ResponseText TEXT NULL,
+                PRIMARY KEY (MonitorName, TimestampTicks)
+            );
+
+            CREATE INDEX IF NOT EXISTS IX_{EventsTableName}_MonitorName_TimestampTicks
+            ON {EventsTableName} (MonitorName, TimestampTicks DESC);
+
+            CREATE TABLE IF NOT EXISTS {MonitorStateChangesTableName} (
+                MonitorName TEXT PRIMARY KEY,
+                LastSeenUpTicks INTEGER NULL,
+                LastSeenDownTicks INTEGER NULL
+            );
+        """;
+        command.ExecuteNonQuery();
+    }
+
+    public MonitorStats? GetStats(string monitorName, int historyCount = 60)
+    {
+        DateTimeOffset? lastSeenUp = null;
+        DateTimeOffset? lastSeenDown = null;
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Get the last seen state
+        using (var cmdLastSeen = connection.CreateCommand())
+        {
+            cmdLastSeen.CommandText = $"""
+                SELECT LastSeenUpTicks, LastSeenDownTicks
+                FROM {MonitorStateChangesTableName}
+                WHERE MonitorName = @MonitorName;
+            """;
+            cmdLastSeen.Parameters.AddWithValue("@MonitorName", monitorName);
+
+            using var readerLastSeen = cmdLastSeen.ExecuteReader();
+            if (readerLastSeen.Read())
+            {
+                var lastSeenUpTicks = readerLastSeen.IsDBNull(0) ? (long?)null : readerLastSeen.GetInt64(0);
+                var lastSeenDownTicks = readerLastSeen.IsDBNull(1) ? (long?)null : readerLastSeen.GetInt64(1);
+                if (lastSeenUpTicks.HasValue) lastSeenUp = new DateTimeOffset(lastSeenUpTicks.Value, TimeSpan.Zero);
+                if (lastSeenDownTicks.HasValue) lastSeenDown = new DateTimeOffset(lastSeenDownTicks.Value, TimeSpan.Zero);
+            }
+        }
+
+        // Get the latest event details
+        long? lastEventTimestampTicks = null;
+        MonitorState? lastEventState = null;
+        using (var cmdLastEvent = connection.CreateCommand())
+        {
+            cmdLastEvent.CommandText = $"""
+                SELECT TimestampTicks, State
+                FROM {EventsTableName}
+                WHERE MonitorName = @MonitorName
+                ORDER BY TimestampTicks DESC
+                LIMIT 1;
+            """;
+            cmdLastEvent.Parameters.AddWithValue("@MonitorName", monitorName);
+
+            using var readerLastEvent = cmdLastEvent.ExecuteReader();
+            if (readerLastEvent.Read())
+            {
+                lastEventTimestampTicks = readerLastEvent.GetInt64(0);
+                lastEventState = (MonitorState)readerLastEvent.GetInt64(1);
+            }
+        }
+
+        if (!lastEventTimestampTicks.HasValue || !lastEventState.HasValue)
+        {
+            // There are no events at all. Return based on LastSeenUp/Down or null
+            return (lastSeenUp.HasValue || lastSeenDown.HasValue)
+                ? new MonitorStats(MonitorState.Unknown, DateTimeOffset.MinValue, 0, TimeSpan.Zero, lastSeenDown, lastSeenUp)
+                : null;
+        }
+
+        // Get the aggregate stats for recent events
+        double? averageResponseTimeTicks = null;
+        long relevantEventCount = 0;
+        long downEventCount = 0;
+        using (var cmdAggStats = connection.CreateCommand())
+        {
+            cmdAggStats.CommandText = $"""
+                WITH RecentEvents AS (
+                    SELECT State, ResponseTimeTicks
+                    FROM {EventsTableName}
+                    WHERE MonitorName = @MonitorName
+                    ORDER BY TimestampTicks DESC
+                    LIMIT @HistoryCount
+                )
+                SELECT
+                    AVG(CAST(ResponseTimeTicks AS REAL)) as AverageResponseTimeTicks, -- Cast needed for AVG with potential NULLs
+                    SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}) THEN 1 ELSE 0 END) as RelevantEventCount,
+                    SUM(CASE WHEN State = {(int)MonitorState.Down} THEN 1 ELSE 0 END) as DownEventCount
+                FROM RecentEvents;
+            """;
+            cmdAggStats.Parameters.AddWithValue("@MonitorName", monitorName);
+            cmdAggStats.Parameters.AddWithValue("@HistoryCount", historyCount);
+
+            using var readerAggStats = cmdAggStats.ExecuteReader();
+            if (readerAggStats.Read())
+            {
+                averageResponseTimeTicks = readerAggStats.IsDBNull(0) ? (double?)null : readerAggStats.GetDouble(0);
+                relevantEventCount = readerAggStats.GetInt64(1);
+                downEventCount = readerAggStats.GetInt64(2);
+            }
+        }
+
+        // Calculate final stats
+        var availability = 100.0;
+        if (relevantEventCount > 0)
+        {
+            var availableCount = relevantEventCount - downEventCount;
+            availability = 100.0 * availableCount / relevantEventCount;
+        }
+
+        var averageResponseTime = averageResponseTimeTicks.HasValue
+            ? TimeSpan.FromTicks((long)averageResponseTimeTicks.Value)
+            : TimeSpan.Zero;
+
+        return new MonitorStats(
+            LastState: lastEventState.Value,
+            LastUpdate: new DateTimeOffset(lastEventTimestampTicks.Value, TimeSpan.Zero),
+            Availability: availability,
+            AverageResponseTime: averageResponseTime,
+            LastSeenDown: lastSeenDown,
+            LastSeenUp: lastSeenUp
+        );
+    }
+
+    public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60)
+    {
+        var results = new List<StoredEvent>();
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = $"""
+                SELECT TimestampTicks, State, ResponseTimeTicks, ResponseText
+                FROM {EventsTableName}
+                WHERE MonitorName = @MonitorName
+                ORDER BY TimestampTicks DESC
+                LIMIT @Count;
+            """;
+            command.Parameters.AddWithValue("@MonitorName", monitorName);
+            command.Parameters.AddWithValue("@Count", count);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                results.Add(new StoredEvent(
+                    At: new DateTimeOffset(reader.GetInt64(0), TimeSpan.Zero),
+                    State: (MonitorState)reader.GetInt64(1),
+                    ResponseTime: reader.IsDBNull(2) ? null : new TimeSpan(reader.GetInt64(2)),
+                    ResponseText: reader.IsDBNull(3) ? null : reader.GetString(3)
+                ));
+            }
+        }
+        return results;
+    }
+
+    public void SaveEvent(string monitorName, StoredEvent storedEvent)
+    {
+        // Create connection per operation
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"""
+            INSERT INTO {EventsTableName} (MonitorName, TimestampTicks, State, ResponseTimeTicks, ResponseText)
+            VALUES (@MonitorName, @TimestampTicks, @State, @ResponseTimeTicks, @ResponseText);
+        """;
+        command.Parameters.AddWithValue("@MonitorName", monitorName);
+        command.Parameters.AddWithValue("@TimestampTicks", storedEvent.At.UtcTicks);
+        command.Parameters.AddWithValue("@State", (int)storedEvent.State);
+        command.Parameters.AddWithValue("@ResponseTimeTicks", storedEvent.ResponseTime?.Ticks ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@ResponseText", storedEvent.ResponseText ?? (object)DBNull.Value);
+        command.ExecuteNonQuery();
+    }
+
+    public void SaveLastStateChange(string monitorName, DateTimeOffset at, MonitorState state)
+    {
+        if (state != MonitorState.Up && state != MonitorState.Down)
+        {
+            return;
+        }
+
+        // Create connection per operation
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"""
+            INSERT INTO {MonitorStateChangesTableName} (MonitorName, LastSeenUpTicks, LastSeenDownTicks)
+            VALUES (@MonitorName,
+                    CASE WHEN @State = {(int)MonitorState.Up} THEN @TimestampTicks ELSE NULL END,
+                    CASE WHEN @State = {(int)MonitorState.Down} THEN @TimestampTicks ELSE NULL END)
+            ON CONFLICT(MonitorName) DO
+                UPDATE SET
+                    LastSeenUpTicks = CASE WHEN @State = {(int)MonitorState.Up} THEN @TimestampTicks
+                                        ELSE LastSeenUpTicks -- Use existing value
+                                    END,
+                    LastSeenDownTicks = CASE WHEN @State = {(int)MonitorState.Down} THEN @TimestampTicks
+                                            ELSE LastSeenDownTicks -- Use existing value
+                                        END
+                WHERE @State = {(int)MonitorState.Up} OR @State = {(int)MonitorState.Down};
+        """;
+        command.Parameters.AddWithValue("@MonitorName", monitorName);
+        command.Parameters.AddWithValue("@TimestampTicks", at.UtcTicks);
+        command.Parameters.AddWithValue("@State", (int)state);
+        command.ExecuteNonQuery();
+    }
+}

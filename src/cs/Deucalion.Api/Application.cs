@@ -54,7 +54,7 @@ public static class Application
         builder.Services.AddSingleton(_ => applicationMonitors);
 
         // Application services
-        var storage = new FasterStorage(deucalionOptions.StoragePath, deucalionOptions.CommitInterval);
+        var storage = new SqliteStorage(deucalionOptions.StoragePath);
         builder.Services.AddSingleton(_ => storage);
         builder.Services.AddHostedService<EngineBackgroundService>();
 
@@ -82,7 +82,7 @@ public static class Application
                 options.PageDescription
             }));
 
-        app.MapGet("/api/monitors/{monitorName?}", (FasterStorage storage, string? monitorName) =>
+        app.MapGet("/api/monitors/{monitorName?}", (SqliteStorage storage, string? monitorName) =>
         {
             if (monitorName is null)
             {
@@ -142,7 +142,7 @@ public static class Application
         return app;
     }
 
-    private static MonitorDto BuildMonitorDto(FasterStorage storage, MonitorConfiguration m, string mn) =>
+    private static MonitorDto BuildMonitorDto(SqliteStorage storage, MonitorConfiguration m, string mn) =>
         new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
