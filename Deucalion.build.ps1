@@ -34,8 +34,18 @@ task Build Clear, {
 
 # synopsis: Start a development environment.
 task Dev {
-    Start-Process powershell { npm --prefix './src/ts/deucalion-ui' run dev }
-    exec { dotnet watch --project './src/cs/Deucalion.Api/Deucalion.Api.csproj' }
+    # Start the frontend dev server in a new window and get its process
+    $npmDevProcess = Start-Process powershell -ArgumentList "-Command", "npm --prefix './src/ts/deucalion-ui' run dev" -PassThru
+    try {
+        # Start the backend watcher. Waits for it to finish.
+        exec { dotnet watch --project './src/cs/Deucalion.Api/Deucalion.Api.csproj' }
+    }
+    finally {
+        # This block runs when dotnet watch exits (e.g., Ctrl+C)
+
+        # Kill the process tree.
+        taskkill /PID $npmDevProcess.Id /T /F > $null
+    }
 }
 
 # synopsis: Run a production service.
