@@ -262,6 +262,12 @@ public class SqliteStorage
     /// <returns>The number of rows deleted.</returns>
     public async Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, CancellationToken cancellationToken = default)
     {
+        // If retention is zero or negative, nothing should be purged.
+        if (retentionPeriod <= TimeSpan.Zero)
+        {
+            return 0;
+        }
+
         var cutoffTimestamp = DateTimeOffset.UtcNow - retentionPeriod;
         var cutoffTicks = cutoffTimestamp.UtcTicks;
 

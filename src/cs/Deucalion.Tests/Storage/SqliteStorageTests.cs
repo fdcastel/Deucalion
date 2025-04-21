@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Deucalion.Tests.Storage;
 
-public class SqliteStorageTests : IDisposable
+public class SqliteStorageTests
 {
     private readonly string _storagePath;
     private readonly string _dbFilePath;
@@ -143,11 +143,6 @@ public class SqliteStorageTests : IDisposable
         Assert.Equal(TimeSpan.FromMilliseconds(102), retrievedEvents[2].ResponseTime);
     }
 
-    // Removed PurgeEventsOlderThanAsync test
-    // Removed GetAllMonitorNamesAsync test
-    // Removed GetStatsAsync test (covered by other tests)
-
-    // Renamed original test to focus on Save/Retrieve
     [Fact]
     public async Task SqliteStorage_SaveAndRetrieveEventsAsync_Works()
     {
@@ -185,7 +180,6 @@ public class SqliteStorageTests : IDisposable
         Assert.Empty(evsOther);
     }
 
-    // Renamed original test to focus on State Change / Stats
     [Fact]
     public async Task SqliteStorage_SaveStateChangeAndGetStatsAsync_Works()
     {
@@ -405,18 +399,187 @@ public class SqliteStorageTests : IDisposable
         Assert.All(remainingEvents, e => Assert.True(e.At >= cutoff));
     }
 
-    public void Dispose()
+    // --- PurgeOldEventsAsync Edge Cases ---
+
+    [Fact]
+    public async Task PurgeOldEventsAsync_ZeroRetention_DoesNotPurge()
     {
-        // Attempt to clean up the storage directory
-        try
+        // Arrange
+        var monitorName = "purge-zero-retention";
+        var now = DateTimeOffset.UtcNow;
+        var eventsToSave = new List<StoredEvent>
         {
-            if (Directory.Exists(_storagePath))
-            {
-                Directory.Delete(_storagePath, true);
-            }
+            new(now.AddMinutes(-10), MonitorState.Up, TimeSpan.FromMilliseconds(100), "Event 1"),
+            new(now.AddMinutes(-5), MonitorState.Down, null, "Event 2"),
+        };
+        foreach (var ev in eventsToSave) await _storage.SaveEventAsync(monitorName, ev);
+
+        // Act
+        var deletedCount = await _storage.PurgeOldEventsAsync(TimeSpan.Zero);
+
+        // Assert
+        Assert.Equal(0, deletedCount); // Nothing should be deleted with zero retention
+        var remainingEvents = (await _storage.GetLastEventsAsync(monitorName, 10)).ToList();
+        Assert.Equal(eventsToSave.Count, remainingEvents.Count); // All events should remain
+    }
+
+    [Fact]
+    public async Task PurgeOldEventsAsync_AllEventsOld_PurgesAll()
+    {
+        // Arrange
+        var monitorName = "purge-all-old";
+        var now = DateTimeOffset.UtcNow;
+        var retentionPeriod = TimeSpan.FromHours(1); // Purge anything older than 1 hour
+        var eventsToSave = new List<StoredEvent>
+        {
+            new(now.AddHours(-2), MonitorState.Up, TimeSpan.FromMilliseconds(100), "Old Event 1"),
+            new(now.AddHours(-3), MonitorState.Down, null, "Old Event 2"),
+        };
+        foreach (var ev in eventsToSave) await _storage.SaveEventAsync(monitorName, ev);
+
+        // Act
+        var deletedCount = await _storage.PurgeOldEventsAsync(retentionPeriod);
+
+        // Assert
+        Assert.Equal(eventsToSave.Count, deletedCount); // All events should be deleted
+        var remainingEvents = (await _storage.GetLastEventsAsync(monitorName, 10)).ToList();
+        Assert.Empty(remainingEvents); // No events should remain
+    }
+
+    [Fact]
+    public async Task PurgeOldEventsAsync_NoEventsOrAllNew_PurgesNone()
+    {
+        // Arrange
+        var monitorNameNoEvents = "purge-no-events";
+        var monitorNameAllNew = "purge-all-new";
+        var now = DateTimeOffset.UtcNow;
+        var retentionPeriod = TimeSpan.FromDays(1); // Purge anything older than 1 day
+
+        // Setup monitor with all new events
+        var newEvents = new List<StoredEvent>
+        {
+            new(now.AddHours(-1), MonitorState.Up, TimeSpan.FromMilliseconds(100), "New Event 1"),
+            new(now.AddHours(-2), MonitorState.Up, TimeSpan.FromMilliseconds(110), "New Event 2"),
+        };
+        foreach (var ev in newEvents) await _storage.SaveEventAsync(monitorNameAllNew, ev);
+
+        // Act
+        var deletedCountNoEvents = await _storage.PurgeOldEventsAsync(retentionPeriod);
+        var deletedCountAllNew = await _storage.PurgeOldEventsAsync(retentionPeriod);
+
+        // Assert
+        Assert.Equal(0, deletedCountNoEvents); // No events existed, so 0 deleted
+        Assert.Equal(0, deletedCountAllNew);   // All events were newer than retention, so 0 deleted
+
+        var remainingEventsAllNew = (await _storage.GetLastEventsAsync(monitorNameAllNew, 10)).ToList();
+        Assert.Equal(newEvents.Count, remainingEventsAllNew.Count); // All new events should remain
+    }
+
+    // --- GetStatsAsync Edge Cases ---
+
+    [Fact]
+    public async Task GetStatsAsync_OnlyDownEvents_ReturnsCorrectStats()
+    {
+        // Arrange
+        var monitorName = "stats-only-down";
+        var time1 = DateTimeOffset.UtcNow.AddMinutes(-2);
+        var time2 = DateTimeOffset.UtcNow;
+        var event1 = new StoredEvent(time1, MonitorState.Down, null, "Down 1");
+        var event2 = new StoredEvent(time2, MonitorState.Down, null, "Down 2");
+
+        await _storage.SaveEventAsync(monitorName, event1);
+        await _storage.SaveEventAsync(monitorName, event2);
+        await _storage.SaveLastStateChangeAsync(monitorName, time2, MonitorState.Down); // Save last state change
+
+        // Act
+        var stats = await _storage.GetStatsAsync(monitorName);
+
+        // Assert
+        Assert.NotNull(stats);
+        Assert.Equal(MonitorState.Down, stats.LastState);
+        Assert.Equal(time2.ToUniversalTime(), stats.LastUpdate.ToUniversalTime());
+        Assert.Equal(0.0, stats.Availability); // Only Down events -> 0% availability
+        Assert.Equal(TimeSpan.Zero, stats.AverageResponseTime); // No successful (Up/Warn) events with response times
+        Assert.Null(stats.LastSeenUp);
+        Assert.Equal(time2.ToUniversalTime(), stats.LastSeenDown?.ToUniversalTime());
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_NullResponseTimes_CalculatesAverageCorrectly()
+    {
+        // Arrange
+        var monitorName = "stats-null-response";
+        var time1 = DateTimeOffset.UtcNow.AddMinutes(-3);
+        var time2 = DateTimeOffset.UtcNow.AddMinutes(-2);
+        var time3 = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var time4 = DateTimeOffset.UtcNow;
+
+        // Events: Up (null RT), Warn (100ms), Up (null RT), Down (null RT)
+        var event1 = new StoredEvent(time1, MonitorState.Up, null, "Up Null RT");
+        var event2 = new StoredEvent(time2, MonitorState.Warn, TimeSpan.FromMilliseconds(100), "Warn 100ms");
+        var event3 = new StoredEvent(time3, MonitorState.Up, null, "Up Null RT 2");
+        var event4 = new StoredEvent(time4, MonitorState.Down, null, "Down Null RT");
+
+        await _storage.SaveEventAsync(monitorName, event1);
+        await _storage.SaveEventAsync(monitorName, event2);
+        await _storage.SaveEventAsync(monitorName, event3);
+        await _storage.SaveEventAsync(monitorName, event4);
+
+        // Act
+        var stats = await _storage.GetStatsAsync(monitorName);
+
+        // Assert
+        Assert.NotNull(stats);
+        Assert.Equal(MonitorState.Down, stats.LastState);
+        Assert.Equal(time4.ToUniversalTime(), stats.LastUpdate.ToUniversalTime());
+        // Availability: 3 Up/Warn, 1 Down -> (4 - 1) / 4 = 75%
+        Assert.Equal(75.0, stats.Availability);
+        // Average Response Time: Only event2 has a non-null RT. Should be 100ms.
+        Assert.Equal(TimeSpan.FromMilliseconds(100), stats.AverageResponseTime);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_AfterPurge_RecalculatesCorrectly()
+    {
+        // Arrange
+        var monitorName = "stats-after-purge";
+        var now = DateTimeOffset.UtcNow;
+        var retentionPeriod = TimeSpan.FromHours(2); // Keep last 2 hours
+        var cutoff = now - retentionPeriod;
+
+        var eventsToSave = new List<StoredEvent>
+        {
+            // Old events (will be purged)
+            new(cutoff.AddHours(-2), MonitorState.Up, TimeSpan.FromMilliseconds(50), "Old Up 1"),
+            new(cutoff.AddHours(-1), MonitorState.Down, null, "Old Down 1"),
+
+            // Recent events (will be kept)
+            new(cutoff.AddMinutes(30), MonitorState.Up, TimeSpan.FromMilliseconds(100), "Recent Up 1"),
+            new(now, MonitorState.Up, TimeSpan.FromMilliseconds(120), "Recent Up 2")
+        };
+
+        foreach (var ev in eventsToSave.OrderBy(e => e.At))
+        {
+            await _storage.SaveEventAsync(monitorName, ev);
         }
-        catch (IOException) { /* Ignore potential file locking issues during cleanup */ }
-        catch (UnauthorizedAccessException) { /* Ignore potential permission issues */ }
-        GC.SuppressFinalize(this);
+
+        // Stats before purge (4 events: 3 Up, 1 Down -> 75% avail, avg RT (50+100+120)/3 = 90ms)
+        var statsBefore = await _storage.GetStatsAsync(monitorName);
+        Assert.NotNull(statsBefore);
+        Assert.Equal(75.0, statsBefore.Availability);
+        Assert.Equal(TimeSpan.FromMilliseconds(90), statsBefore.AverageResponseTime);
+
+        // Act: Purge old events
+        await _storage.PurgeOldEventsAsync(retentionPeriod);
+
+        // Assert: Get stats again and verify recalculation
+        var statsAfter = await _storage.GetStatsAsync(monitorName);
+        Assert.NotNull(statsAfter);
+        Assert.Equal(MonitorState.Up, statsAfter.LastState); // Last event was "Recent Up 2"
+        Assert.Equal(now.ToUniversalTime(), statsAfter.LastUpdate.ToUniversalTime());
+        // Availability (remaining): 2 Up, 0 Down -> 100%
+        Assert.Equal(100.0, statsAfter.Availability);
+        // Average Response Time (remaining): (100 + 120) / 2 = 110ms
+        Assert.Equal(TimeSpan.FromMilliseconds(110), statsAfter.AverageResponseTime);
     }
 }
