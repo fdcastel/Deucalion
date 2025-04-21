@@ -2,6 +2,7 @@
 using Deucalion.Storage;
 using Microsoft.Data.Sqlite; // Needed for direct DB verification
 using Xunit;
+using System.Linq; // Add this using directive
 
 namespace Deucalion.Tests.Storage;
 
@@ -353,6 +354,57 @@ public class SqliteStorageTests : IDisposable
         var (updateUp, updateDown) = GetLastStateChangeTimestamps(monitorNameUpdate);
         Assert.Equal(initialTimestamp.UtcTicks, updateUp); // Should still be the initial Up timestamp
         Assert.Null(updateDown);                           // Should still be null
+    }
+
+    [Fact]
+    public void PurgeOldEvents_RemovesOldEventsAndKeepsRecentOnes()
+    {
+        // Arrange
+        var monitorName = "purge-test-monitor";
+        var now = DateTimeOffset.UtcNow;
+        var retentionPeriod = TimeSpan.FromDays(7);
+        var cutoff = now - retentionPeriod;
+
+        var eventsToSave = new List<StoredEvent>
+        {
+            // Should be kept
+            new(cutoff.AddHours(1), MonitorState.Up, TimeSpan.FromMilliseconds(100), "Recent 1"),
+            new(now, MonitorState.Up, TimeSpan.FromMilliseconds(110), "Recent 2"),
+
+            // Should be purged
+            new(cutoff.AddHours(-1), MonitorState.Down, null, "Old 1"),
+            new(cutoff.AddDays(-1), MonitorState.Up, TimeSpan.FromMilliseconds(120), "Old 2"),
+            new(now.AddDays(-30), MonitorState.Up, TimeSpan.FromMilliseconds(130), "Very Old 3")
+        };
+
+        // Save events in chronological order
+        foreach (var ev in eventsToSave.OrderBy(e => e.At))
+        {
+            _storage.SaveEvent(monitorName, ev);
+        }
+
+        // Pre-assertion: Ensure all events are saved initially
+        var initialEvents = _storage.GetLastEvents(monitorName, 10).ToList();
+        Assert.Equal(eventsToSave.Count, initialEvents.Count);
+
+        // Act
+        var deletedCount = _storage.PurgeOldEvents(retentionPeriod);
+
+        // Assert
+        Assert.Equal(3, deletedCount); // Expecting 3 old events to be deleted
+
+        var remainingEvents = _storage.GetLastEvents(monitorName, 10).ToList();
+        Assert.Equal(2, remainingEvents.Count); // Expecting 2 recent events to remain
+
+        // Verify the correct events remain (newest first)
+        Assert.Contains(remainingEvents, e => e.ResponseText == "Recent 2");
+        Assert.Contains(remainingEvents, e => e.ResponseText == "Recent 1");
+        Assert.DoesNotContain(remainingEvents, e => e.ResponseText == "Old 1");
+        Assert.DoesNotContain(remainingEvents, e => e.ResponseText == "Old 2");
+        Assert.DoesNotContain(remainingEvents, e => e.ResponseText == "Very Old 3");
+
+        // Verify timestamps are correct relative to cutoff
+        Assert.All(remainingEvents, e => Assert.True(e.At >= cutoff));
     }
 
     public void Dispose()

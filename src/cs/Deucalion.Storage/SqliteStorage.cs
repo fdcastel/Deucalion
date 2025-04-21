@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace Deucalion.Storage;
 
@@ -248,5 +249,37 @@ public class SqliteStorage
         command.Parameters.AddWithValue("@TimestampTicks", at.UtcTicks);
         command.Parameters.AddWithValue("@State", (int)state);
         command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Deletes events older than the specified retention period.
+    /// </summary>
+    /// <param name="retentionPeriod">The maximum age of events to keep.</param>
+    /// <returns>The number of rows deleted.</returns>
+    public int PurgeOldEvents(TimeSpan retentionPeriod)
+    {
+        var cutoffTimestamp = DateTimeOffset.UtcNow - retentionPeriod;
+        var cutoffTicks = cutoffTimestamp.UtcTicks;
+
+        // Create connection per operation
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"""
+            DELETE FROM {EventsTableName}
+            WHERE TimestampTicks < @CutoffTicks;
+        """;
+        command.Parameters.AddWithValue("@CutoffTicks", cutoffTicks);
+
+        var stopwatch = Stopwatch.StartNew();
+        var deletedRows = command.ExecuteNonQuery();
+        stopwatch.Stop();
+
+        // Optional: Log the operation details
+        // Consider injecting ILogger if logging is desired here
+        Debug.WriteLine($"Purged {deletedRows} events older than {cutoffTimestamp:O} ({retentionPeriod}) in {stopwatch.ElapsedMilliseconds}ms.");
+
+        return deletedRows;
     }
 }
