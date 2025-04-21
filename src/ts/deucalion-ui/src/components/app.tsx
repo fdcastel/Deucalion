@@ -43,12 +43,12 @@ export const App = () => {
     // Define handlers
     const handleMonitorChecked = (e: MonitorCheckedDto) => {
       logger.log("[onMonitorChecked]", e);
-      mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
+      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
     };
 
     const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
       logger.log("[MonitorStateChanged]", e);
-      toast({
+      void toast({
         title: e.n,
         description: monitorStateToDescription(e.st),
         status: monitorStateToStatus(e.st),
@@ -63,19 +63,19 @@ export const App = () => {
     connection.on("MonitorStateChanged", handleMonitorStateChanged);
 
     // Handle connection lifecycle
-    connection.onclose((error) => {
+    connection.onclose((error: Error | undefined) => {
       logger.warn("Connection closed", error);
       setHubConnectionError(error);
       // Optionally set connection state if needed elsewhere
     });
 
-    connection.onreconnecting((error) => {
+    connection.onreconnecting((error: Error | undefined) => {
       logger.warn("Connection reconnecting", error);
       setHubConnectionError(error);
       // Optionally set connection state
     });
 
-    connection.onreconnected((connectionId) => {
+    connection.onreconnected((connectionId?: string) => {
       logger.warn("Connection reconnected", connectionId);
       setHubConnectionError(undefined);
       // Optionally set connection state
@@ -88,10 +88,15 @@ export const App = () => {
         logger.warn("Connection started");
         setHubConnectionError(undefined);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         // Use logger.warn instead of logger.error
         logger.warn("Error starting connection:", err);
-        setHubConnectionError(err);
+        if (err instanceof Error) {
+          setHubConnectionError(err);
+        } else {
+          const errorMessage = typeof err === "string" ? err : JSON.stringify(err ?? "Unknown error starting connection");
+          setHubConnectionError(new Error(errorMessage));
+        }
       });
 
     // Cleanup on unmount
@@ -103,14 +108,19 @@ export const App = () => {
       // Stop connection
       connection
         .stop()
-        .then(() => logger.warn("Connection stopped"))
-        .catch((err) => logger.warn("Error stopping connection:", err));
+        .then(() => { logger.warn("Connection stopped"); })
+        .catch((err: unknown) => { logger.warn("Error stopping connection:", err); });
     };
   }, [mutateMonitors, toast]); // Add dependencies
 
   return (
     <Container padding="4" maxWidth="container.xl">
-      <Overview title={configuration?.pageTitle ?? "Deucalion Status"} monitors={monitors ?? EMPTY_MONITORS} hubConnection={hubConnection} hubConnectionError={hubConnectionError} />
+      <Overview
+        title={configuration?.pageTitle ?? "Deucalion Status"}
+        monitors={monitors ?? EMPTY_MONITORS}
+        hubConnection={hubConnection}
+        hubConnectionError={hubConnectionError}
+      />
       <MonitorList monitors={monitors ?? EMPTY_MONITORS} />
     </Container>
   );

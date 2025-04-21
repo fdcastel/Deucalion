@@ -28,7 +28,7 @@ const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
 
 const formatMonitorEvent = (e: MonitorEventDto) => {
   const at = dateTimeFromNow(e.at);
-  const timeStamp = e.ms ? `${at}: ${e.ms}ms` : at;
+  const timeStamp = e.ms ? `${at}: ${String(e.ms)}ms` : at;
   return e.te ? `${timeStamp} (${e.te})` : timeStamp;
 };
 

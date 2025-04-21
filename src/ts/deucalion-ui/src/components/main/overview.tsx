@@ -31,15 +31,15 @@ export const Overview = ({ title, monitors, hubConnection, hubConnectionError }:
     eventCount += mp.events.length;
     totalAvailability += ((mp.stats?.availability ?? 0) * mp.events.length) / 100;
 
-    firstUpdateAt = mp.events[0]?.at ? Math.min(firstUpdateAt, mp.events[0]?.at) : firstUpdateAt;
-    lastUpdateAt = mp.stats?.lastUpdate ? Math.max(lastUpdateAt, mp.stats?.lastUpdate) : lastUpdateAt;
+    firstUpdateAt = mp.events[0]?.at ? Math.min(firstUpdateAt, mp.events[0].at) : firstUpdateAt;
+    lastUpdateAt = mp.stats?.lastUpdate ? Math.max(lastUpdateAt, mp.stats.lastUpdate) : lastUpdateAt;
   }
-  totalAvailability = (100 * totalAvailability) / eventCount;
+  totalAvailability = eventCount > 0 ? (100 * totalAvailability) / eventCount : 0;
 
   useEffect(() => {
     document.title = onlineServicesCount === allServicesCount
       ? title
-      : `(-${allServicesCount - onlineServicesCount}) ${title}`
+      : `(-${String(allServicesCount - onlineServicesCount)}) ${title}`
   }, [title, allServicesCount, onlineServicesCount]);
 
   return (

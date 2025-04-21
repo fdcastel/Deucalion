@@ -15,7 +15,6 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = (props) => {
       icon={
         <Icon
           as={
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Reason: Crazy compiler.
             colorMode === "light" ? MdDarkMode : MdLightMode
           }
         />
