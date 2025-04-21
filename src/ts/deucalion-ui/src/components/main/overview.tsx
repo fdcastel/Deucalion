@@ -1,16 +1,20 @@
+import { useEffect } from "react";
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
-import { Box, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Tooltip } from "@chakra-ui/react";
+import { Box, Flex, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
+
+import { ThemeSwitcher } from "./theme-switcher";
 
 import { MonitorState, MonitorProps } from "../../models";
 import { dateTimeFromNow, dateTimeToString } from "../../services";
 
 interface OverviewProps {
+  title: string;
   monitors: Map<string, MonitorProps>;
   hubConnection: HubConnection | null /* use null, not undefined (from react-signalr) */;
   hubConnectionError: Error | undefined;
 }
 
-export const Overview = ({ monitors, hubConnection, hubConnectionError }: OverviewProps) => {
+export const Overview = ({ title, monitors, hubConnection, hubConnectionError }: OverviewProps) => {
   const allServicesCount = monitors.size;
 
   let firstUpdateAt = Number.MAX_VALUE;
@@ -32,49 +36,65 @@ export const Overview = ({ monitors, hubConnection, hubConnectionError }: Overvi
   }
   totalAvailability = (100 * totalAvailability) / eventCount;
 
+  useEffect(() => {
+    document.title = onlineServicesCount === allServicesCount
+      ? title
+      : `(-${allServicesCount - onlineServicesCount}) ${title}`
+  }, [title, allServicesCount, onlineServicesCount]);
+
   return (
-    <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
-      <Stat>
-        <StatLabel>Services</StatLabel>
-        <Box filter="auto" blur={onlineServicesCount === 0 ? "6px" : "0px"}>
-          <StatNumber>
-            {onlineServicesCount} of {allServicesCount}
-          </StatNumber>
-        </Box>
+    <>
+      <Flex alignItems="center">
+        <Image src="/assets/deucalion-icon.svg" boxSize="3em" marginRight="0.5em" alt="icon" />
+        <Text fontSize="3xl" noOfLines={1}>
+          {title}
+        </Text>
+        <Spacer />
+        <ThemeSwitcher />
+      </Flex>
+      <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
+        <Stat>
+          <StatLabel>Services</StatLabel>
+          <Box filter="auto" blur={onlineServicesCount === 0 ? "6px" : "0px"}>
+            <StatNumber>
+              {onlineServicesCount} of {allServicesCount}
+            </StatNumber>
+          </Box>
 
-        {onlineServicesCount === 0 ? (
-          <StatHelpText textColor="gray">Loading...</StatHelpText>
-        ) : onlineServicesCount === allServicesCount ? (
-          <StatHelpText>Online</StatHelpText>
-        ) : (
-          <StatHelpText color="monitor.down">Degraded</StatHelpText>
-        )}
-      </Stat>
+          {onlineServicesCount === 0 ? (
+            <StatHelpText textColor="gray">Loading...</StatHelpText>
+          ) : onlineServicesCount === allServicesCount ? (
+            <StatHelpText>Online</StatHelpText>
+          ) : (
+            <StatHelpText color="monitor.down">Degraded</StatHelpText>
+          )}
+        </Stat>
 
-      <Stat>
-        <StatLabel>Availability</StatLabel>
-        <Box filter="auto" blur={isNaN(totalAvailability) ? "6px" : "0px"}>
-          <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
-        </Box>
-        <Box filter="auto" blur={firstUpdateAt === Number.MAX_VALUE ? "6px" : "0px"}>
-          <StatHelpText>From {dateTimeFromNow(firstUpdateAt, true)}</StatHelpText>
-        </Box>
-      </Stat>
+        <Stat>
+          <StatLabel>Availability</StatLabel>
+          <Box filter="auto" blur={isNaN(totalAvailability) ? "6px" : "0px"}>
+            <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
+          </Box>
+          <Box filter="auto" blur={firstUpdateAt === Number.MAX_VALUE ? "6px" : "0px"}>
+            <StatHelpText>From {dateTimeFromNow(firstUpdateAt, true)}</StatHelpText>
+          </Box>
+        </Stat>
 
-      <Stat>
-        <StatLabel>Updated</StatLabel>
-        <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
-          <Tooltip hasArrow label={dateTimeToString(lastUpdateAt)} placement="left">
-            <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
+        <Stat>
+          <StatLabel>Updated</StatLabel>
+          <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
+            <Tooltip hasArrow label={dateTimeToString(lastUpdateAt)} placement="left">
+              <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
+            </Tooltip>
+          </Box>
+          <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError?.message === undefined} placement="left">
+            <StatHelpText>
+              <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
+              {hubConnection?.state ?? HubConnectionState.Disconnected}
+            </StatHelpText>
           </Tooltip>
-        </Box>
-        <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError?.message === undefined} placement="left">
-          <StatHelpText>
-            <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
-            {hubConnection?.state ?? HubConnectionState.Disconnected}
-          </StatHelpText>
-        </Tooltip>
-      </Stat>
-    </StatGroup>
+        </Stat>
+      </StatGroup>
+    </>
   );
 };

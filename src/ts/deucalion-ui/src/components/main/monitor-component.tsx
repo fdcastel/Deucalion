@@ -57,8 +57,8 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
 
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
-    <Flex>
-      {config.image ? <Image src={config.image} width="1.5em" height="1.5em" alt="icon" /> : <div />}
+    <Flex alignItems="center">
+      {config.image ? <Image src={config.image} boxSize="1.5em" alt="icon" /> : <div />}
       <Tooltip hasArrow label={formatLastSeen(lastState, monitor.stats)} isDisabled={lastState === MonitorState.Unknown} placement="bottom-end">
         <Text marginLeft={textOffset} noOfLines={1} minWidth="8em" color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
           {config.href ? (
@@ -74,7 +74,7 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
 
       {/* ToDo: overflowX="clip" doesn't work in Firefox. 
                 overflowX="hidden" works. But clips hover animation. */}
-      <Flex direction="row-reverse" overflowX="clip">
+      <Flex alignItems="center" direction="row-reverse" overflowX="clip">
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
           <Tag colorScheme="cyan" variant="solid" borderRadius="none" marginLeft="0.25em" minWidth="5em">
             <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
@@ -96,9 +96,10 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
               minWidth="0.5em"
               mr="0.25em"
               borderRadius="xl"
+              height="1.5em"
               _hover={{
                 transform: "translateY(-0.25em)",
-                transitionDuration: "0.2s",
+                transitionDuration: "fast",
                 transitionTimingFunction: "ease-in-out",
               }}
             />

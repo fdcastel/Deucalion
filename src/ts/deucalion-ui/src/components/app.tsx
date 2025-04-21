@@ -3,7 +3,7 @@ import { Container, useToast } from "@chakra-ui/react";
 import { HubConnectionBuilder, HubConnection, LogLevel } from "@microsoft/signalr";
 
 import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS } from "../models";
-import { Header, Overview, MonitorList } from "./main/index";
+import { Overview, MonitorList } from "./main/index";
 
 import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
 
@@ -109,9 +109,8 @@ export const App = () => {
   }, [mutateMonitors, toast]); // Add dependencies
 
   return (
-    <Container padding="4" maxWidth="80em">
-      <Header title={configuration?.pageTitle ?? "Deucalion Status"} />
-      <Overview monitors={monitors ?? EMPTY_MONITORS} hubConnection={hubConnection} hubConnectionError={hubConnectionError} />
+    <Container padding="4" maxWidth="container.xl">
+      <Overview title={configuration?.pageTitle ?? "Deucalion Status"} monitors={monitors ?? EMPTY_MONITORS} hubConnection={hubConnection} hubConnectionError={hubConnectionError} />
       <MonitorList monitors={monitors ?? EMPTY_MONITORS} />
     </Container>
   );
