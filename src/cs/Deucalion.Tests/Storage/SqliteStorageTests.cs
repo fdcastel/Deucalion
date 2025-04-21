@@ -357,7 +357,6 @@ public class SqliteStorageTests : IDisposable
 
     public void Dispose()
     {
-        _storage.Dispose();
         // Attempt to clean up the storage directory
         try
         {
