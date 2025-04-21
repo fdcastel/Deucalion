@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Container, useToast } from "@chakra-ui/react";
+import { Container, Flex, useToast } from "@chakra-ui/react";
 import { HubConnectionBuilder, HubConnection, LogLevel } from "@microsoft/signalr";
 
 import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS } from "../models";
@@ -114,14 +114,16 @@ export const App = () => {
   }, [mutateMonitors, toast]); // Add dependencies
 
   return (
-    <Container padding="4" maxWidth="container.xl">
-      <Overview
-        title={configuration?.pageTitle ?? "Deucalion Status"}
-        monitors={monitors ?? EMPTY_MONITORS}
-        hubConnection={hubConnection}
-        hubConnectionError={hubConnectionError}
-      />
-      <MonitorList monitors={monitors ?? EMPTY_MONITORS} />
+    <Container maxWidth="container.xl" padding="0">
+      <Flex direction="column" padding="2">
+        <Overview
+          title={configuration?.pageTitle ?? "Deucalion Status"}
+          monitors={monitors ?? EMPTY_MONITORS}
+          hubConnection={hubConnection}
+          hubConnectionError={hubConnectionError}
+        />
+        <MonitorList monitors={monitors ?? EMPTY_MONITORS} />
+      </Flex>
     </Container>
   );
 };

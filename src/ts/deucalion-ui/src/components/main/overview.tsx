@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { HubConnection, HubConnectionState } from "@microsoft/signalr";
-import { Box, Flex, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
+import { Box, Flex, Hide, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
 
 import { ThemeSwitcher } from "./theme-switcher";
 
@@ -37,13 +37,11 @@ export const Overview = ({ title, monitors, hubConnection, hubConnectionError }:
   totalAvailability = eventCount > 0 ? (100 * totalAvailability) / eventCount : 0;
 
   useEffect(() => {
-    document.title = onlineServicesCount === allServicesCount
-      ? title
-      : `(-${String(allServicesCount - onlineServicesCount)}) ${title}`
+    document.title = onlineServicesCount === allServicesCount ? title : `(-${String(allServicesCount - onlineServicesCount)}) ${title}`;
   }, [title, allServicesCount, onlineServicesCount]);
 
   return (
-    <>
+    <Flex direction="column">
       <Flex alignItems="center">
         <Image src="/assets/deucalion-icon.svg" boxSize="3em" marginRight="0.5em" alt="icon" />
         <Text fontSize="3xl" noOfLines={1}>
@@ -52,6 +50,7 @@ export const Overview = ({ title, monitors, hubConnection, hubConnectionError }:
         <Spacer />
         <ThemeSwitcher />
       </Flex>
+
       <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
         <Stat>
           <StatLabel>Services</StatLabel>
@@ -80,21 +79,23 @@ export const Overview = ({ title, monitors, hubConnection, hubConnectionError }:
           </Box>
         </Stat>
 
-        <Stat>
-          <StatLabel>Updated</StatLabel>
-          <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
-            <Tooltip hasArrow label={dateTimeToString(lastUpdateAt)} placement="left">
-              <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
+        <Hide below="md" ssr={false}>
+          <Stat>
+            <StatLabel>Updated</StatLabel>
+            <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
+              <Tooltip hasArrow label={dateTimeToString(lastUpdateAt)} placement="left">
+                <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
+              </Tooltip>
+            </Box>
+            <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError?.message === undefined} placement="left">
+              <StatHelpText>
+                <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
+                {hubConnection?.state ?? HubConnectionState.Disconnected}
+              </StatHelpText>
             </Tooltip>
-          </Box>
-          <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError?.message === undefined} placement="left">
-            <StatHelpText>
-              <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
-              {hubConnection?.state ?? HubConnectionState.Disconnected}
-            </StatHelpText>
-          </Tooltip>
-        </Stat>
+          </Stat>
+        </Hide>
       </StatGroup>
-    </>
+    </Flex>
   );
 };

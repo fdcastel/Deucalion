@@ -53,14 +53,22 @@ interface MonitorComponentProps {
 export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps) => {
   const { name, config, stats, events } = monitor;
   const lastState = stats?.lastState ?? MonitorState.Unknown;
-  const textOffset = usingImages && !config.image ? "2em" : "0.5em";
 
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex alignItems="center">
-      {config.image ? <Image src={config.image} boxSize="1.5em" alt="icon" /> : <div />}
+      {usingImages ? (
+        <Hide below="md" ssr={false}>
+        {config.image ? (
+          <Image src={config.image} boxSize="2em" marginRight="0.5em" minWidth="2em" alt="icon" />
+        ) : (
+          <Box boxSize="2em" marginRight="0.5em" />
+        )}
+      </Hide>
+      ) : null}      
+
       <Tooltip hasArrow label={formatLastSeen(lastState, monitor.stats)} isDisabled={lastState === MonitorState.Unknown} placement="bottom-end">
-        <Text marginLeft={textOffset} noOfLines={1} minWidth="8em" color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
+        <Text noOfLines={1} minWidth={["6em", "6em", "8em"]} color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
           {config.href ? (
             <Link href={config.href} isExternal>
               {name}
@@ -72,9 +80,8 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
       </Tooltip>
       <Spacer />
 
-      {/* ToDo: overflowX="clip" doesn't work in Firefox. 
-                overflowX="hidden" works. But clips hover animation. */}
-      <Flex alignItems="center" direction="row-reverse" overflowX="clip">
+      {/* Reverse the direction to crop leftmost itens */}
+      <Flex alignItems="center" direction="row-reverse" overflowX="hidden" height="2.5em">
         <Tooltip hasArrow label="Average response time" placement="bottom-end">
           <Tag colorScheme="cyan" variant="solid" borderRadius="none" marginLeft="0.25em" minWidth="5em">
             <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>

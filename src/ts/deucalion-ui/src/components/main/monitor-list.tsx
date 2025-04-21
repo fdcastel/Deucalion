@@ -1,4 +1,4 @@
-import { Box, Card, CardBody, CardHeader, Heading, List, ListItem } from "@chakra-ui/react";
+import { Box, Card, CardBody, CardHeader, Heading } from "@chakra-ui/react";
 
 import { MonitorProps } from "../../models";
 import { MonitorComponent } from "./monitor-component";
@@ -27,20 +27,16 @@ export const MonitorList = ({ monitors }: MonitorListProps) => {
   return (
     <Box>
       {Array.from(groupedMonitors).map(([groupName, monitors]) => (
-        <Card marginY="1em" key={groupName}>
-          <CardHeader hidden={!groupName} padding="0.5em">
+        <Card key={groupName} marginBottom={["0.5em", "0.5em", "1em"]}>
+          <CardHeader hidden={!groupName} paddingY="0.5em" paddingX="0.5em">
             <Heading size="lg" fontWeight="thin">
               {groupName}
             </Heading>
           </CardHeader>
-          <CardBody paddingY="0.5em">
-            <List spacing="1em">
-              {Array.from(monitors).map(([monitorName, monitorProps]) => (
-                <ListItem key={monitorName}>
-                  <MonitorComponent monitor={monitorProps} usingImages={usingImages} />
-                </ListItem>
-              ))}
-            </List>
+          <CardBody paddingY="0" paddingX="0.5em">
+            {Array.from(monitors).map(([monitorName, monitorProps]) => (
+              <MonitorComponent key={monitorName} monitor={monitorProps} usingImages={usingImages} />
+            ))}
           </CardBody>
         </Card>
       ))}
