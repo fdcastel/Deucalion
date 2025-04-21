@@ -1,5 +1,5 @@
-using Microsoft.Data.Sqlite;
 using System.Diagnostics;
+using Microsoft.Data.Sqlite;
 
 namespace Deucalion.Storage;
 
@@ -20,13 +20,16 @@ public class SqliteStorage
         // Enable connection pooling (Cache=Shared) and WAL mode for better concurrency
         _connectionString = $"Data Source={dbFile};Mode=ReadWriteCreate;Cache=Shared";
 
-        InitializeDatabase();
+        // Fire-and-forget initialization is generally discouraged,
+        // but acceptable here as it's part of constructor setup.
+        // Consider a separate async initialization method if more complex setup is needed.
+        _ = InitializeDatabaseAsync();
     }
 
-    private void InitializeDatabase()
+    private async Task InitializeDatabaseAsync(CancellationToken cancellationToken = default)
     {
         using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
         command.CommandText = $"""
@@ -51,16 +54,16 @@ public class SqliteStorage
                 LastSeenDownTicks INTEGER NULL
             );
         """;
-        command.ExecuteNonQuery();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public MonitorStats? GetStats(string monitorName, int historyCount = 60)
+    public async Task<MonitorStats?> GetStatsAsync(string monitorName, int historyCount = 60, CancellationToken cancellationToken = default)
     {
         DateTimeOffset? lastSeenUp = null;
         DateTimeOffset? lastSeenDown = null;
 
         using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync(cancellationToken);
 
         // Get the last seen state
         using (var cmdLastSeen = connection.CreateCommand())
@@ -72,8 +75,8 @@ public class SqliteStorage
             """;
             cmdLastSeen.Parameters.AddWithValue("@MonitorName", monitorName);
 
-            using var readerLastSeen = cmdLastSeen.ExecuteReader();
-            if (readerLastSeen.Read())
+            using var readerLastSeen = await cmdLastSeen.ExecuteReaderAsync(cancellationToken);
+            if (await readerLastSeen.ReadAsync(cancellationToken))
             {
                 var lastSeenUpTicks = readerLastSeen.IsDBNull(0) ? (long?)null : readerLastSeen.GetInt64(0);
                 var lastSeenDownTicks = readerLastSeen.IsDBNull(1) ? (long?)null : readerLastSeen.GetInt64(1);
@@ -96,8 +99,8 @@ public class SqliteStorage
             """;
             cmdLastEvent.Parameters.AddWithValue("@MonitorName", monitorName);
 
-            using var readerLastEvent = cmdLastEvent.ExecuteReader();
-            if (readerLastEvent.Read())
+            using var readerLastEvent = await cmdLastEvent.ExecuteReaderAsync(cancellationToken);
+            if (await readerLastEvent.ReadAsync(cancellationToken))
             {
                 lastEventTimestampTicks = readerLastEvent.GetInt64(0);
                 lastEventState = (MonitorState)readerLastEvent.GetInt64(1);
@@ -135,8 +138,8 @@ public class SqliteStorage
             cmdAggStats.Parameters.AddWithValue("@MonitorName", monitorName);
             cmdAggStats.Parameters.AddWithValue("@HistoryCount", historyCount);
 
-            using var readerAggStats = cmdAggStats.ExecuteReader();
-            if (readerAggStats.Read())
+            using var readerAggStats = await cmdAggStats.ExecuteReaderAsync(cancellationToken);
+            if (await readerAggStats.ReadAsync(cancellationToken))
             {
                 averageResponseTimeTicks = readerAggStats.IsDBNull(0) ? (double?)null : readerAggStats.GetDouble(0);
                 relevantEventCount = readerAggStats.GetInt64(1);
@@ -166,12 +169,12 @@ public class SqliteStorage
         );
     }
 
-    public IEnumerable<StoredEvent> GetLastEvents(string monitorName, int count = 60)
+    public async Task<IEnumerable<StoredEvent>> GetLastEventsAsync(string monitorName, int count = 60, CancellationToken cancellationToken = default)
     {
         var results = new List<StoredEvent>();
 
         using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync(cancellationToken);
 
         using (var command = connection.CreateCommand())
         {
@@ -185,8 +188,8 @@ public class SqliteStorage
             command.Parameters.AddWithValue("@MonitorName", monitorName);
             command.Parameters.AddWithValue("@Count", count);
 
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
             {
                 results.Add(new StoredEvent(
                     At: new DateTimeOffset(reader.GetInt64(0), TimeSpan.Zero),
@@ -199,11 +202,11 @@ public class SqliteStorage
         return results;
     }
 
-    public void SaveEvent(string monitorName, StoredEvent storedEvent)
+    public async Task SaveEventAsync(string monitorName, StoredEvent storedEvent, CancellationToken cancellationToken = default)
     {
         // Create connection per operation
         using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
         command.CommandText = $"""
@@ -215,10 +218,10 @@ public class SqliteStorage
         command.Parameters.AddWithValue("@State", (int)storedEvent.State);
         command.Parameters.AddWithValue("@ResponseTimeTicks", storedEvent.ResponseTime?.Ticks ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@ResponseText", storedEvent.ResponseText ?? (object)DBNull.Value);
-        command.ExecuteNonQuery();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public void SaveLastStateChange(string monitorName, DateTimeOffset at, MonitorState state)
+    public async Task SaveLastStateChangeAsync(string monitorName, DateTimeOffset at, MonitorState state, CancellationToken cancellationToken = default)
     {
         if (state != MonitorState.Up && state != MonitorState.Down)
         {
@@ -227,7 +230,7 @@ public class SqliteStorage
 
         // Create connection per operation
         using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
         command.CommandText = $"""
@@ -248,22 +251,23 @@ public class SqliteStorage
         command.Parameters.AddWithValue("@MonitorName", monitorName);
         command.Parameters.AddWithValue("@TimestampTicks", at.UtcTicks);
         command.Parameters.AddWithValue("@State", (int)state);
-        command.ExecuteNonQuery();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
     /// Deletes events older than the specified retention period.
     /// </summary>
     /// <param name="retentionPeriod">The maximum age of events to keep.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of rows deleted.</returns>
-    public int PurgeOldEvents(TimeSpan retentionPeriod)
+    public async Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, CancellationToken cancellationToken = default)
     {
         var cutoffTimestamp = DateTimeOffset.UtcNow - retentionPeriod;
         var cutoffTicks = cutoffTimestamp.UtcTicks;
 
         // Create connection per operation
         using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
         command.CommandText = $"""
@@ -273,7 +277,7 @@ public class SqliteStorage
         command.Parameters.AddWithValue("@CutoffTicks", cutoffTicks);
 
         var stopwatch = Stopwatch.StartNew();
-        var deletedRows = command.ExecuteNonQuery();
+        var deletedRows = await command.ExecuteNonQueryAsync(cancellationToken);
         stopwatch.Stop();
 
         // Optional: Log the operation details

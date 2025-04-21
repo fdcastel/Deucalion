@@ -82,12 +82,14 @@ public static class Application
                 options.PageDescription
             }));
 
-        app.MapGet("/api/monitors/{monitorName?}", (SqliteStorage storage, string? monitorName) =>
+        app.MapGet("/api/monitors/{monitorName?}", async (SqliteStorage storage, string? monitorName, CancellationToken cancellationToken) =>
         {
             if (monitorName is null)
             {
-                return Results.Ok(from kvp in applicationConfiguration.Monitors
-                                  select BuildMonitorDto(storage, kvp.Value, kvp.Key));
+                var tasks = applicationConfiguration.Monitors
+                                  .Select(kvp => BuildMonitorDtoAsync(storage, kvp.Value, kvp.Key, cancellationToken));
+                var results = await Task.WhenAll(tasks);
+                return Results.Ok(results);
             }
 
             if (!applicationConfiguration.Monitors.TryGetValue(monitorName, out var monitor))
@@ -95,7 +97,7 @@ public static class Application
                 return DeucalionResults.MonitorNotFound(monitorName);
             }
 
-            return Results.Ok(BuildMonitorDto(storage, monitor, monitorName));
+            return Results.Ok(await BuildMonitorDtoAsync(storage, monitor, monitorName, cancellationToken));
         });
 
         app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, [FromBody] MonitorCheckInDto arguments) =>
@@ -142,12 +144,12 @@ public static class Application
         return app;
     }
 
-    private static MonitorDto BuildMonitorDto(SqliteStorage storage, MonitorConfiguration m, string mn) =>
+    private static async Task<MonitorDto> BuildMonitorDtoAsync(SqliteStorage storage, MonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
         new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
-            Stats: MonitorStatsDto.From(storage.GetStats(mn)),
-            Events: from e in storage.GetLastEvents(mn)
+            Stats: MonitorStatsDto.From(await storage.GetStatsAsync(mn, cancellationToken: cancellationToken)),
+            Events: from e in await storage.GetLastEventsAsync(mn, cancellationToken: cancellationToken)
                     select MonitorEventDto.From(e)
         );
 }
