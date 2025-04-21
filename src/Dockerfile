@@ -22,8 +22,6 @@ RUN dotnet publish -c release -o /app -p:DebugType=None --no-restore -a $TARGETA
 FROM --platform=$BUILDPLATFORM node:lts-alpine AS build-node
 WORKDIR /source
 
-RUN npm install -g vite
-
 COPY ts/deucalion-ui/package*.json .
 RUN npm ci
 
