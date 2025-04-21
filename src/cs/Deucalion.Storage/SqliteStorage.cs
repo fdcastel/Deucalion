@@ -3,12 +3,13 @@ using Microsoft.Data.Sqlite;
 
 namespace Deucalion.Storage;
 
-public class SqliteStorage
+public class SqliteStorage : IDisposable // Add IDisposable
 {
     private const string EventsTableName = "Events";
     private const string MonitorStateChangesTableName = "MonitorStateChanges";
 
     private readonly string _connectionString;
+    private readonly string _dbFile;
 
     public SqliteStorage(string? storagePath = null)
     {
@@ -16,9 +17,9 @@ public class SqliteStorage
         // Ensure the directory exists
         Directory.CreateDirectory(dbPath);
 
-        var dbFile = Path.Combine(dbPath, "deucalion.sqlite.db");
+        _dbFile = Path.Combine(dbPath, "deucalion.sqlite.db"); // Store the full path
         // Enable connection pooling (Cache=Shared) and WAL mode for better concurrency
-        _connectionString = $"Data Source={dbFile};Mode=ReadWriteCreate;Cache=Shared";
+        _connectionString = $"Data Source={_dbFile};Mode=ReadWriteCreate;Cache=Shared";
 
         // Fire-and-forget initialization is generally discouraged,
         // but acceptable here as it's part of constructor setup.
@@ -292,4 +293,33 @@ public class SqliteStorage
 
         return deletedRows;
     }
+
+    #region IDisposable
+    private bool _disposed = false;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // Clear the connection pool associated with this specific database file.
+                // This is important for releasing file locks when Cache=Shared is used.
+                SqliteConnection.ClearAllPools();
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // No unmanaged resources currently, but good practice to have the structure.
+
+            _disposed = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+    #endregion
 }
