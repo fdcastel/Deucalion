@@ -14,6 +14,16 @@ const theme = extendTheme({
       degraded: "#C6F6D5", // green.100
     },
   },
+
+  semanticTokens: {
+    colors: {
+      flash: {
+        default: 'blue.100',
+        _dark: 'blue.900',
+      },
+    },
+  },
+    
 });
 
 interface ChakraEnvironmentProps {

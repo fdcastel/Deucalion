@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
 import { dateTimeFromNow } from "../../services";
@@ -57,9 +58,32 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
   const { name, config, stats, events } = monitor;
   const lastState = stats?.lastState ?? MonitorState.Unknown;
 
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      setIsFlashing(true);
+
+      const timer = setTimeout(() => {
+        setIsFlashing(false);
+      }, 500);    // Flash duration: 500ms
+
+      // Cleanup timer
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [events]);
+
   const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
-    <Flex alignItems="center">
+    <Flex
+      alignItems="center"
+      transition="background-color 0.5s ease-out"
+      bg={isFlashing ? "flash" : "transparent"}
+      p={1} // Add padding to make background visible
+      borderRadius="md" // Add rounded corners
+    >
       {usingImages ? (
         <Hide below="md" ssr={false}>
         {config.image ? (
