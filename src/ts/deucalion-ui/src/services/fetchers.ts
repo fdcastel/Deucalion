@@ -30,11 +30,13 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: Monit
         te: event.te      
       } as MonitorEventDto;
 
+      const sliced = monitor.events.slice(0, 59); // keep only the last 59 events (plus the new one = 60)
+
       const newMonitorProps = {
         name: monitorName,
         config: monitor.config,
         stats: event.ns,
-        events: [...monitor.events, newEvent].slice(-60), // keep only the last 60
+        events: [newEvent, ...sliced],
       };
 
       newMonitors.set(monitorName, newMonitorProps);

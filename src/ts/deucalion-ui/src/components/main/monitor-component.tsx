@@ -75,7 +75,6 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
     }
   }, [events]);
 
-  const reverseEvents = events.map((_, idx) => events[events.length - 1 - idx]);
   return (
     <Flex
       alignItems="center"
@@ -107,13 +106,25 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
       </Tooltip>
       <Spacer />
 
-      {/* Reverse the direction to crop leftmost itens */}
-      <Flex alignItems="center" direction="row-reverse" overflowX="hidden" height="2.5em">
-        <Tooltip hasArrow label="Average response time" placement="bottom-end">
-          <Tag colorScheme="cyan" variant="solid" borderRadius="none" marginLeft="0.25em" minWidth="5em">
-            <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
-          </Tag>
-        </Tooltip>
+      <Flex alignItems="center" overflowX="hidden">
+        <Flex alignItems="center" height="2.5em" overflowX="hidden" flexDirection="row-reverse" justifyContent="flex-start" mr={1}>
+          {events.map((e) => (
+            <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>
+              <Box
+                bg={monitorStateToColor(e.st)}
+                minWidth="0.5em"
+                mr="0.25em"
+                borderRadius="xl"
+                height="1.5em"
+                _hover={{
+                  transform: "translateY(-0.25em)",
+                  transitionDuration: "fast",
+                  transitionTimingFunction: "ease-in-out",
+                }}
+              />
+            </Tooltip>
+          ))}
+        </Flex>
 
         <Hide below="md" ssr={false}>
           <Tooltip hasArrow label="Availability" placement="bottom-end">
@@ -123,22 +134,11 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
           </Tooltip>
         </Hide>
 
-        {reverseEvents.map((e) => (
-          <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>
-            <Box
-              bg={monitorStateToColor(e.st)}
-              minWidth="0.5em"
-              mr="0.25em"
-              borderRadius="xl"
-              height="1.5em"
-              _hover={{
-                transform: "translateY(-0.25em)",
-                transitionDuration: "fast",
-                transitionTimingFunction: "ease-in-out",
-              }}
-            />
-          </Tooltip>
-        ))}
+        <Tooltip hasArrow label="Average response time" placement="bottom-end">
+          <Tag colorScheme="cyan" variant="solid" borderRadius="none" marginLeft="0.25em" minWidth="5em">
+            <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
+          </Tag>
+        </Tooltip>
       </Flex>
     </Flex>
   );
