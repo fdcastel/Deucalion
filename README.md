@@ -4,7 +4,7 @@ Minimal project for systems monitoring. When Grafana + Prometheus is overkill.
 
 This is not a "Status Page" project. There is no intention to add alerts, incident histories, push notifications, or CRUD UIs to configure everything.
 
-Just put up a simple configuration file, start the service, and you are done.
+Just create a configuration file, start the service, and you are done.
 
 ![Deucalion UI example](deucalion-ui.png)
 
@@ -12,7 +12,7 @@ Just put up a simple configuration file, start the service, and you are done.
 
 # Usage
 
-For a quick start:
+## Quick start
 
 ```yaml
 # docker-compose.yaml
@@ -68,6 +68,89 @@ monitors:
 
 
 
+## Configuration
+
+The monitoring behavior is defined in a YAML configuration file (e.g., `deucalion.yaml`).
+
+### `defaults` Section
+
+This optional section allows you to define default values that apply to all monitors unless overridden in a specific monitor's configuration.
+
+```yaml
+defaults:
+  intervalWhenUp: 00:00:03   # Default check interval when the monitor is UP
+  intervalWhenDown: 00:00:03 # Default check interval when the monitor is DOWN
+```
+
+### `monitors` Section
+
+This section defines the individual monitors. Each monitor has a unique name (e.g., `ping-example`) and a type indicated by a YAML tag (e.g., `!ping`).
+
+The following parameters are available for most monitors:
+- `group`: A string to group monitors together in the UI.
+- `intervalWhenUp`: Check interval when the monitor is UP. Overrides the default. Format: `HH:MM:SS` or `HH:MM:SS.fff`.
+- `intervalWhenDown`: Check interval when the monitor is DOWN. Overrides the default. Format: `HH:MM:SS` or `HH:MM:SS.fff`.
+- `image`: URL for a custom icon to display for the monitor.
+- `href`: URL to link to when the monitor name is clicked. Set to `""` to disable the link.
+
+#### `!ping` Monitor
+
+```yaml
+ping-example:
+  !ping
+  host: cloudflare.com             # Required: The hostname or IP address to ping.
+```
+
+#### `!tcp` Monitor
+
+```yaml
+tcp-example:
+  !tcp
+  host: cloudflare.com             # Required: The hostname or IP address to connect to.
+  port: 443                        # Required: The TCP port to connect to.
+```
+
+#### `!dns` Monitor
+
+```yaml
+dns-example:
+  !dns
+  host: google.com                 # Required: The hostname to query.
+  recordType: A                    # Required: The DNS record type (e.g., A, AAAA, MX, CNAME).
+  resolver: 1.1.1.1:53             # Required: The DNS resolver IP address and port.
+```
+
+#### `!http` Monitor
+
+```yaml
+http-example:
+  !http
+  url: https://google.com          # Required: The URL to request.
+  expectedStatusCode: 200          # (Optional) Expected HTTP status code. Defaults to 200-299.
+  expectedResponseBodyPattern: .*  # (Optional) Regex pattern to match against the response body.
+  ignoreCertificateErrors: true    # (Optional) Set to true to ignore SSL/TLS certificate errors. Defaults to false.
+  warnTimeout: 00:00:00.250        # (Optional) Time threshold after which the monitor shows a 'Warning' state. Format: HH:MM:SS.fff.
+  timeout: 00:00:02                # (Optional) Time after which the request is considered failed. Format: HH:MM:SS or HH:MM:SS.fff. Defaults to 00:00:05.
+```
+
+#### `!checkin` Monitor
+
+A passive monitor that waits for an external system to report ("check-in") via a specific URL.
+
+```yaml
+checkin-example:
+  !checkin
+  secret: your-secret-key          # Required: A secret key that must be provided in the check-in request.
+  # Common parameters (intervalWhenUp defines the expected check-in frequency)...
+```
+
+- The check-in URL is `/api/checkin/{monitorName}/{secret}`. 
+  - For the example above, it would be `/api/checkin/checkin-example/your-secret-key`. 
+- A `GET` or `POST` request to this URL marks the monitor as UP.
+- If a check-in is not received within the expected interval, the monitor is marked as DOWN.
+
+
+
 # Development notes
 
 ## Project guidelines:
@@ -84,11 +167,11 @@ monitors:
   - `Deucalion.Application`: Core engine and configuration.
   - `Deucalion.Network`: Base network monitors.
   - `Deucalion.Storage`: Persistence and statistics.
-  - `Deucalion.Api`: Server-side Asp.Net Web Api application.
-  - `Deucalion.Service`: Service Host for `Deucalion.Api`. Can run as a Service on Windows.
-  - `deucalion-ui`: Client-side React application.
+  - `Deucalion.Api`: Server-side ASP.NET Web API application.
+  - `Deucalion.Service`: Service Host for `Deucalion.Api`. Can run as a Windows Service.
   - `Deucalion.Tests`: xUnit tests.
   - `Deucalion.Cli`: Sample command-line SignalR client.
+  - `deucalion-ui`: Client-side React application.
 
 
 
@@ -132,6 +215,6 @@ in command-line. Or change the appropriate value in `appsettings.json`.
 
 Install [`Invoke-Build`](https://github.com/nightroman/Invoke-Build).
 
-`Invoke-Build`  or `Invoke-Build build` will put all artifacts in `./publish` folder.
+`Invoke-Build` or `Invoke-Build build` will put all artifacts in the `./publish` folder.
 
-`Invoke-Build test` will build and start a production version using `./deucalion-sample.yaml` configuration.
+`Invoke-Build test` will run the unit tests using `dotnet test`.
