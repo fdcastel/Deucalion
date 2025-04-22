@@ -83,20 +83,53 @@ public class Engine
 
             if (catalog.TryGetValue(monitor, out var status))
             {
-                // Notify response
-                callback(new MonitorChecked(name, at, monitorResponse));
+                var initialState = monitorResponse?.State ?? MonitorState.Down;
+                var effectiveState = initialState;
 
-                var newState = monitorResponse?.State ?? MonitorState.Down;
-                var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != newState;
+                // --- ignoreFailCount Logic ---
+                if (initialState == MonitorState.Up)
+                {
+                    status.ConsecutiveFailCount = 0;
+                }
+                else if (initialState == MonitorState.Down || initialState == MonitorState.Warn)
+                {
+                    status.ConsecutiveFailCount++;
+                    if (monitor.IgnoreFailCount > 0 && status.ConsecutiveFailCount < monitor.IgnoreFailCount)
+                    {
+                        effectiveState = MonitorState.Degraded;
+                    }
+                    // else: effectiveState remains Down or Warn
+                }
+                // else: Unknown state doesn't change fail count or trigger Degraded
+
+                // --- upsideDown Logic ---
+                if (monitor.UpsideDown)
+                {
+                    if (effectiveState == MonitorState.Up)
+                    {
+                        effectiveState = MonitorState.Down;
+                    }
+                    else if (effectiveState == MonitorState.Down)
+                    {
+                        effectiveState = MonitorState.Up;
+                    }
+                    // Warn and Degraded states are not flipped
+                }
+
+                // Notify response
+                var effectiveResponse = monitorResponse is null ? null : monitorResponse with { State = effectiveState };
+                callback(new MonitorChecked(name, at, effectiveResponse));
+
+                var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != effectiveState;
                 if (hasStateChanged)
                 {
                     // Notify change
-                    callback(new MonitorStateChanged(name, at, newState));
+                    callback(new MonitorStateChanged(name, at, effectiveState));
 
                     if (monitor is PullMonitor pullMonitor)
                     {
-                        // Update timer interval
-                        var dueTime = newState == MonitorState.Up
+                        // Update timer interval based on the *effective* state
+                        var dueTime = effectiveState == MonitorState.Up
                             ? pullMonitor.IntervalWhenUp
                             : pullMonitor.IntervalWhenDown;
 
@@ -111,7 +144,7 @@ public class Engine
                     }
                 }
 
-                status.LastKnownState = newState;
+                status.LastKnownState = effectiveState;
             }
         }
     }
@@ -121,5 +154,6 @@ public class Engine
         internal required Monitors.Monitor Monitor { get; init; }
         internal Timer? QueryTimer { get; set; }
         internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
+        internal int ConsecutiveFailCount { get; set; } = 0;
     }
 }

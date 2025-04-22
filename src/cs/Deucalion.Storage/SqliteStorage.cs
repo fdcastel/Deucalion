@@ -132,7 +132,7 @@ public class SqliteStorage : IDisposable // Add IDisposable
                 )
                 SELECT
                     AVG(CAST(ResponseTimeTicks AS REAL)) as AverageResponseTimeTicks, -- Cast needed for AVG with potential NULLs
-                    SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}) THEN 1 ELSE 0 END) as RelevantEventCount,
+                    SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}, {(int)MonitorState.Degraded}) THEN 1 ELSE 0 END) as RelevantEventCount,
                     SUM(CASE WHEN State = {(int)MonitorState.Down} THEN 1 ELSE 0 END) as DownEventCount
                 FROM RecentEvents;
             """;

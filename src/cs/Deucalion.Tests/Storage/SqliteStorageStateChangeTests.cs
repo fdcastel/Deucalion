@@ -1,5 +1,3 @@
-using Deucalion.Events;
-using Deucalion.Storage;
 using Xunit;
 
 namespace Deucalion.Tests.Storage;

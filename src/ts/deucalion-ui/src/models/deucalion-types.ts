@@ -1,10 +1,11 @@
 export const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
 export enum MonitorState {
-  Unknown = -1,
-  Down = 0,
-  Up = 1,
-  Warn = 2,
+  Unknown = 0,
+  Down = 1,
+  Up = 2,
+  Warn = 3,
+  Degraded = 4,
 }
 
 export interface MonitorConfigurationDto {
@@ -60,6 +61,7 @@ export interface DeucalionOptions {
 export const monitorStateToStatus = (state: MonitorState) => {
   switch (state) {
     case MonitorState.Up:
+    case MonitorState.Degraded:
       return "success";
     case MonitorState.Warn:
       return "warning";
@@ -78,6 +80,8 @@ export const monitorStateToDescription = (state: MonitorState) => {
       return "Changed to warning.";
     case MonitorState.Down:
       return "Is down.";
+    case MonitorState.Degraded:
+      return "May be down.";
     default:
       return "Is unknown";
   }

@@ -1,4 +1,3 @@
-using Deucalion.Events;
 using Deucalion.Storage;
 using Xunit;
 

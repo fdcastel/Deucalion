@@ -2,8 +2,9 @@
 
 public enum MonitorState
 {
-    Unknown = -1,
-    Down = 0,
-    Up = 1,
-    Warn = 2
+    Unknown = 0,
+    Down = 1,
+    Up = 2,
+    Warn = 3,
+    Degraded = 4,
 }

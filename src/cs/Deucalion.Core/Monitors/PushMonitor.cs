@@ -1,4 +1,4 @@
-﻿namespace Deucalion.Monitors;
+﻿namespace Deucalion.Monitors; // Corrected namespace
 
 public abstract class PushMonitor : Monitor
 {

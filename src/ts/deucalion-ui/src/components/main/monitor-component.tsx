@@ -18,6 +18,7 @@ const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
       break;
 
     case MonitorState.Down:
+    case MonitorState.Degraded:
       if (m.lastSeenUp) {
         const lastSeenUpAt = dateTimeFromNow(m.lastSeenUp);
         return `Last seen up ${lastSeenUpAt}`;
@@ -38,6 +39,8 @@ const monitorStateToColor = (state?: MonitorState) => {
       return "monitor.up";
     case MonitorState.Warn:
       return "monitor.warn";
+    case MonitorState.Degraded:
+      return "monitor.degraded";
     case MonitorState.Down:
       return "monitor.down";
     default:

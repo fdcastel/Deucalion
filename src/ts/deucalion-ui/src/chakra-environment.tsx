@@ -4,13 +4,14 @@ const theme = extendTheme({
   initialColorMode: "system",
   useSystemColorMode: false,
 
-  // Source: https://github.com/chakra-ui/chakra-ui/blob/main/packages/components/theme/src/foundations/colors.ts
+  // Source: https://v2.chakra-ui.com/docs/styled-system/theme#colors
   colors: {
     monitor: {
-      up: "#48BB78",      // green.400
-      warn: "#ECC94B",    // yellow.400
-      down: "#F56565",    // red.400
-      unknown: "#A0AEC0", // gray.400
+      unknown: "#A0AEC0",  // gray.400
+      down: "#F56565",     // red.400
+      up: "#48BB78",       // green.400
+      warn: "#ECC94B",     // yellow.400
+      degraded: "#C6F6D5", // green.100
     },
   },
 });

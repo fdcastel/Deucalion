@@ -1,6 +1,5 @@
 using Deucalion.Storage;
 using Microsoft.Data.Sqlite;
-using Xunit;
 
 namespace Deucalion.Tests.Storage;
 
