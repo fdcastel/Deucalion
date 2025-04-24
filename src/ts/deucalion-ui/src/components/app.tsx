@@ -4,17 +4,21 @@ import { EMPTY_MONITORS } from "../services";
 import { Overview, MonitorList } from "./main/index";
 
 import { logger } from "../services";
-import { preloadData, useData } from "../contexts/DataContext";
+
+import { preloadConfiguration, useConfiguration } from "../contexts/ConfigurationContext";
+import { preloadMonitors, useMonitors } from "../contexts/MonitorsContext";
 import { useMonitorHubContext } from "../contexts/MonitorHubContext";
 
-preloadData();
+preloadConfiguration();
+preloadMonitors();
 
 if (import.meta.env.PROD) {
   logger.disableLogger();
 }
 
 export const App = () => {
-  const { configurationData, monitorsData, groupedMonitorsData, usingImages } = useData();
+  const { configurationData } = useConfiguration();
+  const { monitorsData, groupedMonitorsData, usingImages } = useMonitors();
   const { isConnected, isConnecting, connectionError } = useMonitorHubContext();
 
   return (
@@ -22,7 +26,7 @@ export const App = () => {
       <Flex direction="column" padding="2">
         <Overview
           title={configurationData?.pageTitle ?? "Deucalion Status"}
-          monitors={monitorsData ?? EMPTY_MONITORS} 
+          monitors={monitorsData ?? EMPTY_MONITORS}
           isConnected={isConnected}
           isConnecting={isConnecting}
           connectionError={connectionError}

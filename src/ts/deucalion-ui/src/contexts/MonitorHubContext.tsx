@@ -7,7 +7,7 @@ import { monitorStateToDescription, monitorStateToStatus } from '../services';
 import { logger } from '../services';
 
 import { API_HUB_URL } from '../configuration';
-import { useData } from './DataContext';
+import { useMonitors } from './MonitorsContext';
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: MonitorCheckedDto) => {
   const monitorName = event.n;
@@ -57,7 +57,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
   const [hubConnectionState, setHubConnectionState] = useState<HubConnectionState>(HubConnectionState.Disconnected);
   const [hubConnectionError, setHubConnectionError] = useState<Error | null>(null);
 
-  const { mutateMonitors } = useData(); 
+  const { mutateMonitors } = useMonitors(); 
   const toast = useToast();
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
           logger.warn("Error stopping connection:", err); 
         });
     };
-  }, [mutateMonitors, toast]); 
+  }, [mutateMonitors, toast]);
 
   // --- Context Value (Facade) ---
   const value: IMonitorHubFacade = {
