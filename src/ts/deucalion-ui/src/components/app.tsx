@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Container, Flex, useToast } from "@chakra-ui/react";
 import { HubConnectionBuilder, HubConnection, LogLevel } from "@microsoft/signalr";
 
-import { MonitorCheckedDto, MonitorStateChangedDto, monitorStateToDescription, monitorStateToStatus, EMPTY_MONITORS } from "../models";
+import { MonitorCheckedDto, MonitorStateChangedDto, EMPTY_MONITORS } from "../models";
 import { Overview, MonitorList } from "./main/index";
 
 import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
+import { monitorStateToDescription, monitorStateToStatus } from "../utils/formatting";
 
 import useSWR, { preload } from "swr";
 

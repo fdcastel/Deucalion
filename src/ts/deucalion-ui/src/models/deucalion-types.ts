@@ -57,32 +57,3 @@ export interface MonitorProps {
 export interface DeucalionOptions {
   pageTitle: string;
 }
-
-export const monitorStateToStatus = (state: MonitorState) => {
-  switch (state) {
-    case MonitorState.Up:
-    case MonitorState.Degraded:
-      return "success";
-    case MonitorState.Warn:
-      return "warning";
-    case MonitorState.Down:
-      return "error";
-    default:
-      return "info";
-  }
-};
-
-export const monitorStateToDescription = (state: MonitorState) => {
-  switch (state) {
-    case MonitorState.Up:
-      return "Is online.";
-    case MonitorState.Warn:
-      return "Changed to warning.";
-    case MonitorState.Down:
-      return "Is down.";
-    case MonitorState.Degraded:
-      return "May be down.";
-    default:
-      return "Is unknown";
-  }
-};

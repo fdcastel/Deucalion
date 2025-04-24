@@ -1,53 +1,8 @@
 import { useState, useEffect } from "react";
 import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
-import { dateTimeFromNow } from "../../services";
-import { MonitorState, MonitorProps, MonitorStatsDto, MonitorEventDto } from "../../models";
-
-const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
-  if (!m) {
-    return undefined;
-  }
-
-  switch (state) {
-    case MonitorState.Up:
-    case MonitorState.Warn:
-      if (m.lastSeenDown) {
-        const lastSeenDownAt = dateTimeFromNow(m.lastSeenDown);
-        return `Last seen down ${lastSeenDownAt}`;
-      }
-      break;
-
-    case MonitorState.Down:
-    case MonitorState.Degraded:
-      if (m.lastSeenUp) {
-        const lastSeenUpAt = dateTimeFromNow(m.lastSeenUp);
-        return `Last seen up ${lastSeenUpAt}`;
-      }
-      break;
-  }
-};
-
-const formatMonitorEvent = (e: MonitorEventDto) => {
-  const at = dateTimeFromNow(e.at);
-  const timeStamp = e.ms ? `${at}: ${String(e.ms)}ms` : at;
-  return e.te ? `${timeStamp} (${e.te})` : timeStamp;
-};
-
-const monitorStateToColor = (state?: MonitorState) => {
-  switch (state) {
-    case MonitorState.Up:
-      return "monitor.up";
-    case MonitorState.Warn:
-      return "monitor.warn";
-    case MonitorState.Degraded:
-      return "monitor.degraded";
-    case MonitorState.Down:
-      return "monitor.down";
-    default:
-      return "monitor.unknown";
-  }
-};
+import { MonitorState, MonitorProps } from "../../models";
+import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../utils/formatting";
 
 interface MonitorComponentProps {
   monitor: MonitorProps;
