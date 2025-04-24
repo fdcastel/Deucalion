@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import useSWR, { preload, SWRResponse } from "swr";
+import useSWR, { preload, MutatorCallback, MutatorOptions } from "swr";
 
 import { DeucalionOptions, MonitorProps } from "../services";
 import { API_CONFIGURATION_URL, API_MONITORS_URL } from "../configuration";
@@ -18,8 +18,19 @@ export const monitorsFetcher = (url: string) =>
     .catch(() => undefined);
 
 interface IDataContext {
-  configuration: SWRResponse<DeucalionOptions | undefined>;
-  monitors: SWRResponse<Map<string, MonitorProps> | undefined>;
+  configurationData: DeucalionOptions | undefined;
+  monitorsData: Map<string, MonitorProps> | undefined;
+
+  isConfigurationLoading: boolean;
+  isMonitorsLoading: boolean;
+
+  configurationError: Error | undefined;
+  monitorsError: Error | undefined;
+
+  mutateMonitors: (
+    data?: Map<string, MonitorProps> | Promise<Map<string, MonitorProps> | undefined> | MutatorCallback<Map<string, MonitorProps> | undefined>,
+    opts?: boolean | MutatorOptions<Map<string, MonitorProps> | undefined>
+  ) => Promise<Map<string, MonitorProps> | undefined>;
 }
 
 // Create the context with an undefined initial value
@@ -29,13 +40,17 @@ const DataContext = createContext<IDataContext | undefined>(undefined);
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const SWR_OPTIONS = { suspense: true, revalidateOnMount: false, revalidateIfStale: false, revalidateOnFocus: false, revalidateOnReconnect: false };
 
-  const configuration = useSWR<DeucalionOptions | undefined>(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
-  const monitors = useSWR<Map<string, MonitorProps> | undefined>(API_MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
+  const configurationResponse = useSWR<DeucalionOptions | undefined>(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
+  const monitorsResponse = useSWR<Map<string, MonitorProps> | undefined>(API_MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
 
-  // Combine the SWR responses into the context value
   const value: IDataContext = {
-    configuration,
-    monitors,
+    configurationData: configurationResponse.data,
+    monitorsData: monitorsResponse.data,
+    isConfigurationLoading: configurationResponse.isValidating,
+    isMonitorsLoading: monitorsResponse.isValidating,
+    configurationError: configurationResponse.error as Error | undefined,
+    monitorsError: monitorsResponse.error as Error | undefined,
+    mutateMonitors: monitorsResponse.mutate,
   };
 
   // Provide the context value to children components
@@ -57,4 +72,4 @@ export const useData = () => {
 export const preloadData = () => {
   void preload(API_CONFIGURATION_URL, configurationFetcher);
   void preload(API_MONITORS_URL, monitorsFetcher);
-}
+};

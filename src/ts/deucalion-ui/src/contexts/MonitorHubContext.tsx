@@ -59,8 +59,8 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
   const [hubConnectionState, setHubConnectionState] = useState<HubConnectionState>(HubConnectionState.Disconnected);
   const [hubConnectionError, setHubConnectionError] = useState<Error | null>(null);
 
-  const { monitors } = useData();
-  const { mutate: mutateMonitors } = monitors; // Extract mutate function
+  // Get mutateMonitors directly from the facade
+  const { mutateMonitors } = useData(); 
   const toast = useToast();
 
   useEffect(() => {
@@ -76,6 +76,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
     // --- Event Handlers ---
     const handleMonitorChecked = (e: MonitorCheckedDto) => {
       logger.log("[onMonitorChecked]", e);
+      // Use mutateMonitors from the facade
       void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
     };
 
@@ -149,6 +150,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
           // State might already be Disconnected due to onclose
         });
     };
+  // Update dependency array
   }, [mutateMonitors, toast]); 
 
   // --- Context Value ---
