@@ -14,7 +14,7 @@ if (import.meta.env.PROD) {
 }
 
 export const App = () => {
-  const { configurationData, monitorsData } = useData();
+  const { configurationData, monitorsData, groupedMonitorsData, usingImages } = useData();
   const { isConnected, isConnecting, connectionError } = useMonitorHubContext();
 
   return (
@@ -22,12 +22,12 @@ export const App = () => {
       <Flex direction="column" padding="2">
         <Overview
           title={configurationData?.pageTitle ?? "Deucalion Status"}
-          monitors={monitorsData ?? EMPTY_MONITORS}
+          monitors={monitorsData ?? EMPTY_MONITORS} 
           isConnected={isConnected}
           isConnecting={isConnecting}
           connectionError={connectionError}
         />
-        <MonitorList monitors={monitorsData ?? EMPTY_MONITORS} />
+        <MonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
       </Flex>
     </Container>
   );

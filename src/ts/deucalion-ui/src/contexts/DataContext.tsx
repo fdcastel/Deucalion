@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import useSWR, { preload, MutatorCallback, MutatorOptions } from "swr";
 
 import { DeucalionOptions, MonitorProps } from "../services";
@@ -17,9 +17,29 @@ export const monitorsFetcher = (url: string) =>
     .then((arr) => (arr ? new Map(arr.map((x) => [x.name, x])) : undefined))
     .catch(() => undefined);
 
+const groupMonitors = (monitors: Map<string, MonitorProps> | undefined): Map<string, MonitorProps[]> => {
+  const grouped = new Map<string, MonitorProps[]>();
+  if (!monitors) {
+    return grouped;
+  }
+
+  for (const [, monitorProps] of monitors) {
+    const groupKey = monitorProps.config.group ?? ""; // Use empty string for default group
+    let slot = grouped.get(groupKey);
+    if (!slot) {
+      slot = [];
+      grouped.set(groupKey, slot);
+    }
+    slot.push(monitorProps);
+  }
+  return grouped;
+};
+
 interface IDataContext {
   configurationData: DeucalionOptions | undefined;
-  monitorsData: Map<string, MonitorProps> | undefined;
+  monitorsData: Map<string, MonitorProps> | undefined; // Keep raw data for Overview calculations
+  groupedMonitorsData: Map<string, MonitorProps[]> | undefined; // Add grouped data
+  usingImages: boolean; // Add flag for image usage
 
   isConfigurationLoading: boolean;
   isMonitorsLoading: boolean;
@@ -43,9 +63,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const configurationResponse = useSWR<DeucalionOptions | undefined>(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
   const monitorsResponse = useSWR<Map<string, MonitorProps> | undefined>(API_MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
 
+  const groupedMonitors = useMemo(() => groupMonitors(monitorsResponse.data), [monitorsResponse.data]);
+
+  // Determine if any monitor uses images
+  const usingImages = useMemo(() => {
+    if (!monitorsResponse.data) return false;
+    return Array.from(monitorsResponse.data.values()).some(mp => mp.config.image);
+  }, [monitorsResponse.data]);
+
   const value: IDataContext = {
     configurationData: configurationResponse.data,
     monitorsData: monitorsResponse.data,
+    groupedMonitorsData: groupedMonitors,
+    usingImages: usingImages,
     isConfigurationLoading: configurationResponse.isValidating,
     isMonitorsLoading: monitorsResponse.isValidating,
     configurationError: configurationResponse.error as Error | undefined,
