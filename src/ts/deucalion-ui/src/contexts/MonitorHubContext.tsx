@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { HubConnectionBuilder, HubConnection, LogLevel, HubConnectionState } from '@microsoft/signalr';
+import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr';
 import { useToast } from '@chakra-ui/react';
 
 import { MonitorCheckedDto, MonitorEventDto, MonitorProps, MonitorStateChangedDto } from '../services';
@@ -8,12 +8,6 @@ import { logger } from '../services';
 
 import { API_HUB_URL } from '../configuration';
 import { useData } from './DataContext';
-
-interface IMonitorHubContext {
-  hubConnection: HubConnection | null;
-  hubConnectionState: HubConnectionState;
-  hubConnectionError: Error | null;
-}
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: MonitorCheckedDto) => {
   const monitorName = event.n;
@@ -50,16 +44,19 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: Monit
 };
 
 
-// Create the context
-const MonitorHubContext = createContext<IMonitorHubContext | undefined>(undefined);
+interface IMonitorHubFacade {
+  isConnected: boolean;
+  isConnecting: boolean; // Includes connecting and reconnecting states
+  connectionError: Error | null;
+}
+
+const MonitorHubContext = createContext<IMonitorHubFacade | undefined>(undefined);
 
 // Create the provider component
 export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [hubConnection, setHubConnection] = useState<HubConnection | null>(null);
   const [hubConnectionState, setHubConnectionState] = useState<HubConnectionState>(HubConnectionState.Disconnected);
   const [hubConnectionError, setHubConnectionError] = useState<Error | null>(null);
 
-  // Get mutateMonitors directly from the facade
   const { mutateMonitors } = useData(); 
   const toast = useToast();
 
@@ -70,13 +67,11 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       .configureLogging(LogLevel.Warning)
       .build();
 
-    setHubConnection(connection);
     setHubConnectionState(HubConnectionState.Connecting);
 
     // --- Event Handlers ---
     const handleMonitorChecked = (e: MonitorCheckedDto) => {
       logger.log("[onMonitorChecked]", e);
-      // Use mutateMonitors from the facade
       void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
     };
 
@@ -92,7 +87,6 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       });
     };
 
-    // Register SignalR event handlers
     connection.on("MonitorChecked", handleMonitorChecked);
     connection.on("MonitorStateChanged", handleMonitorStateChanged);
 
@@ -147,24 +141,21 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
         })
         .catch((err: unknown) => { 
           logger.warn("Error stopping connection:", err); 
-          // State might already be Disconnected due to onclose
         });
     };
-  // Update dependency array
   }, [mutateMonitors, toast]); 
 
-  // --- Context Value ---
-  const value: IMonitorHubContext = {
-    hubConnection,
-    hubConnectionState,
-    hubConnectionError,
+  // --- Context Value (Facade) ---
+  const value: IMonitorHubFacade = {
+    isConnected: hubConnectionState === HubConnectionState.Connected,
+    isConnecting: hubConnectionState === HubConnectionState.Connecting || hubConnectionState === HubConnectionState.Reconnecting,
+    connectionError: hubConnectionError,
   };
 
   return <MonitorHubContext.Provider value={value}>{children}</MonitorHubContext.Provider>;
 };
 
-// Create the custom hook to consume the context
-export const useMonitorHubContext = () => {
+export const useMonitorHubContext = (): IMonitorHubFacade => {
   const context = useContext(MonitorHubContext);
 
   if (context === undefined) {

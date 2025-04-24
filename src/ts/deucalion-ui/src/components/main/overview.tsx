@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { HubConnectionState } from "@microsoft/signalr"; 
 import { Box, Flex, Hide, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
 
 import { ThemeSwitcher } from "./theme-switcher";
@@ -9,11 +8,12 @@ import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from ".
 interface OverviewProps {
   title: string;
   monitors: Map<string, MonitorProps>;
-  hubConnectionState: HubConnectionState; 
-  hubConnectionError: Error | null;
+  isConnected: boolean;
+  isConnecting: boolean;
+  connectionError: Error | null;
 }
 
-export const Overview = ({ title, monitors, hubConnectionState, hubConnectionError }: OverviewProps) => {
+export const Overview = ({ title, monitors, isConnected, isConnecting, connectionError }: OverviewProps) => {
   const allServicesCount = monitors.size;
 
   let firstUpdateAt = Number.MAX_VALUE;
@@ -38,6 +38,8 @@ export const Overview = ({ title, monitors, hubConnectionState, hubConnectionErr
   useEffect(() => {
     document.title = onlineServicesCount === allServicesCount ? title : `(-${String(allServicesCount - onlineServicesCount)}) ${title}`;
   }, [title, allServicesCount, onlineServicesCount]);
+
+  const connectionStatusText = isConnected ? "Connected" : isConnecting ? "Connecting..." : "Disconnected";
 
   return (
     <Flex direction="column">
@@ -86,10 +88,10 @@ export const Overview = ({ title, monitors, hubConnectionState, hubConnectionErr
                 <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
               </Tooltip>
             </Box>
-            <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError === null} placement="left">
+            <Tooltip hasArrow label={connectionError?.message} isDisabled={connectionError === null} placement="left">
               <StatHelpText>
-                <StatArrow type={hubConnectionState === HubConnectionState.Connected ? "increase" : "decrease"} />
-                {hubConnectionState}
+                <StatArrow type={isConnected ? "increase" : "decrease"} />
+                {connectionStatusText}
               </StatHelpText>
             </Tooltip>
           </Stat>
