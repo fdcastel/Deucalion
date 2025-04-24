@@ -1,5 +1,5 @@
-import { MonitorState, MonitorEventDto, MonitorStatsDto } from "../models/deucalion-types";
-import { dateTimeFromNow } from "../services";
+import { MonitorState, MonitorEventDto, MonitorStatsDto } from "./deucalion-types";
+import { dateTimeFromNow } from ".";
 
 export const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
   if (!m) {

@@ -1,6 +1,6 @@
 import { Box, Card, CardBody, CardHeader, Heading } from "@chakra-ui/react";
 
-import { MonitorProps } from "../../models";
+import { MonitorProps } from "../../services";
 import { MonitorComponent } from "./monitor-component";
 
 interface MonitorListProps {

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
 
-import { MonitorState, MonitorProps } from "../../models";
-import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../utils/formatting";
+import { MonitorState, MonitorProps } from "../../services";
+import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
 
 interface MonitorComponentProps {
   monitor: MonitorProps;

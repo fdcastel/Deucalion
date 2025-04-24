@@ -1,115 +1,24 @@
-import { useState, useEffect } from "react";
-import { Container, Flex, useToast } from "@chakra-ui/react";
-import { HubConnectionBuilder, HubConnection, LogLevel } from "@microsoft/signalr";
+import { Container, Flex } from "@chakra-ui/react";
 
-import { MonitorCheckedDto, MonitorStateChangedDto, EMPTY_MONITORS } from "../models";
+import { EMPTY_MONITORS } from "../services";
 import { Overview, MonitorList } from "./main/index";
 
-import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
-import { monitorStateToDescription, monitorStateToStatus } from "../utils/formatting";
-import { API_CONFIGURATION_URL, API_MONITORS_URL, API_HUB_URL } from "../configuration";
+import { logger } from "../services";
+import { preloadData, useData } from "../contexts/DataContext";
+import { useMonitorHubContext } from "../contexts/MonitorHubContext";
 
-import useSWR, { preload } from "swr";
-
-void preload(API_CONFIGURATION_URL, configurationFetcher);
-void preload(API_MONITORS_URL, monitorsFetcher);
+preloadData();
 
 if (import.meta.env.PROD) {
-  // Disables logger in production mode.
   logger.disableLogger();
 }
 
-const SWR_OPTIONS = { suspense: true, revalidateOnMount: false, revalidateIfStale: false, revalidateOnFocus: false, revalidateOnReconnect: false };
-
 export const App = () => {
-  const { data: configuration } = useSWR(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
-  const { data: monitors, mutate: mutateMonitors } = useSWR(API_MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
+  const { configuration: configurationResponse, monitors: monitorsResponse } = useData();
+  const { data: configuration } = configurationResponse;
+  const { data: monitors } = monitorsResponse;
 
-  const [hubConnection, setHubConnection] = useState<HubConnection | null>(null);
-  const [hubConnectionError, setHubConnectionError] = useState<Error | undefined>(undefined);
-  const toast = useToast();
-
-  useEffect(() => {
-    const connection = new HubConnectionBuilder()
-      .withUrl(API_HUB_URL)
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build();
-
-    setHubConnection(connection);
-
-    // Define handlers
-    const handleMonitorChecked = (e: MonitorCheckedDto) => {
-      logger.log("[onMonitorChecked]", e);
-      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
-    };
-
-    const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
-      logger.log("[MonitorStateChanged]", e);
-      void toast({
-        title: e.n,
-        description: monitorStateToDescription(e.st),
-        status: monitorStateToStatus(e.st),
-        position: "bottom-right",
-        variant: "left-accent",
-        isClosable: true,
-      });
-    };
-
-    // Register handlers
-    connection.on("MonitorChecked", handleMonitorChecked);
-    connection.on("MonitorStateChanged", handleMonitorStateChanged);
-
-    // Handle connection lifecycle
-    connection.onclose((error: Error | undefined) => {
-      logger.warn("Connection closed", error);
-      setHubConnectionError(error);
-      // Optionally set connection state if needed elsewhere
-    });
-
-    connection.onreconnecting((error: Error | undefined) => {
-      logger.warn("Connection reconnecting", error);
-      setHubConnectionError(error);
-      // Optionally set connection state
-    });
-
-    connection.onreconnected((connectionId?: string) => {
-      logger.warn("Connection reconnected", connectionId);
-      setHubConnectionError(undefined);
-      // Optionally set connection state
-    });
-
-    // Start the connection
-    connection
-      .start()
-      .then(() => {
-        logger.warn("Connection started");
-        setHubConnectionError(undefined);
-      })
-      .catch((err: unknown) => {
-        // Use logger.warn instead of logger.error
-        logger.warn("Error starting connection:", err);
-        if (err instanceof Error) {
-          setHubConnectionError(err);
-        } else {
-          const errorMessage = typeof err === "string" ? err : JSON.stringify(err ?? "Unknown error starting connection");
-          setHubConnectionError(new Error(errorMessage));
-        }
-      });
-
-    // Cleanup on unmount
-    return () => {
-      // Remove handlers
-      connection.off("MonitorChecked", handleMonitorChecked);
-      connection.off("MonitorStateChanged", handleMonitorStateChanged);
-
-      // Stop connection
-      connection
-        .stop()
-        .then(() => { logger.warn("Connection stopped"); })
-        .catch((err: unknown) => { logger.warn("Error stopping connection:", err); });
-    };
-  }, [mutateMonitors, toast]); // Add dependencies
+  const { hubConnectionState, hubConnectionError } = useMonitorHubContext();
 
   return (
     <Container maxWidth="container.xl" padding="0">
@@ -117,7 +26,7 @@ export const App = () => {
         <Overview
           title={configuration?.pageTitle ?? "Deucalion Status"}
           monitors={monitors ?? EMPTY_MONITORS}
-          hubConnection={hubConnection}
+          hubConnectionState={hubConnectionState}
           hubConnectionError={hubConnectionError}
         />
         <MonitorList monitors={monitors ?? EMPTY_MONITORS} />

@@ -40,10 +40,9 @@ export default tseslint.config(
       ...pluginReact.configs.recommended.rules,
       ...pluginReact.configs["jsx-runtime"].rules, // Enable new JSX transform
       ...pluginReactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
+
+      // Turn off the rule causing warnings for context files
+      "react-refresh/only-export-components": "off", 
     },
     settings: {
       react: {

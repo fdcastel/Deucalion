@@ -1,20 +1,19 @@
 import { useEffect } from "react";
-import { HubConnection, HubConnectionState } from "@microsoft/signalr";
+import { HubConnectionState } from "@microsoft/signalr"; 
 import { Box, Flex, Hide, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
 
 import { ThemeSwitcher } from "./theme-switcher";
 
-import { MonitorState, MonitorProps } from "../../models";
-import { dateTimeFromNow, dateTimeToString } from "../../services";
+import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
 
 interface OverviewProps {
   title: string;
   monitors: Map<string, MonitorProps>;
-  hubConnection: HubConnection | null /* use null, not undefined (from react-signalr) */;
-  hubConnectionError: Error | undefined;
+  hubConnectionState: HubConnectionState; 
+  hubConnectionError: Error | null;
 }
 
-export const Overview = ({ title, monitors, hubConnection, hubConnectionError }: OverviewProps) => {
+export const Overview = ({ title, monitors, hubConnectionState, hubConnectionError }: OverviewProps) => {
   const allServicesCount = monitors.size;
 
   let firstUpdateAt = Number.MAX_VALUE;
@@ -87,10 +86,10 @@ export const Overview = ({ title, monitors, hubConnection, hubConnectionError }:
                 <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
               </Tooltip>
             </Box>
-            <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError?.message === undefined} placement="left">
+            <Tooltip hasArrow label={hubConnectionError?.message} isDisabled={hubConnectionError === null} placement="left">
               <StatHelpText>
-                <StatArrow type={hubConnection?.state === HubConnectionState.Connected ? "increase" : "decrease"} />
-                {hubConnection?.state ?? HubConnectionState.Disconnected}
+                <StatArrow type={hubConnectionState === HubConnectionState.Connected ? "increase" : "decrease"} />
+                {hubConnectionState}
               </StatHelpText>
             </Tooltip>
           </Stat>
