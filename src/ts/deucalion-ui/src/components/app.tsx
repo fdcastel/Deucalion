@@ -7,15 +7,12 @@ import { Overview, MonitorList } from "./main/index";
 
 import { appendNewEvent, configurationFetcher, monitorsFetcher, logger } from "../services";
 import { monitorStateToDescription, monitorStateToStatus } from "../utils/formatting";
+import { API_CONFIGURATION_URL, API_MONITORS_URL, API_HUB_URL } from "../configuration";
 
 import useSWR, { preload } from "swr";
 
-const CONFIGURATION_URL = "/api/configuration";
-const MONITORS_URL = "/api/monitors";
-const HUB_URL = "/api/monitors/hub";
-
-void preload(CONFIGURATION_URL, configurationFetcher);
-void preload(MONITORS_URL, monitorsFetcher);
+void preload(API_CONFIGURATION_URL, configurationFetcher);
+void preload(API_MONITORS_URL, monitorsFetcher);
 
 if (import.meta.env.PROD) {
   // Disables logger in production mode.
@@ -25,8 +22,8 @@ if (import.meta.env.PROD) {
 const SWR_OPTIONS = { suspense: true, revalidateOnMount: false, revalidateIfStale: false, revalidateOnFocus: false, revalidateOnReconnect: false };
 
 export const App = () => {
-  const { data: configuration } = useSWR(CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
-  const { data: monitors, mutate: mutateMonitors } = useSWR(MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
+  const { data: configuration } = useSWR(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
+  const { data: monitors, mutate: mutateMonitors } = useSWR(API_MONITORS_URL, monitorsFetcher, SWR_OPTIONS);
 
   const [hubConnection, setHubConnection] = useState<HubConnection | null>(null);
   const [hubConnectionError, setHubConnectionError] = useState<Error | undefined>(undefined);
@@ -34,7 +31,7 @@ export const App = () => {
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      .withUrl(HUB_URL)
+      .withUrl(API_HUB_URL)
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();
