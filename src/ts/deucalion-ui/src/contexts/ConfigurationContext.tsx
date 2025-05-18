@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from "react";
 import useSWR, { preload } from "swr";
 
-import { DeucalionOptions } from "../services";
+import { type DeucalionOptions } from "../services";
 import { API_CONFIGURATION_URL, SWR_OPTIONS } from "../configuration";
 
 // Fetcher function specific to configuration

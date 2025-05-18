@@ -1,27 +1,27 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import { ChakraEnvironment } from "./chakra-environment";
+import { Provider } from "@/components/ui/provider"
+import { Toaster } from "./components/ui/toaster";
+
 import { App } from "./components/app";
 
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
 import { MonitorsProvider } from "./contexts/MonitorsContext";
 import { MonitorHubProvider } from "./contexts/MonitorHubContext";
 
-const container = document.getElementById("root");
-if (!container) throw new Error("Failed to find the root element");
-
-ReactDOM.createRoot(container).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ChakraEnvironment>
+    <Provider>
       <ConfigurationProvider>
         <MonitorsProvider>
           <MonitorHubProvider>
             <App />
+            <Toaster />
           </MonitorHubProvider>
         </MonitorsProvider>
       </ConfigurationProvider>
-    </ChakraEnvironment>
-  </React.StrictMode>
-);
+    </Provider>
+  </React.StrictMode>,
+)
 

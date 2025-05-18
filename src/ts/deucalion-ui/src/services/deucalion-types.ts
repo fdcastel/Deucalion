@@ -1,12 +1,14 @@
 export const EMPTY_MONITORS = new Map<string, MonitorProps>();
 
-export enum MonitorState {
-  Unknown = 0,
-  Down = 1,
-  Up = 2,
-  Warn = 3,
-  Degraded = 4,
-}
+export const MonitorState = {
+  Unknown: 0,
+  Down: 1,
+  Up: 2,
+  Warn: 3,
+  Degraded: 4,
+} as const;
+
+export type MonitorState = typeof MonitorState[keyof typeof MonitorState];
 
 export interface MonitorConfigurationDto {
   group?: string;

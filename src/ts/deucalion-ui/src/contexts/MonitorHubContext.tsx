@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr';
-import { useToast } from '@chakra-ui/react';
+import { toaster } from '../components/ui/toaster';
 
-import { MonitorCheckedDto, MonitorEventDto, MonitorProps, MonitorStateChangedDto } from '../services';
+import { type MonitorCheckedDto, type MonitorEventDto, type MonitorProps, type MonitorStateChangedDto } from '../services';
 import { monitorStateToDescription, monitorStateToStatus } from '../services';
 import { logger } from '../services';
 
@@ -57,8 +57,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
   const [hubConnectionState, setHubConnectionState] = useState<HubConnectionState>(HubConnectionState.Disconnected);
   const [hubConnectionError, setHubConnectionError] = useState<Error | null>(null);
 
-  const { mutateMonitors } = useMonitors(); 
-  const toast = useToast();
+  const { mutateMonitors } = useMonitors();
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
@@ -77,13 +76,13 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
 
     const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
       logger.log("[MonitorStateChanged]", e);
-      toast({
+      toaster.create({
         title: e.n,
         description: monitorStateToDescription(e.st),
-        status: monitorStateToStatus(e.st),
-        position: "bottom-right",
-        variant: "left-accent",
-        isClosable: true,
+        type: monitorStateToStatus(e.st),
+        meta: {
+          closable: true,
+        },
       });
     };
 
@@ -135,15 +134,15 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       connection.off("MonitorStateChanged", handleMonitorStateChanged);
       connection
         .stop()
-        .then(() => { 
-          logger.warn("Connection stopped"); 
+        .then(() => {
+          logger.warn("Connection stopped");
           setHubConnectionState(HubConnectionState.Disconnected);
         })
-        .catch((err: unknown) => { 
-          logger.warn("Error stopping connection:", err); 
+        .catch((err: unknown) => {
+          logger.warn("Error stopping connection:", err);
         });
     };
-  }, [mutateMonitors, toast]);
+  }, [mutateMonitors]);
 
   // --- Context Value (Facade) ---
   const value: IMonitorHubFacade = {

@@ -1,6 +1,6 @@
-import { Box, Card, CardBody, CardHeader, Heading } from "@chakra-ui/react";
+import { Box, Card, Heading } from "@chakra-ui/react";
 
-import { MonitorProps } from "../../services";
+import { type MonitorProps } from "../../services";
 import { MonitorComponent } from "./monitor-component";
 
 interface MonitorListProps {
@@ -8,28 +8,22 @@ interface MonitorListProps {
   usingImages: boolean;
 }
 
-export const MonitorList = ({ groupedMonitors, usingImages }: MonitorListProps) => {
-  // Handle undefined case
-  if (!groupedMonitors) {
-    return null; // Or return a loading indicator/placeholder
-  }
-
-  return (
+export const MonitorList = ({ groupedMonitors, usingImages }: MonitorListProps) =>
+  groupedMonitors ? (
     <Box>
       {Array.from(groupedMonitors).map(([groupName, monitorsInGroup]) => (
-        <Card key={groupName} marginBottom={["0.5em", "0.5em", "1em"]}>
-          <CardHeader hidden={!groupName} paddingY="0.5em" paddingX="0.5em">
-            <Heading size="lg" fontWeight="thin">
+        <Card.Root key={groupName} marginBottom={["0.5em", "0.5em", "1em"]} shadow="sm" borderRadius="none">
+          <Card.Header hidden={!groupName} padding="0.5em">
+            <Heading size={["2xl", "2xl", "3xl"]} fontWeight="thin">
               {groupName}
             </Heading>
-          </CardHeader>
-          <CardBody paddingY="0" paddingX="0.5em">
+          </Card.Header>
+          <Card.Body paddingTop="0" paddingBottom="0.5em" paddingX="0">
             {monitorsInGroup.map((monitorProps) => (
               <MonitorComponent key={monitorProps.name} monitor={monitorProps} usingImages={usingImages} />
             ))}
-          </CardBody>
-        </Card>
+          </Card.Body>
+        </Card.Root>
       ))}
     </Box>
-  );
-};
+  ) : null;

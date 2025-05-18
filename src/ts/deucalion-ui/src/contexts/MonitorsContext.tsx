@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from "react";
-import useSWR, { preload, MutatorCallback, MutatorOptions } from "swr";
+import useSWR, { preload, type MutatorCallback, type MutatorOptions } from "swr";
 
-import { MonitorProps } from "../services";
+import { type MonitorProps } from "../services";
 import { API_MONITORS_URL, SWR_OPTIONS } from "../configuration";
 
 // Fetcher function specific to monitors

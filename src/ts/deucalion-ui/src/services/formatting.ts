@@ -1,11 +1,11 @@
-import { MonitorState, MonitorEventDto, MonitorStatsDto } from "./deucalion-types";
+import { MonitorState, type MonitorEventDto, type MonitorStatsDto } from "./deucalion-types";
 import { dateTimeFromNow } from ".";
 
 export const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
   if (!m) {
     return undefined;
   }
-
+  
   switch (state) {
     case MonitorState.Up:
     case MonitorState.Warn:

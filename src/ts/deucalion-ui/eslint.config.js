@@ -1,63 +1,28 @@
-import eslint from "@eslint/js";
-import globals from "globals";
-import tseslint from "typescript-eslint";
-import pluginReact from "eslint-plugin-react";
-import pluginReactHooks from "eslint-plugin-react-hooks";
-import pluginReactRefresh from "eslint-plugin-react-refresh";
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
+  { ignores: ['dist'] },
   {
-    // Global ignores
-    ignores: ["dist/**", "eslint.config.js", "vite.config.js", "vite.config.d.ts"],
-  },
-  // Base recommended configurations
-  eslint.configs.recommended,
-  ...tseslint.configs.strictTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
-  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      parserOptions: {
-        project: ["./tsconfig.json", "./tsconfig.node.json"],
-        tsconfigRootDir: import.meta.dirname,
-      },
+      ecmaVersion: 2020,
+      globals: globals.browser,
     },
-  },
-  {
-    // Configuration for React files (TSX)
-    files: ["src/**/*.tsx"],
     plugins: {
-      react: pluginReact,
-      "react-hooks": pluginReactHooks,
-      "react-refresh": pluginReactRefresh,
-    },
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.es2020,
-      },
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
     },
     rules: {
-      ...pluginReact.configs.recommended.rules,
-      ...pluginReact.configs["jsx-runtime"].rules, // Enable new JSX transform
-      ...pluginReactHooks.configs.recommended.rules,
-
-      // Turn off the rule causing warnings for context files
-      "react-refresh/only-export-components": "off", 
-    },
-    settings: {
-      react: {
-        version: "detect",
-      },
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
     },
   },
-  {
-    // Configuration for other TS files (non-JSX)
-    files: ["src/**/*.ts"],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.es2020,
-      },
-    },
-  }
-);
+)

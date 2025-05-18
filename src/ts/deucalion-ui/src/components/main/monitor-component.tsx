@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Box, Center, Flex, Hide, Image, Link, Spacer, Tag, Text, Tooltip } from "@chakra-ui/react";
+import { Box, Center, Flex, Image, Link, Spacer, Tag, Text } from "@chakra-ui/react";
+import { Tooltip } from "../ui/tooltip";
 
-import { MonitorState, MonitorProps } from "../../services";
+import { MonitorState, type MonitorProps } from "../../services";
 import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
 
 interface MonitorComponentProps {
@@ -34,24 +35,21 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
     <Flex
       alignItems="center"
       transition="background-color 0.5s ease-out"
-      bg={isFlashing ? "flash" : "transparent"}
-      p={1} // Add padding to make background visible
-      borderRadius="md" // Add rounded corners
+      bg={isFlashing ? "blue.subtle" : undefined}
+      borderRadius="sm"
     >
-      {usingImages ? (
-        <Hide below="md" ssr={false}>
+      <Box hideBelow={"md"} hidden={!usingImages} marginLeft="0.5em">
         {config.image ? (
-          <Image src={config.image} boxSize="2em" marginRight="0.5em" minWidth="2em" alt="icon" />
+          <Image src={config.image} fit="contain" boxSize="2em" minWidth="2em" alt="icon" />
         ) : (
-          <Box boxSize="2em" marginRight="0.5em" />
+          <Box boxSize="2em" />
         )}
-      </Hide>
-      ) : null}      
+      </Box>
 
-      <Tooltip hasArrow label={formatLastSeen(lastState, monitor.stats)} isDisabled={lastState === MonitorState.Unknown} placement="bottom-end">
-        <Text noOfLines={1} minWidth={["6em", "6em", "8em"]} color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
+      <Tooltip showArrow content={formatLastSeen(lastState, monitor.stats)} disabled={lastState === MonitorState.Unknown} positioning={{ placement: "bottom-end" }}>
+        <Text lineClamp={1} marginLeft="0.5em" minWidth={["6em", "6em", "8em"]} color={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>
           {config.href ? (
-            <Link href={config.href} isExternal>
+            <Link href={config.href} target="_blank" rel="noopener noreferrer">
               {name}
             </Link>
           ) : (
@@ -64,12 +62,12 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
       <Flex alignItems="center" overflowX="hidden">
         <Flex alignItems="center" height="2.5em" overflowX="hidden" flexDirection="row-reverse" justifyContent="flex-start" mr={1}>
           {events.map((e) => (
-            <Tooltip key={e.at} hasArrow label={formatMonitorEvent(e)}>
+            <Tooltip key={e.at} showArrow content={formatMonitorEvent(e)} positioning={{ placement: "top" }}>
               <Box
                 bg={monitorStateToColor(e.st)}
                 minWidth="0.5em"
                 mr="0.25em"
-                borderRadius="xl"
+                borderRadius="full"
                 height="1.5em"
                 _hover={{
                   transform: "translateY(-0.25em)",
@@ -81,18 +79,18 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
           ))}
         </Flex>
 
-        <Hide below="md" ssr={false}>
-          <Tooltip hasArrow label="Availability" placement="bottom-end">
-            <Tag colorScheme="teal" variant="solid" borderRadius="full" marginLeft="0.25em" minWidth="4em">
-              <Center width="100%">{stats?.availability !== undefined ? stats.availability.toFixed(0) : "... "}%</Center>
-            </Tag>
+        <Box hideBelow={"md"}>
+          <Tooltip showArrow content="Availability" positioning={{ placement: "bottom-end" }}>
+            <Tag.Root colorPalette="teal" variant="solid" borderRadius="full" marginRight="0.25em" >
+              <Center minWidth="3em">{stats?.availability !== undefined ? stats.availability.toFixed(0) : "... "}%</Center>
+            </Tag.Root>
           </Tooltip>
-        </Hide>
+        </Box>
 
-        <Tooltip hasArrow label="Average response time" placement="bottom-end">
-          <Tag colorScheme="cyan" variant="solid" borderRadius="none" marginLeft="0.25em" minWidth="5em">
-            <Center width="100%">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
-          </Tag>
+        <Tooltip showArrow content="Average response time" positioning={{ placement: "bottom-end" }}>
+          <Tag.Root colorPalette="cyan" variant="solid" borderRadius="none" marginRight="0.5em">
+            <Center minWidth="4em">{stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms</Center>
+          </Tag.Root>
         </Tooltip>
       </Flex>
     </Flex>

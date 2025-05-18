@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { Box, Flex, Hide, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
+import { Box, Flex, Image, Spacer, Stat, StatGroup, Text, StatLabel, StatHelpText, StatUpIndicator, StatDownIndicator, StatValueText } from "@chakra-ui/react";
+import { Tooltip } from "../ui/tooltip";
 
-import { ThemeSwitcher } from "./theme-switcher";
-
-import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
+import { MonitorState, type MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
+import { ColorModeButton } from "../ui/color-mode";
 
 interface OverviewProps {
   title: string;
@@ -44,58 +44,53 @@ export const Overview = ({ title, monitors, isConnected, isConnecting, connectio
   return (
     <Flex direction="column">
       <Flex alignItems="center">
-        <Image src="/assets/deucalion-icon.svg" boxSize="3em" marginRight="0.5em" alt="icon" />
-        <Text fontSize="3xl" noOfLines={1}>
+        <Image src="/assets/deucalion-icon.svg" fit="contain" boxSize="3em" marginRight="0.5em" alt="icon" />
+        <Text fontSize="3xl">
           {title}
         </Text>
         <Spacer />
-        <ThemeSwitcher />
+        <ColorModeButton />
       </Flex>
 
-      <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
-        <Stat>
+      <StatGroup marginY="1em" padding="0.5em" bg="bg.emphasized" shadow="md" borderRadius="md">
+        <Stat.Root>
           <StatLabel>Services</StatLabel>
           <Box filter="auto" blur={onlineServicesCount === 0 ? "6px" : "0px"}>
-            <StatNumber>
+            <StatValueText>
               {onlineServicesCount} of {allServicesCount}
-            </StatNumber>
+            </StatValueText>
           </Box>
-
           {onlineServicesCount === 0 ? (
-            <StatHelpText textColor="gray">Loading...</StatHelpText>
+            <StatHelpText>Loading...</StatHelpText>
           ) : onlineServicesCount === allServicesCount ? (
             <StatHelpText>Online</StatHelpText>
           ) : (
             <StatHelpText color="monitor.down">Degraded</StatHelpText>
           )}
-        </Stat>
+        </Stat.Root>
 
-        <Stat>
+        <Stat.Root>
           <StatLabel>Availability</StatLabel>
           <Box filter="auto" blur={isNaN(totalAvailability) ? "6px" : "0px"}>
-            <StatNumber>{totalAvailability.toFixed(1)}%</StatNumber>
+            <StatValueText>{totalAvailability.toFixed(1)}%</StatValueText>
           </Box>
-          <Box filter="auto" blur={firstUpdateAt === Number.MAX_VALUE ? "6px" : "0px"}>
-            <StatHelpText>From {dateTimeFromNow(firstUpdateAt, true)}</StatHelpText>
-          </Box>
-        </Stat>
+          <StatHelpText>From {dateTimeFromNow(firstUpdateAt, true)}</StatHelpText>
+        </Stat.Root>
 
-        <Hide below="md" ssr={false}>
-          <Stat>
-            <StatLabel>Updated</StatLabel>
-            <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
-              <Tooltip hasArrow label={dateTimeToString(lastUpdateAt)} placement="left">
-                <StatNumber noOfLines={1}>{dateTimeFromNow(lastUpdateAt)}</StatNumber>
-              </Tooltip>
-            </Box>
-            <Tooltip hasArrow label={connectionError?.message} isDisabled={connectionError === null} placement="left">
-              <StatHelpText>
-                <StatArrow type={isConnected ? "increase" : "decrease"} />
-                {connectionStatusText}
-              </StatHelpText>
+        <Stat.Root hideBelow={"md"}>
+          <StatLabel>Updated</StatLabel>
+          <Box filter="auto" blur={lastUpdateAt === 0 ? "6px" : "0px"}>
+            <Tooltip showArrow content={dateTimeToString(lastUpdateAt)} positioning={{ placement: "left" }}>
+              <StatValueText lineClamp={1}>{dateTimeFromNow(lastUpdateAt)}</StatValueText>
             </Tooltip>
-          </Stat>
-        </Hide>
+          </Box>
+          <Tooltip showArrow content={connectionError?.message} disabled={connectionError === null} positioning={{ placement: "left" }}>
+            <StatHelpText>
+              {isConnected ? <StatUpIndicator /> : <StatDownIndicator />}
+              {connectionStatusText}
+            </StatHelpText>
+          </Tooltip>
+        </Stat.Root>
       </StatGroup>
     </Flex>
   );
