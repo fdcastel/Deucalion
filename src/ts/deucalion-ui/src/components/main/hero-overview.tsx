@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
+import { ThemeSwitcher } from "./theme-switcher";
 
 interface HeroOverviewProps {
   title: string;
@@ -40,7 +41,7 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
         <img src="/assets/deucalion-icon.svg" className="w-12 h-12 mr-2" alt="icon" />
         <span className="text-3xl truncate">{title}</span>
         <div className="flex-1" />
-        {/* TODO: Add HeroUI theme switcher if available */}
+        <ThemeSwitcher />
       </div>
       <div className="flex gap-6 my-4 p-2 pb-0 bg-black/10 shadow rounded-md">
         <div>

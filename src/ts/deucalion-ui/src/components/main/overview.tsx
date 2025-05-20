@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { Box, Flex, Hide, Image, Spacer, Stat, StatArrow, StatGroup, StatHelpText, StatLabel, StatNumber, Text, Tooltip } from "@chakra-ui/react";
 
-import { ThemeSwitcher } from "./theme-switcher";
-
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
 
 interface OverviewProps {
@@ -49,7 +47,6 @@ export const Overview = ({ title, monitors, isConnected, isConnecting, connectio
           {title}
         </Text>
         <Spacer />
-        <ThemeSwitcher />
       </Flex>
 
       <StatGroup marginY="1em" padding="0.5em" paddingBottom="0" bg="blackAlpha.200" boxShadow="md" borderRadius="md">
