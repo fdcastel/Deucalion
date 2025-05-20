@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { MonitorState, MonitorProps } from "../../services";
-import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
+import { formatLastSeen, formatMonitorEvent, monitorStateToHeroColor } from "../../services";
 
 interface HeroMonitorComponentProps {
   monitor: MonitorProps;
@@ -34,12 +34,11 @@ export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ moni
         </span>
       )}
       <span
-        className="truncate min-w-[6em] md:min-w-[8em]"
+        className={`truncate min-w-[6em] md:min-w-[8em] ${lastState !== MonitorState.Up ? `text-${monitorStateToHeroColor(lastState)}` : ""}`}
         title={formatLastSeen(lastState, monitor.stats) || undefined}
-        style={{ color: lastState !== MonitorState.Up ? undefined : undefined }}
       >
         {config.href ? (
-          <a href={config.href} target="_blank" rel="noopener noreferrer" className={lastState !== MonitorState.Up ? monitorStateToColor(lastState) : undefined}>{name}</a>
+          <a href={config.href} target="_blank" rel="noopener noreferrer" className={lastState !== MonitorState.Up ? `text-${monitorStateToHeroColor(lastState)}` : undefined}>{name}</a>
         ) : (
           name
         )}
@@ -51,8 +50,7 @@ export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ moni
             <span
               key={e.at}
               title={formatMonitorEvent(e)}
-              className={`inline-block rounded-xl h-6 min-w-[0.5em] mr-1 ${monitorStateToColor(e.st)}`}
-              style={{ background: monitorStateToColor(e.st) }}
+              className={`inline-block rounded-xl h-6 min-w-[0.5em] mr-1 bg-${monitorStateToHeroColor(e.st)}`}
             />
           ))}
         </div>

@@ -74,3 +74,18 @@ export const monitorStateToDescription = (state: MonitorState) => {
       return "Is unknown";
   }
 };
+
+export const monitorStateToHeroColor = (state?: MonitorState) => {
+  switch (state) {
+    case MonitorState.Up:
+      return "monitor-up";
+    case MonitorState.Warn:
+      return "monitor-warn";
+    case MonitorState.Degraded:
+      return "monitor-degraded";
+    case MonitorState.Down:
+      return "monitor-down";
+    default:
+      return "monitor-unknown";
+  }
+};

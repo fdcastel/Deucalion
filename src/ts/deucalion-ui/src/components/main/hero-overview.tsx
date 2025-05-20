@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
+import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString, monitorStateToHeroColor } from "../../services";
 import { ThemeSwitcher } from "./theme-switcher";
 
 interface HeroOverviewProps {
@@ -50,7 +50,7 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
             <span className="text-2xl font-bold">{onlineServicesCount} of {allServicesCount}</span>
           </div>
           <div className="text-xs text-gray-500">
-            {onlineServicesCount === 0 ? "Loading..." : onlineServicesCount === allServicesCount ? "Online" : <span className="text-red-600">Degraded</span>}
+            {onlineServicesCount === 0 ? "Loading..." : onlineServicesCount === allServicesCount ? "Online" : <span className="text-monitor-down">Degraded</span>}
           </div>
         </div>
         <div>
@@ -68,7 +68,7 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
             <span className="text-2xl font-bold" title={dateTimeToString(lastUpdateAt)}>{dateTimeFromNow(lastUpdateAt)}</span>
           </div>
           <div className="text-xs text-gray-500" title={connectionError?.message ?? undefined}>
-            <span className={isConnected ? "text-green-600" : "text-red-600"}>{connectionStatusText}</span>
+            <span className={isConnected ? "text-monitor-up" : "text-monitor-down"}>{connectionStatusText}</span>
           </div>
         </div>
       </div>
