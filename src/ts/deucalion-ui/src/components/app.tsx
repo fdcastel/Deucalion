@@ -10,7 +10,6 @@ import { logger } from "../services";
 import { preloadConfiguration, useConfiguration } from "../contexts/ConfigurationContext";
 import { preloadMonitors, useMonitors } from "../contexts/MonitorsContext";
 import { useMonitorHubContext } from "../contexts/MonitorHubContext";
-import { Button } from "@heroui/react";
 
 preloadConfiguration();
 preloadMonitors();

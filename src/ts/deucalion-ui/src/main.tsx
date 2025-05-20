@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import {HeroUIProvider, ToastProvider} from '@heroui/react'
+import {ThemeProvider as NextThemesProvider} from "next-themes";
 
 import { ChakraEnvironment } from "./chakra-environment";
 import { App } from "./components/app";
@@ -18,16 +19,18 @@ if (!container) throw new Error("Failed to find the root element");
 ReactDOM.createRoot(container).render(
   <React.StrictMode>
     <HeroUIProvider>
-      <ToastProvider />
-      <ChakraEnvironment>
-        <ConfigurationProvider>
-          <MonitorsProvider>
-            <MonitorHubProvider>
-              <App />
-            </MonitorHubProvider>
-          </MonitorsProvider>
-        </ConfigurationProvider>
-      </ChakraEnvironment>
+      <NextThemesProvider attribute="class" enableSystem={true}>
+        <ToastProvider />
+        <ChakraEnvironment>
+          <ConfigurationProvider>
+            <MonitorsProvider>
+              <MonitorHubProvider>
+                <App />
+              </MonitorHubProvider>
+            </MonitorsProvider>
+          </ConfigurationProvider>
+        </ChakraEnvironment>
+      </NextThemesProvider>
     </HeroUIProvider>    
   </React.StrictMode>
 );
