@@ -17,6 +17,10 @@ export default {
           warn: "#ECC94B",     // yellow.400
           degraded: "#C6F6D5", // green.100
         },
+        flash: {
+          light: "#DBEAFE", // blue.100
+          dark: "#1E3A8A",  // blue.900
+        },
       },
     },
   },

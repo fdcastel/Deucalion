@@ -34,7 +34,7 @@ export const MonitorComponent = ({ monitor, usingImages }: MonitorComponentProps
     <Flex
       alignItems="center"
       transition="background-color 0.5s ease-out"
-      bg={isFlashing ? "flash" : "transparent"}
+      bg={isFlashing ? "flash" : ""}
       p={1} // Add padding to make background visible
       borderRadius="md" // Add rounded corners
     >

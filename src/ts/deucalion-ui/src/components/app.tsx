@@ -40,8 +40,8 @@ export const App = () => {
       </Container>
 
       {/* Hero UI area */}
-      <div className="relative flex flex-col h-screen">
-        <main className="container mx-auto max-w-7xl px-6 flex-grow pt-16">
+      <div className="relative flex h-screen flex-col">
+        <main className="container mx-auto max-w-7xl flex-grow px-2 pt-16">
           <HeroOverview
             title={configurationData?.pageTitle ?? "Deucalion Status"}
             monitors={monitorsData ?? EMPTY_MONITORS}
@@ -49,10 +49,7 @@ export const App = () => {
             isConnecting={isConnecting}
             connectionError={connectionError}
           />
-          <HeroMonitorList
-            groupedMonitors={groupedMonitorsData}
-            usingImages={usingImages}
-          />
+          <HeroMonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
         </main>
       </div>
     </>
