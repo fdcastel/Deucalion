@@ -31,6 +31,14 @@ export const formatMonitorEvent = (e: MonitorEventDto) => {
   return e.te ? `${timeStamp} (${e.te})` : timeStamp;
 };
 
+export const formatMonitorEventHero = (e: MonitorEventDto) => (
+  <div>
+    <span className="text-bold" hidden={!e.ms}>{e.ms}ms </span>
+    <span className="text-xs">{dateTimeFromNow(e.at)}</span>
+    <div className="text-tiny text-gray-500">{e.te}</div>
+  </div>
+);
+
 export const monitorStateToColor = (state?: MonitorState) => {
   switch (state) {
     case MonitorState.Up:
@@ -72,5 +80,20 @@ export const monitorStateToDescription = (state: MonitorState) => {
       return "May be down.";
     default:
       return "Is unknown";
+  }
+};
+
+export const monitorStateToHeroColor = (state?: MonitorState) => {
+  switch (state) {
+    case MonitorState.Up:
+      return "monitor-up";
+    case MonitorState.Warn:
+      return "monitor-warn";
+    case MonitorState.Degraded:
+      return "monitor-degraded";
+    case MonitorState.Down:
+      return "monitor-down";
+    default:
+      return "monitor-unknown";
   }
 };

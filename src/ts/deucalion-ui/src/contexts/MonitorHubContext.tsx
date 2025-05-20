@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr';
-import { useToast } from '@chakra-ui/react';
+import { addToast } from "@heroui/react";
 
 import { MonitorCheckedDto, MonitorEventDto, MonitorProps, MonitorStateChangedDto } from '../services';
 import { monitorStateToDescription, monitorStateToStatus } from '../services';
@@ -58,7 +58,6 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
   const [hubConnectionError, setHubConnectionError] = useState<Error | null>(null);
 
   const { mutateMonitors } = useMonitors(); 
-  const toast = useToast();
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
@@ -77,13 +76,11 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
 
     const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
       logger.log("[MonitorStateChanged]", e);
-      toast({
+      const status = monitorStateToStatus(e.st);
+      addToast({
         title: e.n,
         description: monitorStateToDescription(e.st),
-        status: monitorStateToStatus(e.st),
-        position: "bottom-right",
-        variant: "left-accent",
-        isClosable: true,
+        color: monitorStateToHeroUIColor(status),
       });
     };
 
@@ -143,7 +140,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
           logger.warn("Error stopping connection:", err); 
         });
     };
-  }, [mutateMonitors, toast]);
+  }, [mutateMonitors]);
 
   // --- Context Value (Facade) ---
   const value: IMonitorHubFacade = {
@@ -164,3 +161,16 @@ export const useMonitorHubContext = (): IMonitorHubFacade => {
 
   return context;
 };
+
+function monitorStateToHeroUIColor(status: string): "success" | "warning" | "danger" | "default" {
+  switch (status) {
+    case "success":
+      return "success";
+    case "warning":
+      return "warning";
+    case "error":
+      return "danger";
+    default:
+      return "default";
+  }
+}
