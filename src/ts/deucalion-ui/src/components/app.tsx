@@ -1,9 +1,5 @@
-import { Container, Flex } from "@chakra-ui/react";
-
 import { EMPTY_MONITORS } from "../services";
-import { Overview, MonitorList } from "./main/index";
-import { HeroOverview } from "./main/hero-overview";
-import { HeroMonitorList } from "./main/hero-monitor-list";
+import { HeroOverview, HeroMonitorList } from "./main";
 
 import { logger } from "../services";
 
@@ -25,20 +21,6 @@ export const App = () => {
 
   return (
     <>
-      {/* Chakra UI area */}
-      <Container maxWidth="container.xl" padding="0">
-        <Flex direction="column" padding="2">
-          <Overview
-            title={configurationData?.pageTitle ?? "Deucalion Status"}
-            monitors={monitorsData ?? EMPTY_MONITORS}
-            isConnected={isConnected}
-            isConnecting={isConnecting}
-            connectionError={connectionError}
-          />
-          <MonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
-        </Flex>
-      </Container>
-
       {/* Hero UI area */}
       <div className="relative flex h-screen flex-col">
         <main className="container mx-auto max-w-7xl flex-grow px-2 pt-16">

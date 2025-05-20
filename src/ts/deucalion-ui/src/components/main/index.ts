@@ -1,2 +1,2 @@
-export * from "./monitor-list";
-export * from "./overview";
+export * from "./hero-monitor-list";
+export * from "./hero-overview";

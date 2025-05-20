@@ -4,7 +4,6 @@ import ReactDOM from "react-dom/client";
 import {HeroUIProvider, ToastProvider} from '@heroui/react'
 import {ThemeProvider as NextThemesProvider} from "next-themes";
 
-import { ChakraEnvironment } from "./chakra-environment";
 import { App } from "./components/app";
 
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
@@ -21,7 +20,6 @@ ReactDOM.createRoot(container).render(
     <HeroUIProvider>
       <NextThemesProvider attribute="class" enableSystem={true}>
         <ToastProvider />
-        <ChakraEnvironment>
           <ConfigurationProvider>
             <MonitorsProvider>
               <MonitorHubProvider>
@@ -29,9 +27,7 @@ ReactDOM.createRoot(container).render(
               </MonitorHubProvider>
             </MonitorsProvider>
           </ConfigurationProvider>
-        </ChakraEnvironment>
       </NextThemesProvider>
     </HeroUIProvider>    
   </React.StrictMode>
 );
-

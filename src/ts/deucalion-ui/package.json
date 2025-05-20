@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@chakra-ui/react": "^2.10.7",
     "@heroui/react": "^2.7.8",
     "@heroui/use-theme": "^2.1.8",
     "@microsoft/signalr": "^8.0.7",
