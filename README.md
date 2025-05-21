@@ -1,14 +1,37 @@
 # Deucalion
 
-Minimal project for systems monitoring. When Grafana + Prometheus is overkill.
+A minimal project for systems monitoring, designed for cases where Grafana and Prometheus are overkill.
 
-This is not a "Status Page" project. There is no intention to add alerts, incident histories, push notifications, or CRUD UIs to configure everything.
+This is not a typical "Status Page" project. There are no alerts, incident histories, push notifications, or CRUD UIs for configuration.
 
-Just create a configuration file, start the service, and you are done.
+Simply create a configuration file, start the service, and you're done.
 
-![Deucalion UI example](deucalion-ui.png)
+![Deucalion UI example](deucalion-ui.apng)
 
+# Table of Contents
 
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+  - [Defaults Section](#defaults-section)
+  - [Monitors Section](#monitors-section)
+  - [Monitor Name Interpolation](#monitor-name-interpolation)
+- [Monitor Types](#monitor-types)
+  - [`ping` Monitor](#ping-monitor)
+  - [`tcp` Monitor](#tcp-monitor)
+  - [`dns` Monitor](#dns-monitor)
+  - [`http` Monitor](#http-monitor)
+  - [`checkin` Monitor](#checkin-monitor)
+- [Development notes](#development-notes)
+  - [How to debug](#how-to-debug)
+  - [Logging](#logging)
+  - [How to build](#how-to-build)
+
+# Prerequisites
+
+- Docker (for containerized usage)
+- .NET 9 SDK (for development and building)
+- PowerShell (for build scripts)
+- [Invoke-Build](https://github.com/nightroman/Invoke-Build) (for build automation)
 
 # Usage
 
@@ -16,36 +39,35 @@ Just create a configuration file, start the service, and you are done.
 
 ```yaml
 # docker-compose.yaml
-version: "3.9"
-
 services:
   deucalion:
     user: root
     container_name: deucalion
     image: ghcr.io/fdcastel/deucalion:latest
     ports:
-     - 80:8080
+      - 80:8080
     environment:
       - DEUCALION__PAGETITLE=Deucalion status
     volumes:
-      - ./example.yaml:/app/deucalion.yaml
+      - ./example.yaml:/app/example.yaml  # Rename or copy your configuration file as needed.
       - ./data/:/storage/
 ```
 
 ```yaml
 # example.yaml
+defaults:
+  intervalWhenUp: 00:00:03   # Default check interval when the monitor is UP
+
 monitors:
   ping-example:
     !ping
     host: cloudflare.com
-    intervalWhenUp: 00:00:03
     group: Cloudflare
 
   tcp-example:
     !tcp
     host: cloudflare.com
     port: 443
-    intervalWhenUp: 00:00:03
     group: Cloudflare
 
   dns-example:
@@ -53,7 +75,6 @@ monitors:
     host: google.com
     recordType: A
     resolver: 1.1.1.1:53
-    intervalWhenUp: 00:00:03
     group: Google
 
   http-example:
@@ -62,38 +83,77 @@ monitors:
     expectedStatusCode: 200
     expectedResponseBodyPattern: .*
     ignoreCertificateErrors: true
-    intervalWhenUp: 00:00:03
     group: Google
 ```
 
+# Configuration
 
+Monitoring behavior is defined in a YAML configuration file (e.g., `deucalion.yaml`).
 
-## Configuration
+### Defaults Section
 
-The monitoring behavior is defined in a YAML configuration file (e.g., `deucalion.yaml`).
-
-### `defaults` Section
-
-This optional section allows you to define default values that apply to all monitors unless overridden in a specific monitor's configuration.
+This optional section allows you to define default values that apply to all monitors, or to all monitors of a specific type, unless overridden in a monitor's configuration. Example:
 
 ```yaml
 defaults:
-  intervalWhenUp: 00:00:03   # Default check interval when the monitor is UP
-  intervalWhenDown: 00:00:03 # Default check interval when the monitor is DOWN
+  intervalWhenUp: 00:01:00    # Check interval when the monitor is UP
+  intervalWhenDown: 00:01:00  # Check interval when the monitor is DOWN
+  timeout: 00:00:05
+  warnTimeout: 00:00:01
+
+  http:
+    timeout: 00:00:10
+    warnTimeout: 00:00:02
+    expectedStatusCode: 202
+    ignoreCertificateErrors: true
+
+  dns:
+    recordType: AAAA
+    resolver: 8.8.8.8
+
+  ping:
+    timeout: 00:00:05
+    warnTimeout: 00:00:01
 ```
 
-### `monitors` Section
+You can set defaults for each monitor type as follows:
+
+- `intervalWhenUp`, `intervalWhenDown`, `timeout`, `warnTimeout` (global or for each monitor type)
+- `expectedStatusCode`, `expectedResponseBodyPattern`, `ignoreCertificateErrors`, `method` (for http only)
+- `recordType`, `resolver` (for dns only)
+
+### Monitors Section
 
 This section defines the individual monitors. Each monitor has a unique name (e.g., `ping-example`) and a type indicated by a YAML tag (e.g., `!ping`).
 
-The following parameters are available for most monitors:
+The following optional parameters are available for all monitors:
 - `group`: A string to group monitors together in the UI.
-- `intervalWhenUp`: Check interval when the monitor is UP. Overrides the default. Format: `HH:MM:SS` or `HH:MM:SS.fff`.
-- `intervalWhenDown`: Check interval when the monitor is DOWN. Overrides the default. Format: `HH:MM:SS` or `HH:MM:SS.fff`.
 - `image`: URL for a custom icon to display for the monitor.
-- `href`: URL to link to when the monitor name is clicked. Set to `""` to disable the link.
+- `href`: URL to link to when the monitor name is clicked.
+- `intervalWhenUp`: Check interval when the monitor is UP (except for `checkin`).
+- `intervalWhenDown`: Check interval when the monitor is DOWN (except for `checkin`).
 
-#### `!ping` Monitor
+#### Monitor Name Interpolation
+
+You can use `${MONITOR_NAME}` in monitor fields to insert the monitor's name dynamically. Example:
+```yaml
+monitors:
+  google: !http
+    url: https://${MONITOR_NAME}.com
+```
+This will set the URL to `https://google.com`.
+
+### Monitor Types
+
+| Type     | Required Fields                  | Optional Fields                                                                |
+|----------|----------------------------------|--------------------------------------------------------------------------------|
+| ping     | `host`                           | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href` |
+| tcp      | `host`, `port`                   | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href` |
+| dns      | `host`, `recordType`, `resolver` | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href` |
+| http     | `url`                            | `expectedStatusCode`, `expectedResponseBodyPattern`, `ignoreCertificateErrors`, `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href`, `method` |
+| checkin  | `secret`                         | `intervalWhenUp`, `group`, `image`, `href`                                      |
+
+### `ping` Monitor
 
 ```yaml
 ping-example:
@@ -101,7 +161,8 @@ ping-example:
   host: cloudflare.com             # Required: The hostname or IP address to ping.
 ```
 
-#### `!tcp` Monitor
+
+### `tcp` Monitor
 
 ```yaml
 tcp-example:
@@ -110,7 +171,8 @@ tcp-example:
   port: 443                        # Required: The TCP port to connect to.
 ```
 
-#### `!dns` Monitor
+
+### `dns` Monitor
 
 ```yaml
 dns-example:
@@ -120,7 +182,8 @@ dns-example:
   resolver: 1.1.1.1:53             # Required: The DNS resolver IP address and port.
 ```
 
-#### `!http` Monitor
+
+### `http` Monitor
 
 ```yaml
 http-example:
@@ -133,23 +196,21 @@ http-example:
   timeout: 00:00:02                # (Optional) Time after which the request is considered failed. Format: HH:MM:SS or HH:MM:SS.fff. Defaults to 00:00:05.
 ```
 
-#### `!checkin` Monitor
 
-A passive monitor that waits for an external system to report ("check-in") via a specific URL.
+### `checkin` Monitor
+
+A passive monitor that waits for an external system to report ("check in") via a specific URL.
 
 ```yaml
 checkin-example:
   !checkin
   secret: your-secret-key          # Required: A secret key that must be provided in the check-in request.
-  # Common parameters (intervalWhenUp defines the expected check-in frequency)...
 ```
 
-- The check-in URL is `/api/checkin/{monitorName}/{secret}`. 
-  - For the example above, it would be `/api/checkin/checkin-example/your-secret-key`. 
+- The check-in URL is `/api/checkin/{monitorName}/{secret}`.
+  - For the example above, it would be `/api/checkin/checkin-example/your-secret-key`.
 - A `GET` or `POST` request to this URL marks the monitor as UP.
 - If a check-in is not received within the expected interval, the monitor is marked as DOWN.
-
-
 
 # Development notes
 
@@ -158,8 +219,6 @@ checkin-example:
   - [Hexagonal Architecture](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
   - [K.I.S.S.](https://en.wikipedia.org/wiki/KISS_principle)
   - [Do One Thing And Do It Well](https://en.wikipedia.org/wiki/Unix_philosophy): Not a "Status Page" (with incidents, justifications, etc)
-
-
 
 ## Projects overview:
 
@@ -173,8 +232,6 @@ checkin-example:
   - `Deucalion.Cli`: Sample command-line SignalR client.
   - `deucalion-ui`: Client-side React application.
 
-
-
 ## How to debug
 
 ### Using Visual Studio 2022
@@ -183,9 +240,7 @@ Open `Deucalion.sln` with Visual Studio 2022.
 
 Start both `Deucalion.Api` and `deucalion-ui` projects. You may [set multiple startup projects](https://learn.microsoft.com/en-us/visualstudio/ide/how-to-set-multiple-startup-projects) for this.
 
-> Do not use `Deucalion.Service` for debugging. It uses a static (pre-built) version of UI (you need to run `Invoke-Build Build` first).
-
-
+> Do not use `Deucalion.Service` for debugging. It uses a static (pre-built) version of the UI (you need to run `Invoke-Build Build` first).
 
 ### Using Visual Studio Code
 
@@ -195,21 +250,17 @@ Run
 Invoke-Build Dev
 ```
 
-This will start both `Deucalion.Api` and `deucalion-ui` projects in development mode. Any source file changes will be detected and reloaded.
-
-
+This will start both `Deucalion.Api` and `deucalion-ui` projects in development mode. Any changes to source files will be detected and reloaded automatically.
 
 ## Logging
 
-In **Development** environment the log level for `Deucalion.Api` namespace is `Debug`. This generates a log entry for each message received from `EngineBackgroundService`.
+In the **Development** environment, the log level for the `Deucalion.Api` namespace is set to `Debug`. This generates a log entry for each message received from `EngineBackgroundService`.
 
-For **Production** environments the log level is `Information` (the default). To change this, you can run the application with
+For **Production** environments, the log level is `Information` (the default). To change this, you can run the application with
 
 `--Logging:LogLevel:Deucalion=Debug`
 
-in command-line. Or change the appropriate value in `appsettings.json`.
-
-
+in the command line, or change the appropriate value in `appsettings.json`.
 
 ## How to build
 

@@ -73,7 +73,7 @@ public class HttpMonitor : PullMonitor
                         : string.Concat(responseBody.AsSpan(0, 60), "...");
 
                     return MonitorResponse.Down(stopwatch.Elapsed, $"Unexpected response: {truncatedBody}");
-                };
+                }
             }
 
             return MonitorResponse.Up(stopwatch.Elapsed, warnElapsed: WarnTimeout);

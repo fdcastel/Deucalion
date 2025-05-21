@@ -20,17 +20,15 @@ export const App = () => {
   const { isConnected, isConnecting, connectionError } = useMonitorHubContext();
 
   return (
-    <div className="relative flex h-screen flex-col">
-      <main className="container mx-auto max-w-7xl flex-grow p-2">
-        <Overview
-          title={configurationData?.pageTitle ?? "Deucalion Status"}
-          monitors={monitorsData ?? EMPTY_MONITORS}
-          isConnected={isConnected}
-          isConnecting={isConnecting}
-          connectionError={connectionError}
-        />
-        <MonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
-      </main>
-    </div>
+    <main className="container mx-auto max-w-6xl flex-grow p-2">
+      <Overview
+        title={configurationData?.pageTitle ?? "Deucalion Status"}
+        monitors={monitorsData ?? EMPTY_MONITORS}
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        connectionError={connectionError}
+      />
+      <MonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
+    </main>
   );
 };
