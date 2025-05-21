@@ -8,3 +8,17 @@ body {
 .dark body {
   background-color: #1a202c;
 }
+
+@layer utilities {
+  .icon-size-5 {
+    @apply h-5 w-5;
+  }
+
+  .icon-size-8 {
+    @apply h-8 w-8;
+  }
+
+  .icon-size-12 {
+    @apply h-12 w-12;
+  }
+}
