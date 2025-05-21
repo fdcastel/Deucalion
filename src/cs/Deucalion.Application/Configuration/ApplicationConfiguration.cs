@@ -112,10 +112,11 @@ public record ApplicationConfiguration
 
         if (monitorConfiguration.Value is PullMonitorConfiguration pullMonitorConfiguration)
         {
-            pullMonitorConfiguration.IntervalWhenDown ??= defaults.IntervalWhenDown;
-            pullMonitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
             pullMonitorConfiguration.Timeout ??= defaults.Timeout;
             pullMonitorConfiguration.WarnTimeout ??= defaults.WarnTimeout;
+
+            pullMonitorConfiguration.IntervalWhenDown ??= defaults.IntervalWhenDown;
+            pullMonitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
         }
 
         if (monitorConfiguration.Value is PushMonitorConfiguration pushMonitorConfiguration)
