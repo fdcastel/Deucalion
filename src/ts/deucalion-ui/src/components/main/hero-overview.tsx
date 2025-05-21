@@ -39,13 +39,13 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center">
+      <div className="mb-4 flex items-center">
         <img src="/assets/deucalion-icon.svg" className="mr-2 h-12 w-12" alt="icon" />
         <span className="truncate text-3xl">{title}</span>
         <div className="flex-1" />
         <ThemeSwitcher />
       </div>
-      <div className="my-4 flex flex-wrap items-start justify-around rounded-md bg-black/5 p-2 shadow-lg">
+      <div className="mb-4 flex flex-wrap items-start justify-around rounded-md bg-black/10 p-2 shadow-lg">
         <div className="min-w-0 flex-1 basis-0">
           <div className="text-sm text-gray-500">Services</div>
           <div className={onlineServicesCount === 0 ? "blur-sm" : ""}>
@@ -80,7 +80,7 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
             </Tooltip>
           </div>
           <div className="text-xs text-gray-500">
-            <Tooltip content={connectionError?.message} showArrow={true} isDisabled={!connectionError?.message}  placement="bottom-end">
+            <Tooltip content={connectionError?.message} showArrow={true} isDisabled={!connectionError?.message} placement="bottom-end">
               <span className={isConnected ? "text-monitor-up" : "text-monitor-down"}>
                 {isConnected ? <MdArrowUpward className="mr-1 inline align-middle" /> : <MdArrowDownward className="mr-1 inline align-middle" />}
                 {connectionStatusText}

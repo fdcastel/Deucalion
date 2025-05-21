@@ -20,20 +20,17 @@ export const App = () => {
   const { isConnected, isConnecting, connectionError } = useMonitorHubContext();
 
   return (
-    <>
-      {/* Hero UI area */}
-      <div className="relative flex h-screen flex-col">
-        <main className="container mx-auto max-w-7xl flex-grow px-2 pt-16">
-          <HeroOverview
-            title={configurationData?.pageTitle ?? "Deucalion Status"}
-            monitors={monitorsData ?? EMPTY_MONITORS}
-            isConnected={isConnected}
-            isConnecting={isConnecting}
-            connectionError={connectionError}
-          />
-          <HeroMonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
-        </main>
-      </div>
-    </>
+    <div className="relative flex h-screen flex-col">
+      <main className="container mx-auto max-w-7xl flex-grow p-2">
+        <HeroOverview
+          title={configurationData?.pageTitle ?? "Deucalion Status"}
+          monitors={monitorsData ?? EMPTY_MONITORS}
+          isConnected={isConnected}
+          isConnecting={isConnecting}
+          connectionError={connectionError}
+        />
+        <HeroMonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
+      </main>
+    </div>
   );
 };
