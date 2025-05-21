@@ -12,8 +12,8 @@ export const HeroMonitorList: React.FC<HeroMonitorListProps> = ({ groupedMonitor
   return (
     <div>
       {Array.from(groupedMonitors).map(([groupName, monitorsInGroup]) => (
-        <div key={groupName} className="my-4">
-          {groupName && <div className="text-2xl font-light md:text-3xl">{groupName}</div>}
+        <div key={groupName} className="mb-4">
+          {groupName && <div className="mb-2 text-2xl font-light md:text-3xl">{groupName}</div>}
           {monitorsInGroup.map((monitorProps) => (
             <HeroMonitorComponent key={monitorProps.name} monitor={monitorProps} usingImages={usingImages} />
           ))}

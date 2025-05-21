@@ -1,8 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import {HeroUIProvider, ToastProvider} from '@heroui/react'
-import {ThemeProvider as NextThemesProvider} from "next-themes";
+import { HeroUIProvider, ToastProvider } from "@heroui/react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 import { App } from "./components/app";
 
@@ -20,14 +20,14 @@ ReactDOM.createRoot(container).render(
     <HeroUIProvider>
       <NextThemesProvider attribute="class" enableSystem={true}>
         <ToastProvider />
-          <ConfigurationProvider>
-            <MonitorsProvider>
-              <MonitorHubProvider>
-                <App />
-              </MonitorHubProvider>
-            </MonitorsProvider>
-          </ConfigurationProvider>
+        <ConfigurationProvider>
+          <MonitorsProvider>
+            <MonitorHubProvider>
+              <App />
+            </MonitorHubProvider>
+          </MonitorsProvider>
+        </ConfigurationProvider>
       </NextThemesProvider>
-    </HeroUIProvider>    
+    </HeroUIProvider>
   </React.StrictMode>
 );
