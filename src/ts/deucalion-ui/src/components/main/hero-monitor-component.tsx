@@ -24,11 +24,10 @@ export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ moni
   const lastSeenAt = formatLastSeen(lastState, monitor.stats);
 
   return (
-    // For a compact view, remove "p-1":
-    <div className={`flex items-center transition-colors duration-500 ${isFlashing ? "bg-flash-light dark:bg-flash-dark" : ""} rounded-md p-1 px-2`}>
+    <div className={`flex items-center transition-colors duration-500 ${isFlashing ? "bg-flash-light dark:bg-flash-dark" : ""} my-1 h-10 rounded-md px-2`}>
       {usingImages && (
         <span className="hidden md:inline-block">
-          {config.image ? <img src={config.image} className="mr-2 h-8 w-8 min-w-8" alt="icon" /> : <span className="mr-2 inline-block h-8 w-8" />}
+          {config.image ? <img src={config.image} className="icon-size-8 mr-2 min-w-8" alt="icon" /> : <span className="icon-size-8 mr-2 inline-block" />}
         </span>
       )}
       <Tooltip content={lastSeenAt} showArrow={true} isDisabled={!lastSeenAt} placement="bottom-start">
@@ -49,7 +48,7 @@ export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ moni
       </Tooltip>
       <span className="flex-1" />
       <div className="flex items-center overflow-x-hidden">
-        <div className="mr-1 flex h-10 flex-row-reverse items-center justify-start overflow-x-hidden">
+        <div className="mr-1 flex flex-row-reverse items-center justify-start overflow-x-hidden">
           {events.map((e) => (
             <Tooltip key={e.at} content={formatMonitorEventHero(e)} showArrow={true} placement="bottom">
               <span
