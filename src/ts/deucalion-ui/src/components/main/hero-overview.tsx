@@ -1,8 +1,10 @@
 import React, { useEffect } from "react";
-import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
-import { ThemeSwitcher } from "./theme-switcher";
-import { Tooltip } from "@heroui/react";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
+import { Tooltip } from "@heroui/react";
+import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
+
+import { ThemeSwitcher } from "../ui/theme-switcher";
+import { StatCard, StatCardFooter } from "../ui/stat-card";
 
 interface HeroOverviewProps {
   title: string;
@@ -40,20 +42,17 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
   return (
     <div className="flex flex-col">
       <div className="mb-4 flex items-center">
-        <img src="/assets/deucalion-icon.svg" className="mr-2 h-12 w-12" alt="icon" />
+        <img src="/assets/deucalion-icon.svg" className="mr-2 icon-size-12" alt="icon" />
         <span className="truncate text-3xl">{title}</span>
         <div className="flex-1" />
         <ThemeSwitcher />
       </div>
       <div className="mb-4 flex flex-wrap items-start justify-around rounded-md bg-black/10 p-2 shadow-lg">
-        <div className="min-w-0 flex-1 basis-0">
-          <div className="text-sm text-gray-500">Services</div>
-          <div className={onlineServicesCount === 0 ? "blur-sm" : ""}>
-            <span className="text-2xl font-semibold">
-              {onlineServicesCount} of {allServicesCount}
-            </span>
-          </div>
-          <div className="text-xs text-gray-500">
+        <StatCard title="Services" blur={onlineServicesCount === 0}>
+          <span className="text-2xl font-semibold">
+            {onlineServicesCount} of {allServicesCount}
+          </span>
+          <StatCardFooter>
             {onlineServicesCount === 0 ? (
               "Loading..."
             ) : onlineServicesCount === allServicesCount ? (
@@ -61,33 +60,31 @@ export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isC
             ) : (
               <span className="text-monitor-down">Degraded</span>
             )}
-          </div>
-        </div>
-        <div className="min-w-0 flex-1 basis-0">
-          <div className="text-sm text-gray-500">Availability</div>
-          <div className={isNaN(totalAvailability) ? "blur-sm" : ""}>
-            <span className="text-2xl font-semibold">{totalAvailability.toFixed(1)}%</span>
-          </div>
-          <div className={"text-xs " + (firstUpdateAt === Number.MAX_VALUE ? "blur-sm" : "")}>
-            <span className="text-gray-500">From {dateTimeFromNow(firstUpdateAt, true)}</span>
-          </div>
-        </div>
-        <div className="hidden flex-1 basis-0 md:block">
-          <div className="text-sm text-gray-500">Updated</div>
-          <div className={lastUpdateAt === 0 ? "blur-sm" : ""}>
-            <Tooltip content={dateTimeToString(lastUpdateAt)} showArrow={true} placement="left">
-              <span className="text-2xl font-semibold">{dateTimeFromNow(lastUpdateAt)}</span>
-            </Tooltip>
-          </div>
-          <div className="text-xs text-gray-500">
+          </StatCardFooter>
+        </StatCard>
+        <StatCard title="Availability" blur={isNaN(totalAvailability)}>
+          {totalAvailability !== undefined ? <span className="text-2xl font-semibold">{totalAvailability.toFixed(1)}%</span> : null}
+          <StatCardFooter>
+            <span className={firstUpdateAt === Number.MAX_VALUE ? "blur-sm" : ""}>From {dateTimeFromNow(firstUpdateAt, true)}</span>
+          </StatCardFooter>
+        </StatCard>
+        <StatCard title="Updated" className="hidden md:block" blur={lastUpdateAt === 0}>
+          <Tooltip content={dateTimeToString(lastUpdateAt)} showArrow={true} placement="left">
+            <span className="text-2xl font-semibold">{dateTimeFromNow(lastUpdateAt)}</span>
+          </Tooltip>
+          <StatCardFooter>
             <Tooltip content={connectionError?.message} showArrow={true} isDisabled={!connectionError?.message} placement="bottom-end">
               <span className={isConnected ? "text-monitor-up" : "text-monitor-down"}>
-                {isConnected ? <MdArrowUpward className="mr-1 inline align-middle" /> : <MdArrowDownward className="mr-1 inline align-middle" />}
+                {isConnected ? (
+                  <MdArrowUpward className="icon-size-5 mr-1 inline align-middle" />
+                ) : (
+                  <MdArrowDownward className="icon-size-5 mr-1 inline align-middle" />
+                )}
                 {connectionStatusText}
               </span>
             </Tooltip>
-          </div>
-        </div>
+          </StatCardFooter>
+        </StatCard>
       </div>
     </div>
   );

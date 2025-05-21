@@ -14,7 +14,7 @@ export const ThemeSwitcher: React.FC = () => {
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
-      {isDark ? <MdLightMode className="h-5 w-5" /> : <MdDarkMode className="h-5 w-5" />}
+      {isDark ? <MdLightMode className="icon-size-5" /> : <MdDarkMode className="icon-size-5" />}
     </button>
   );
 };
