@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { MonitorState, MonitorProps } from "../../services";
-import { formatLastSeen, formatMonitorEventHero, monitorStateToHeroColor } from "../../services";
+import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
 import { Tooltip } from "@heroui/react";
 
-interface HeroMonitorComponentProps {
+interface MonitorComponentProps {
   monitor: MonitorProps;
   usingImages?: boolean;
 }
 
-export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ monitor, usingImages }) => {
+export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usingImages }) => {
   const { name, config, stats, events } = monitor;
   const lastState = stats?.lastState ?? MonitorState.Unknown;
   const [isFlashing, setIsFlashing] = useState(false);
@@ -31,13 +31,13 @@ export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ moni
         </span>
       )}
       <Tooltip content={lastSeenAt} showArrow={true} isDisabled={!lastSeenAt} placement="bottom-start">
-        <span className={`min-w-[6em] truncate md:min-w-[8em] ${lastState !== MonitorState.Up ? `text-${monitorStateToHeroColor(lastState)}` : ""}`}>
+        <span className={`min-w-[6em] truncate md:min-w-[8em] ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
           {config.href ? (
             <a
               href={config.href}
               target="_blank"
               rel="noopener noreferrer"
-              className={lastState !== MonitorState.Up ? `text-${monitorStateToHeroColor(lastState)}` : undefined}
+              className={lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : undefined}
             >
               {name}
             </a>
@@ -50,9 +50,9 @@ export const HeroMonitorComponent: React.FC<HeroMonitorComponentProps> = ({ moni
       <div className="flex items-center overflow-x-hidden">
         <div className="mr-1 flex flex-row-reverse items-center justify-start overflow-x-hidden">
           {events.map((e) => (
-            <Tooltip key={e.at} content={formatMonitorEventHero(e)} showArrow={true} placement="bottom">
+            <Tooltip key={e.at} content={formatMonitorEvent(e)} showArrow={true} placement="bottom">
               <span
-                className={`mr-1 inline-block h-6 min-w-[0.5em] rounded-xl bg-${monitorStateToHeroColor(e.st)} transition-transform duration-200 hover:-translate-y-1`}
+                className={`mr-1 inline-block h-6 min-w-[0.5em] rounded-xl bg-${monitorStateToColor(e.st)} transition-transform duration-200 hover:-translate-y-1`}
               />
             </Tooltip>
           ))}

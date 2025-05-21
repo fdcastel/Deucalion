@@ -80,7 +80,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       addToast({
         title: e.n,
         description: monitorStateToDescription(e.st),
-        color: monitorStateToHeroUIColor(status),
+        color: monitorStateToToastColor(status),
       });
     };
 
@@ -162,7 +162,7 @@ export const useMonitorHubContext = (): IMonitorHubFacade => {
   return context;
 };
 
-function monitorStateToHeroUIColor(status: string): "success" | "warning" | "danger" | "default" {
+function monitorStateToToastColor(status: string): "success" | "warning" | "danger" | "default" {
   switch (status) {
     case "success":
       return "success";

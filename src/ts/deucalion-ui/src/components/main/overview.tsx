@@ -6,7 +6,7 @@ import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from ".
 import { ThemeSwitcher } from "../ui/theme-switcher";
 import { StatCard, StatCardFooter } from "../ui/stat-card";
 
-interface HeroOverviewProps {
+interface OverviewProps {
   title: string;
   monitors: Map<string, MonitorProps>;
   isConnected: boolean;
@@ -14,7 +14,7 @@ interface HeroOverviewProps {
   connectionError: Error | null;
 }
 
-export const HeroOverview: React.FC<HeroOverviewProps> = ({ title, monitors, isConnected, isConnecting, connectionError }) => {
+export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected, isConnecting, connectionError }) => {
   const allServicesCount = monitors.size;
 
   let firstUpdateAt = Number.MAX_VALUE;

@@ -1,13 +1,13 @@
 import React from "react";
 import { MonitorProps } from "../../services";
-import { HeroMonitorComponent } from "./hero-monitor-component";
+import { MonitorComponent } from "./monitor-component";
 
-interface HeroMonitorListProps {
+interface MonitorListProps {
   groupedMonitors: Map<string, MonitorProps[]> | undefined;
   usingImages: boolean;
 }
 
-export const HeroMonitorList: React.FC<HeroMonitorListProps> = ({ groupedMonitors, usingImages }) => {
+export const MonitorList: React.FC<MonitorListProps> = ({ groupedMonitors, usingImages }) => {
   if (!groupedMonitors) return null;
   return (
     <div>
@@ -15,7 +15,7 @@ export const HeroMonitorList: React.FC<HeroMonitorListProps> = ({ groupedMonitor
         <div key={groupName} className="mb-4">
           {groupName && <div className="mb-2 text-2xl font-light md:text-3xl">{groupName}</div>}
           {monitorsInGroup.map((monitorProps) => (
-            <HeroMonitorComponent key={monitorProps.name} monitor={monitorProps} usingImages={usingImages} />
+            <MonitorComponent key={monitorProps.name} monitor={monitorProps} usingImages={usingImages} />
           ))}
         </div>
       ))}
