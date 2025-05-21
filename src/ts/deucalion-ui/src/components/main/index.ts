@@ -1,3 +1,3 @@
-export * from "./hero-monitor-component";
-export * from "./hero-monitor-list";
-export * from "./hero-overview";
+export * from "./monitor-component";
+export * from "./monitor-list";
+export * from "./overview";

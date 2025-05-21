@@ -1,5 +1,5 @@
 import { EMPTY_MONITORS } from "../services";
-import { HeroOverview, HeroMonitorList } from "./main";
+import { Overview, MonitorList } from "./main";
 
 import { logger } from "../services";
 
@@ -22,14 +22,14 @@ export const App = () => {
   return (
     <div className="relative flex h-screen flex-col">
       <main className="container mx-auto max-w-7xl flex-grow p-2">
-        <HeroOverview
+        <Overview
           title={configurationData?.pageTitle ?? "Deucalion Status"}
           monitors={monitorsData ?? EMPTY_MONITORS}
           isConnected={isConnected}
           isConnecting={isConnecting}
           connectionError={connectionError}
         />
-        <HeroMonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
+        <MonitorList groupedMonitors={groupedMonitorsData} usingImages={usingImages} />
       </main>
     </div>
   );
