@@ -2,16 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tailwind will set html, body classes based on theme,
+     but initial background is set in index.html <style> for FOUC prevention */
 html, body {
   height: 100%;
-}
-
-html {
-  background-color: #fff;
-}
-
-html.dark {
-  background-color: #1a202c;
 }
 
 @layer utilities {
@@ -25,5 +19,15 @@ html.dark {
 
   .icon-size-12 {
     @apply h-12 w-12;
+  }
+
+  .app-icon-effect {
+    /* Light mode: main shadow (soft, down-right) & highlight (sharper, up-left, darker) */
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.3)) drop-shadow(-1px -1px 1px rgba(0,0,0,0.5));
+  }
+
+  .dark .app-icon-effect {
+    /* Dark mode: main shadow (deep, down-right) & highlight (sharper, up-left, lighter for engraved look) */
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.6)) drop-shadow(-1px -1px 1px rgba(255,255,255,0.2));
   }
 }

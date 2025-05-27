@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 import { Tooltip } from "@heroui/react";
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
+import deucalionIconDataUri from '/assets/deucalion-icon.svg?inline';
 
 import { ThemeSwitcher } from "../ui/theme-switcher";
 import { StatCard, StatCardFooter } from "../ui/stat-card";
@@ -42,31 +43,31 @@ export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected
   return (
     <div className="flex flex-col">
       <div className="mb-4 flex items-center">
-        <img src="/assets/deucalion-icon.svg" className="mr-2 icon-size-12" alt="icon" />
+        <img src={deucalionIconDataUri} className="icon-size-12 mr-2 app-icon-effect" alt="icon" />
         <span className="truncate text-3xl">{title}</span>
         <div className="flex-1" />
         <ThemeSwitcher />
       </div>
       <div className="mb-4 flex flex-wrap items-start justify-around rounded-md bg-black/10 p-2 shadow-lg">
-        <StatCard title="Services" blur={onlineServicesCount === 0}>
+        <StatCard title="Services">
           <span className="text-2xl font-semibold">
             {onlineServicesCount} of {allServicesCount}
           </span>
           <StatCardFooter>
-            {onlineServicesCount === 0 ? (
-              "Loading..."
-            ) : onlineServicesCount === allServicesCount ? (
+            {allServicesCount > 0 && onlineServicesCount === allServicesCount ? (
               "Online"
-            ) : (
+            ) : allServicesCount > 0 && onlineServicesCount === 0 ? (
+              <span className="text-monitor-down">All Offline</span>
+            ) : allServicesCount > 0 ? (
               <span className="text-monitor-down">Degraded</span>
+            ) : (
+              "No services" // Unexpected state.
             )}
           </StatCardFooter>
         </StatCard>
-        <StatCard title="Availability" blur={isNaN(totalAvailability)}>
+        <StatCard title="Availability" blur={eventCount === 0}>
           {totalAvailability !== undefined ? <span className="text-2xl font-semibold">{totalAvailability.toFixed(1)}%</span> : null}
-          <StatCardFooter>
-            <span className={firstUpdateAt === Number.MAX_VALUE ? "blur-sm" : ""}>From {dateTimeFromNow(firstUpdateAt, true)}</span>
-          </StatCardFooter>
+          <StatCardFooter blur={firstUpdateAt === Number.MAX_VALUE}>From {dateTimeFromNow(firstUpdateAt, true)}</StatCardFooter>
         </StatCard>
         <StatCard title="Updated" className="hidden md:block" blur={lastUpdateAt === 0}>
           <Tooltip content={dateTimeToString(lastUpdateAt)} showArrow={true} placement="left">
