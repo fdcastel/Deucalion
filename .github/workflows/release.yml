@@ -1,0 +1,73 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/deucalion
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Disable shallow fetch (required for GitVersion)
+
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v3
+      with:
+        versionSpec: '6.x'
+
+    - name: Determine Version
+      id: gitversion
+      uses: gittools/actions/gitversion/execute@v3
+      with:
+        useConfigFile: true
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=raw,value=${{ steps.gitversion.outputs.semVer }},enable=${{ steps.gitversion.outputs.branchName != github.event.repository.default_branch }}
+
+          type=raw,value=${{ steps.gitversion.outputs.majorMinorPatch }},enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          type=raw,value=${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }},enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          type=raw,value=${{ steps.gitversion.outputs.major }},enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          type=raw,value=latest,enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+
+          type=sha
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ./src
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ steps.gitversion.outputs.semVer }}
+          INFORMATIONAL_VERSION=${{ steps.gitversion.outputs.informationalVersion }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

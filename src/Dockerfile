@@ -3,6 +3,8 @@
 # build image for .net
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build-net
 ARG TARGETARCH
+ARG VERSION=0.0.0-dev
+ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /source
 
 COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
@@ -16,20 +18,31 @@ RUN dotnet restore Deucalion.Service -a $TARGETARCH
 
 COPY cs/ .
 WORKDIR /source/Deucalion.Service
-RUN dotnet publish -c release -o /app -p:DebugType=None --no-restore -a $TARGETARCH
+RUN dotnet publish -c release -o /app \
+    -p:Version=${VERSION} \
+    -p:InformationalVersion=${INFORMATIONAL_VERSION} \
+    -p:DebugType=None --no-restore -a $TARGETARCH
 
 # build image for NodeJs
 FROM --platform=$BUILDPLATFORM node:lts-alpine AS build-node
+ARG VERSION=0.0.0-dev
+ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /source
 
 COPY ts/deucalion-ui/package*.json .
 RUN npm ci
 
 COPY ts/deucalion-ui/ .
+
+ENV VITE_BUILD_VERSION=$VERSION
+ENV VITE_INFORMATIONAL_VERSION=$INFORMATIONAL_VERSION
+
 RUN npm run build
 
 # final image
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
+ARG VERSION=0.0.0-dev
+ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
