@@ -1,9 +1,20 @@
 name: release
 
+# This workflow will run:
+#   - When you push a v* tag:
+#     - If the tag is on your default branch, images will be tagged with majorMinorPatch, major.minor, major, latest, and sha.
+#     - If the tag is on a non-default branch, the image will be tagged with the full semVer (e.g., v1.2.3-beta.1) and sha. 
+#     - If this branch is master, edge will also be tagged.
+#   - When you push a commit to the master branch (that is not a tag):
+#     - Only the edge and sha tags will be applied to the Docker image. 
+#     - The version-specific tags (latest, X.Y.Z, etc.) will not be created because github.ref_type will be branch, not tag.
+
 on:
   push:
+    branches:
+      - 'master'  # For `edge` builds    
     tags:
-      - 'v*'
+      - 'v*'  # For tagged releases
 
 env:
   REGISTRY: ghcr.io
@@ -49,13 +60,14 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=raw,value=${{ steps.gitversion.outputs.semVer }},enable=${{ steps.gitversion.outputs.branchName != github.event.repository.default_branch }}
+          type=raw,value=${{ steps.gitversion.outputs.semVer }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName != github.event.repository.default_branch }}
 
-          type=raw,value=${{ steps.gitversion.outputs.majorMinorPatch }},enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          type=raw,value=${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }},enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          type=raw,value=${{ steps.gitversion.outputs.major }},enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          type=raw,value=latest,enable=${{ steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-
+          type=raw,value=${{ steps.gitversion.outputs.majorMinorPatch }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          type=raw,value=${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          type=raw,value=${{ steps.gitversion.outputs.major }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
+          
+          type=edge
           type=sha
 
     - name: Build and push Docker image
