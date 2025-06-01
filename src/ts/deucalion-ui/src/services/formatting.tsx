@@ -28,8 +28,8 @@ export const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto) => {
 export const formatMonitorEvent = (e: MonitorEventDto) => (
   <div>
     <span className="text-bold" hidden={!e.ms}>{e.ms}ms </span>
-    <span className="text-xs">{dateTimeFromNow(e.at)}</span>
-    <div className="text-tiny text-gray-500">{e.te}</div>
+    <span className="text-tiny text-gray-500">{dateTimeFromNow(e.at)}</span>
+    <div className="text-xs">{e.te}</div>
   </div>
 );
 
