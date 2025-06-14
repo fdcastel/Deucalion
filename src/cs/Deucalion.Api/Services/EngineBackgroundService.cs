@@ -22,7 +22,6 @@ internal class EngineBackgroundService(
     private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext = hubContext;
     private readonly DeucalionOptions _options = options.Value;
     private readonly ILogger<EngineBackgroundService> _logger = logger;
-    private Timer? _purgeTimer;
     private CancellationTokenSource? _internalCts;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,7 +33,7 @@ internal class EngineBackgroundService(
         var engine = new Engine();
 
         // Start the monitoring engine in the background
-        _ = Task.Run(() =>
+        var engineTask = Task.Run(() =>
         {
             try
             {
@@ -46,13 +45,22 @@ internal class EngineBackgroundService(
             }
         }, internalToken);
 
-        // Start the periodic purge timer
-        _purgeTimer = new Timer(
-            PurgeDatabaseCallback,
-            internalToken, // Pass token as state
-            TimeSpan.FromMinutes(1), // Initial delay before first purge (e.g., 1 minute after start)
-            _options.PurgeInterval // Interval from configuration
-        );
+        // Start the periodic purge using PeriodicTimer
+        var purgeTask = Task.Run(async () =>
+        {
+            using var purgeTimer = new PeriodicTimer(_options.PurgeInterval);
+            try
+            {
+                while (await purgeTimer.WaitForNextTickAsync(internalToken))
+                {
+                    await PurgeDatabaseAsync(internalToken);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Graceful shutdown for purge
+            }
+        }, internalToken);
 
         // Consume events from the channel
         try
@@ -66,16 +74,12 @@ internal class EngineBackgroundService(
         {
             // Graceful shutdown for consumer
         }
+
+        await Task.WhenAll(engineTask, purgeTask);
     }
 
-    private async void PurgeDatabaseCallback(object? state)
+    private async Task PurgeDatabaseAsync(CancellationToken cancellationToken)
     {
-        if (state is not CancellationToken cancellationToken || cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogInformation("PurgeDatabaseCallback cancelled.");
-            return;
-        }
-
         try
         {
             _logger.LogInformation("Starting periodic database purge (Retention: {RetentionPeriod})...", _options.EventRetentionPeriod);
@@ -146,9 +150,6 @@ internal class EngineBackgroundService(
         // Signal cancellation to internal operations
         _internalCts?.Cancel();
 
-        // Stop the timer immediately
-        _purgeTimer?.Change(Timeout.Infinite, 0);
-
         // Allow time for graceful shutdown of Run and callbacks before calling base.StopAsync
         // Adjust delay as needed, or use more sophisticated synchronization if required.
         await Task.Delay(1000, cancellationToken); // Wait a short period
@@ -158,7 +159,6 @@ internal class EngineBackgroundService(
 
     public override void Dispose()
     {
-        _purgeTimer?.Dispose();
         _internalCts?.Dispose(); // Dispose the CancellationTokenSource
         base.Dispose();
         GC.SuppressFinalize(this);
