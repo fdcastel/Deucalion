@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Deucalion.Application;
 using Deucalion.Events;
 using Deucalion.Network.Monitors;
@@ -27,7 +26,7 @@ public class EngineTests(ITestOutputHelper output)
         using CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1 };
         using CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
 
-        var eventCount = new ConcurrentDictionary<string, int>();
+        var eventCount = new Dictionary<string, int>();
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
 
@@ -65,7 +64,8 @@ public class EngineTests(ITestOutputHelper output)
                     MonitorStateChanged => MonitorStateChangedEvent,
                     _ => string.Empty
                 };
-                eventCount.AddOrUpdate(eventType, 1, (k, v) => Interlocked.Increment(ref v));
+                if (!eventCount.TryAdd(eventType, 1))
+                    eventCount[eventType]++;
             }
             await engineTask;
             await checkInTask;
@@ -149,7 +149,7 @@ public class EngineTests(ITestOutputHelper output)
             )
         { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
 
-        var eventCount = new ConcurrentDictionary<Type, int>();
+        var eventCount = new Dictionary<Type, int>();
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
 
@@ -163,7 +163,8 @@ public class EngineTests(ITestOutputHelper output)
             {
                 _output.WriteLine(monitorEvent.ToString());
                 events.Add(monitorEvent);
-                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+                if (!eventCount.TryAdd(monitorEvent.GetType(), 1))
+                    eventCount[monitorEvent.GetType()]++;
             }
             await engineTask;
         }
@@ -231,7 +232,7 @@ public class EngineTests(ITestOutputHelper output)
             )
         { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5 };
 
-        var eventCount = new ConcurrentDictionary<Type, int>();
+        var eventCount = new Dictionary<Type, int>();
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
 
@@ -245,7 +246,8 @@ public class EngineTests(ITestOutputHelper output)
             {
                 _output.WriteLine(monitorEvent.ToString());
                 events.Add(monitorEvent);
-                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+                if (!eventCount.TryAdd(monitorEvent.GetType(), 1))
+                    eventCount[monitorEvent.GetType()]++;
             }
             await engineTask;
         }
