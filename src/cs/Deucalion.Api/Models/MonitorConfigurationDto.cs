@@ -9,14 +9,14 @@ internal record MonitorConfigurationDto(
     string? Image
 )
 {
-    internal static MonitorConfigurationDto From(MonitorConfiguration c) =>
+    internal static MonitorConfigurationDto From(PullMonitorConfiguration c) =>
         new(
             Group: c.Group,
             Href: ExtractHref(c),
             Image: c.Image
         );
 
-    private static string? ExtractHref(MonitorConfiguration monitor)
+    private static string? ExtractHref(PullMonitorConfiguration monitor)
     {
         if (monitor.Href is null && monitor is HttpMonitorConfiguration hm)
         {

@@ -6,7 +6,7 @@ namespace Deucalion.Application;
 
 public static class MonitorExtensions
 {
-    public static async Task RunAllAsync(this IEnumerable<Deucalion.Monitors.Monitor> monitors, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
+    public static async Task RunAllAsync(this IEnumerable<PullMonitor> monitors, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
     {
         var monitorTasks = new List<Task>();
 

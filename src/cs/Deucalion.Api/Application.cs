@@ -143,7 +143,7 @@ public static class Application
         return app;
     }
 
-    private static async Task<MonitorDto> BuildMonitorDtoAsync(SqliteStorage storage, MonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
+    private static async Task<MonitorDto> BuildMonitorDtoAsync(SqliteStorage storage, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
         new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),

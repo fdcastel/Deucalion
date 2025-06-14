@@ -28,7 +28,7 @@ public record ApplicationConfiguration
 
     public ConfigurationDefaults? Defaults { get; set; }
 
-    public required OrderedDictionary<string, MonitorConfiguration> Monitors { get; set; }
+    public required OrderedDictionary<string, PullMonitorConfiguration> Monitors { get; set; }
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {
@@ -76,7 +76,7 @@ public record ApplicationConfiguration
         return result;
     }
 
-    private static void ApplyDefaults(ConfigurationDefaults defaults, KeyValuePair<string, MonitorConfiguration> monitorConfiguration)
+    private static void ApplyDefaults(ConfigurationDefaults defaults, KeyValuePair<string, PullMonitorConfiguration> monitorConfiguration)
     {
         if (defaults.Dns is not null && monitorConfiguration.Value is DnsMonitorConfiguration dnsMonitorConfiguration)
         {

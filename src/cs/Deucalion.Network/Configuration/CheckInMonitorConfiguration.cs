@@ -2,7 +2,7 @@
 
 namespace Deucalion.Network.Configuration;
 
-public record CheckInMonitorConfiguration : MonitorConfiguration
+public record CheckInMonitorConfiguration : PullMonitorConfiguration
 {
     public string? Secret { get; set; }
     public TimeSpan? IntervalToDown { get; set; }

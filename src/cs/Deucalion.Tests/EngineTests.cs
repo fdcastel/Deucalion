@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Deucalion.Application;
 using Deucalion.Events;
+using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Deucalion.Tests.Mocks;
 using Xunit;
@@ -34,7 +35,7 @@ public class EngineTests(ITestOutputHelper output)
             m2.CheckIn();
         });
         using CancellationTokenSource cts = new(pulse * 4.5);
-        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1, m2];
+        IEnumerable<PullMonitor> monitors = [m1, m2];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
@@ -72,7 +73,7 @@ public class EngineTests(ITestOutputHelper output)
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
         using CancellationTokenSource cts = new(pulse * 4.5);
-        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1, m2];
+        IEnumerable<PullMonitor> monitors = [m1, m2];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
@@ -104,7 +105,7 @@ public class EngineTests(ITestOutputHelper output)
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
         using CancellationTokenSource cts = new(pulse * 7.5);
-        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1];
+        IEnumerable<PullMonitor> monitors = [m1];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
@@ -128,7 +129,7 @@ public class EngineTests(ITestOutputHelper output)
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
         using CancellationTokenSource cts = new(pulse * 3.5);
-        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1];
+        IEnumerable<PullMonitor> monitors = [m1];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {

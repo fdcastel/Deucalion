@@ -93,7 +93,7 @@ public static class ConfigurationExtensions
         return monitor;
     }
 
-    private static Monitors.Monitor ConfigureMonitor(this Monitors.Monitor monitor, MonitorConfiguration configuration)
+    private static Monitors.PullMonitor ConfigureMonitor(this Monitors.PullMonitor monitor, PullMonitorConfiguration configuration)
     {
         monitor.Name = configuration.Name ?? monitor.Name;
         monitor.IgnoreFailCount = configuration.IgnoreFailCount ?? monitor.IgnoreFailCount;

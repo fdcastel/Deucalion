@@ -276,7 +276,7 @@ public class ConfigurationTests
         return ApplicationConfiguration.ReadFromString(configurationContent);
     }
 
-    private static MonitorConfiguration ReadSingleMonitorFromConfiguration(string configurationContent)
+    private static PullMonitorConfiguration ReadSingleMonitorFromConfiguration(string configurationContent)
     {
         var configuration = ReadConfiguration(configurationContent);
         Assert.Single(configuration.Monitors);
