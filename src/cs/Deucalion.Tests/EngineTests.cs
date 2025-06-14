@@ -16,7 +16,6 @@ public class EngineTests(ITestOutputHelper output)
     public async Task Engine_ReceiveEventsFromPushMonitors()
     {
         var pulse = TimeSpan.FromMilliseconds(500);
-        Engine engine = new();
         CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1 };
         CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
         var events = new List<MonitorEventBase>();
@@ -35,8 +34,8 @@ public class EngineTests(ITestOutputHelper output)
             m2.CheckIn();
         });
         using CancellationTokenSource cts = new(pulse * 4.5);
-        var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
-        var engineTask = Task.Run(async () => await engine.RunAsync(monitors, channel.Writer, cts.Token));
+        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1, m2];
+        var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
             await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))
@@ -56,7 +55,6 @@ public class EngineTests(ITestOutputHelper output)
     public async Task Engine_QueryPullMonitors()
     {
         var pulse = TimeSpan.FromMilliseconds(500);
-        Engine engine = new();
         PullMonitorMock m1 = new(
             (MonitorState.Unknown, pulse / 2),
             (MonitorState.Up, pulse),
@@ -74,8 +72,8 @@ public class EngineTests(ITestOutputHelper output)
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
         using CancellationTokenSource cts = new(pulse * 4.5);
-        var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
-        var engineTask = Task.Run(async () => await engine.RunAsync(monitors, channel.Writer, cts.Token));
+        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1, m2];
+        var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
             await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))
@@ -96,7 +94,6 @@ public class EngineTests(ITestOutputHelper output)
     public async Task Engine_QueryPullMonitors_WithDifferentIntervalWhenDown()
     {
         var pulse = TimeSpan.FromMilliseconds(500);
-        Engine engine = new();
         PullMonitorMock m1 = new(
             (MonitorState.Unknown, pulse / 2),
             (MonitorState.Up, pulse * 2),
@@ -107,8 +104,8 @@ public class EngineTests(ITestOutputHelper output)
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
         using CancellationTokenSource cts = new(pulse * 7.5);
-        var monitors = new List<Deucalion.Monitors.Monitor>() { m1 };
-        var engineTask = Task.Run(async () => await engine.RunAsync(monitors, channel.Writer, cts.Token));
+        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1];
+        var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
             await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))
@@ -127,13 +124,12 @@ public class EngineTests(ITestOutputHelper output)
     public async Task Engine_PushMonitor_RepeatedDownState_GeneratesEvent()
     {
         var pulse = TimeSpan.FromMilliseconds(100);
-        Engine engine = new();
         CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.5 };
         var events = new List<MonitorEventBase>();
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
         using CancellationTokenSource cts = new(pulse * 3.5);
-        var monitors = new List<Deucalion.Monitors.Monitor>() { m1 };
-        var engineTask = Task.Run(async () => await engine.RunAsync(monitors, channel.Writer, cts.Token));
+        IEnumerable<Deucalion.Monitors.Monitor> monitors = [m1];
+        var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
         try
         {
             await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))

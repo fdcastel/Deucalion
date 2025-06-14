@@ -32,15 +32,13 @@ internal class EngineBackgroundService(
         var internalToken = _internalCts.Token;
 
         var channel = Channel.CreateUnbounded<MonitorEventBase>();
-        var engine = new Engine();
 
-        // Start the monitoring engine in the background
+        // Start the monitoring engine in the background (now as extension method)
         _engineTask = Task.Run(async () =>
         {
             try
             {
-                // Changed from engine.Run to await engine.RunAsync
-                await engine.RunAsync(_monitors.Monitors.Values, channel.Writer, internalToken);
+                await _monitors.Monitors.Values.RunAllAsync(channel.Writer, internalToken);
             }
             catch (OperationCanceledException)
             {
