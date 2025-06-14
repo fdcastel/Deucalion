@@ -8,153 +8,175 @@ namespace Deucalion.Application;
 
 public class Engine
 {
-    public void Run(IEnumerable<Monitors.Monitor> monitors, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
+    public async Task RunAsync(IEnumerable<Monitors.Monitor> monitors, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
     {
-        var start = DateTimeOffset.UtcNow;
-
         var catalog = monitors
             .Select(monitor => new MonitorStatus() { Monitor = monitor })
             .ToDictionary(ms => ms.Monitor);
+
+        var monitorTasks = new List<Task>();
 
         foreach (var (monitor, status) in catalog)
         {
             if (monitor is CheckInMonitor checkInMonitor)
             {
-                checkInMonitor.CheckedInEvent += PushMonitorCheckedIn;
-                checkInMonitor.TimedOutEvent += PushMonitorTimedOut;
+                // Wrap event handling in a task
+                monitorTasks.Add(ProcessCheckInMonitorEventsAsync(checkInMonitor, status, writer, stopToken));
             }
             else if (monitor is PullMonitor pullMonitor)
             {
-                status.QueryTimer = new Timer(QueryPullMonitor, monitor, TimeSpan.Zero, pullMonitor.IntervalWhenUp);
+                // Run pull monitor in its own async loop
+                monitorTasks.Add(RunPullMonitorLoopAsync(pullMonitor, status, writer, stopToken));
             }
         }
 
         try
         {
-            stopToken.WaitHandle.WaitOne();
+            // Wait for all monitor tasks to complete or for cancellation
+            await Task.WhenAll(monitorTasks);
         }
+        catch (OperationCanceledException)
+        {
+            // Expected when stopToken is signaled and tasks are cancelled
+        }
+        // Consider catching other specific exceptions from tasks if robust error handling per task is needed
         finally
         {
-            foreach (var (_, status) in catalog)
-            {
-                status.QueryTimer?.Dispose();
-            }
+            // Ensure writer is completed when all operations are done or cancelled
             writer.TryComplete();
         }
+    }
 
-        void PushMonitorCheckedIn(object? sender, EventArgs args)
+    private async Task RunPullMonitorLoopAsync(PullMonitor pullMonitor, MonitorStatus status, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
+    {
+        // Perform initial query without delay
+        await QueryAndProcessPullMonitorAsync(pullMonitor, status, writer, stopToken);
+        if (stopToken.IsCancellationRequested) return;
+
+        while (!stopToken.IsCancellationRequested)
         {
-            if (sender is PushMonitor pushMonitor)
+            TimeSpan delayInterval = (status.LastKnownState == MonitorState.Up || status.LastKnownState == MonitorState.Unknown)
+                ? pullMonitor.IntervalWhenUp
+                : pullMonitor.IntervalWhenDown;
+
+            try
             {
-                var monitorResponse = args is MonitorResponseEventArgs mrea ? mrea.Response : MonitorResponse.Up();
-                UpdateMonitorState(pushMonitor, monitorResponse);
+                await Task.Delay(delayInterval, stopToken);
             }
+            catch (OperationCanceledException)
+            {
+                break; // Exit loop if cancellation is requested during delay
+            }
+
+            if (stopToken.IsCancellationRequested) break; // Check again after delay
+
+            await QueryAndProcessPullMonitorAsync(pullMonitor, status, writer, stopToken);
+        }
+    }
+
+    private async Task QueryAndProcessPullMonitorAsync(PullMonitor pullMonitor, MonitorStatus status, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
+    {
+        if (stopToken.IsCancellationRequested) return;
+
+        var queryStartTime = DateTimeOffset.UtcNow;
+        var stopwatch = Stopwatch.StartNew();
+        var response = await pullMonitor.QueryAsync(stopToken);
+        stopwatch.Stop();
+
+        if (response.ResponseTime is null)
+        {
+            response = response with { ResponseTime = stopwatch.Elapsed };
         }
 
-        void PushMonitorTimedOut(object? sender, EventArgs _)
+        UpdateMonitorState(pullMonitor, response, writer, status, queryStartTime);
+    }
+
+    private Task ProcessCheckInMonitorEventsAsync(CheckInMonitor checkInMonitor, MonitorStatus status, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        EventHandler? actualCheckedInHandler = null;
+        EventHandler? actualTimedOutHandler = null;
+
+        actualCheckedInHandler = (sender, eventArgs) =>
         {
-            if (sender is PushMonitor pushMonitor)
+            var monitorResponse = eventArgs is MonitorResponseEventArgs mrea ? mrea.Response : MonitorResponse.Up();
+            UpdateMonitorState(checkInMonitor, monitorResponse, writer, status, DateTimeOffset.UtcNow);
+        };
+
+        actualTimedOutHandler = (sender, eventArgs) =>
+        {
+            UpdateMonitorState(checkInMonitor, null, writer, status, DateTimeOffset.UtcNow);
+        };
+
+        checkInMonitor.CheckedInEvent += actualCheckedInHandler;
+        checkInMonitor.TimedOutEvent += actualTimedOutHandler;
+
+        stopToken.Register(() =>
+        {
+            checkInMonitor.CheckedInEvent -= actualCheckedInHandler;
+            checkInMonitor.TimedOutEvent -= actualTimedOutHandler;
+            tcs.TrySetResult();
+        });
+
+        return tcs.Task;
+    }
+
+    private void UpdateMonitorState(Monitors.Monitor monitor, MonitorResponse? monitorResponse, ChannelWriter<MonitorEventBase> writer, MonitorStatus status, DateTimeOffset eventTime)
+    {
+        var name = monitor.Name;
+
+        var initialState = monitorResponse?.State ?? MonitorState.Down;
+        var effectiveState = initialState;
+
+        // --- ignoreFailCount Logic ---
+        if (initialState == MonitorState.Up)
+        {
+            status.ConsecutiveFailCount = 0;
+        }
+        else if (initialState == MonitorState.Down || initialState == MonitorState.Warn)
+        {
+            status.ConsecutiveFailCount++;
+            if (monitor.IgnoreFailCount > 0 && status.ConsecutiveFailCount < monitor.IgnoreFailCount)
             {
-                UpdateMonitorState(pushMonitor, null);
+                effectiveState = MonitorState.Degraded;
             }
+            // else: effectiveState remains Down or Warn
+        }
+        // else: Unknown state doesn't change fail count or trigger Degraded
+
+        // --- upsideDown Logic ---
+        if (monitor.UpsideDown)
+        {
+            if (effectiveState == MonitorState.Up)
+            {
+                effectiveState = MonitorState.Down;
+            }
+            else if (effectiveState == MonitorState.Down)
+            {
+                effectiveState = MonitorState.Up;
+            }
+            // Warn and Degraded states are not flipped
         }
 
-        async void QueryPullMonitor(object? sender)
+        // Notify response
+        var effectiveResponse = monitorResponse is null ? null : monitorResponse with { State = effectiveState };
+        writer.TryWrite(new MonitorChecked(name, eventTime, effectiveResponse)); // Use eventTime
+
+        var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != effectiveState;
+        if (hasStateChanged)
         {
-            var timerEventAt = DateTimeOffset.UtcNow;
+            // Notify change
+            writer.TryWrite(new MonitorStateChanged(name, eventTime, effectiveState)); // Use eventTime
 
-            if (sender is PullMonitor pullMonitor)
-            {
-                var stopwatch = Stopwatch.StartNew();
-                var response = await pullMonitor.QueryAsync();
-                stopwatch.Stop();
-
-                if (response.ResponseTime is null)
-                {
-                    response = response with { ResponseTime = stopwatch.Elapsed };
-                }
-
-                UpdateMonitorState(pullMonitor, response, timerEventAt);
-            }
         }
 
-        void UpdateMonitorState(Monitors.Monitor monitor, MonitorResponse? monitorResponse, DateTimeOffset timerEventAt = default)
-        {
-            var name = monitor.Name;
-            var at = DateTimeOffset.UtcNow;
-
-            if (catalog.TryGetValue(monitor, out var status))
-            {
-                var initialState = monitorResponse?.State ?? MonitorState.Down;
-                var effectiveState = initialState;
-
-                // --- ignoreFailCount Logic ---
-                if (initialState == MonitorState.Up)
-                {
-                    status.ConsecutiveFailCount = 0;
-                }
-                else if (initialState == MonitorState.Down || initialState == MonitorState.Warn)
-                {
-                    status.ConsecutiveFailCount++;
-                    if (monitor.IgnoreFailCount > 0 && status.ConsecutiveFailCount < monitor.IgnoreFailCount)
-                    {
-                        effectiveState = MonitorState.Degraded;
-                    }
-                    // else: effectiveState remains Down or Warn
-                }
-                // else: Unknown state doesn't change fail count or trigger Degraded
-
-                // --- upsideDown Logic ---
-                if (monitor.UpsideDown)
-                {
-                    if (effectiveState == MonitorState.Up)
-                    {
-                        effectiveState = MonitorState.Down;
-                    }
-                    else if (effectiveState == MonitorState.Down)
-                    {
-                        effectiveState = MonitorState.Up;
-                    }
-                    // Warn and Degraded states are not flipped
-                }
-
-                // Notify response
-                var effectiveResponse = monitorResponse is null ? null : monitorResponse with { State = effectiveState };
-                writer.TryWrite(new MonitorChecked(name, at, effectiveResponse));
-
-                var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != effectiveState;
-                if (hasStateChanged)
-                {
-                    // Notify change
-                    writer.TryWrite(new MonitorStateChanged(name, at, effectiveState));
-
-                    if (monitor is PullMonitor pullMonitor)
-                    {
-                        // Update timer interval based on the *effective* state
-                        var dueTime = effectiveState == MonitorState.Up
-                            ? pullMonitor.IntervalWhenUp
-                            : pullMonitor.IntervalWhenDown;
-
-                        // Subtract from next dueTime the elapsed time since the current timer event.
-                        var deltaUntilNow = DateTimeOffset.UtcNow - timerEventAt;
-                        var remaining = dueTime - deltaUntilNow;
-
-                        // Avoid exception when debugging with breakpoints.
-                        remaining = remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
-
-                        status.QueryTimer?.Change(remaining, dueTime);
-                    }
-                }
-
-                status.LastKnownState = effectiveState;
-            }
-        }
+        status.LastKnownState = effectiveState;
     }
 
     internal class MonitorStatus
     {
         internal required Monitors.Monitor Monitor { get; init; }
-        internal Timer? QueryTimer { get; set; }
         internal MonitorState LastKnownState { get; set; } = MonitorState.Unknown;
         internal int ConsecutiveFailCount { get; set; } = 0;
     }

@@ -35,11 +35,12 @@ internal class EngineBackgroundService(
         var engine = new Engine();
 
         // Start the monitoring engine in the background
-        _engineTask = Task.Run(() =>
+        _engineTask = Task.Run(async () =>
         {
             try
             {
-                engine.Run(_monitors.Monitors.Values, channel.Writer, internalToken);
+                // Changed from engine.Run to await engine.RunAsync
+                await engine.RunAsync(_monitors.Monitors.Values, channel.Writer, internalToken);
             }
             catch (OperationCanceledException)
             {

@@ -15,5 +15,5 @@ public abstract class PullMonitor : Monitor
     public TimeSpan Timeout { get; set; } = DefaultTimeout;
     public TimeSpan WarnTimeout { get; set; } = DefaultWarnTimeout;
 
-    public abstract Task<MonitorResponse> QueryAsync();
+    public abstract Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default);
 }

@@ -12,16 +12,17 @@ public class PingMonitor : PullMonitor
 
     public PingMonitor()
     {
+        // Ping has stricter defaults than PullMonitor
         Timeout = DefaultPingTimeout;
         WarnTimeout = DefaultPingWarnTimeout;
     }
 
-    public override async Task<MonitorResponse> QueryAsync()
+    public override async Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             using Ping pinger = new();
-            var reply = await pinger.SendPingAsync(Host, (int)Timeout.TotalMilliseconds);
+            var reply = await pinger.SendPingAsync(Host, Timeout, cancellationToken: cancellationToken);
             var elapsed = TimeSpan.FromMilliseconds(reply.RoundtripTime);
 
             return reply.Status == IPStatus.Success

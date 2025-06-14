@@ -4,25 +4,28 @@ namespace Deucalion.Tests.Mocks;
 
 internal class PullMonitorMock(params (MonitorState, TimeSpan)[] timeline) : PullMonitor
 {
-    private MonitorState CurrentState { get; set; } = MonitorState.Unknown;
-    public (MonitorState, TimeSpan)[] Timeline { get; } = timeline;
+    public (MonitorState State, TimeSpan Duration)[] Timeline { get; } = timeline; // Duration is now illustrative, not directly used by mock's timing
+    private int _queryCount = -1; // Start at -1 so first call is index 0
 
-    public void Start()
+    public override Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
-        Task.Run(async () =>
-        {
-            foreach (var (state, ts) in Timeline)
-            {
-                CurrentState = state;
-                await Task.Delay(ts);
-            }
-        });
-    }
+        int currentQueryIndex = Interlocked.Increment(ref _queryCount);
+        MonitorState stateToReturn;
 
-    public override Task<MonitorResponse> QueryAsync() =>
-        Task.FromResult(new MonitorResponse()
+        if (currentQueryIndex < Timeline.Length)
         {
-            State = CurrentState,
+            stateToReturn = Timeline[currentQueryIndex].State;
+        }
+        else
+        {
+            // If called more times than timeline entries, return the last state or a default
+            stateToReturn = Timeline.Length > 0 ? Timeline[^1].State : MonitorState.Unknown;
+        }
+
+        return Task.FromResult(new MonitorResponse()
+        {
+            State = stateToReturn,
             ResponseTime = TimeSpan.FromMilliseconds(333)
         });
+    }
 }

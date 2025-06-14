@@ -25,47 +25,41 @@ public class HttpMonitor : PullMonitor
     public bool? IgnoreCertificateErrors { get; set; }
     public HttpMethod? Method { get; set; }
 
-    public override async Task<MonitorResponse> QueryAsync()
+    public override async Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
-        var method = Method ??
-            // Uses HEAD when response body is not needed. GET otherwise.
-            (ExpectedResponseBodyPattern is not null ? HttpMethod.Get : HttpMethod.Head);
-
-        var request = new HttpRequestMessage(method, Url);
-
+        var method = Method ?? HttpMethod.Get;
+        using var request = new HttpRequestMessage(method, Url);
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("Deucalion", "1.0"));
 
-        var httpClient = IgnoreCertificateErrors ?? false
-            ? CachedHttpClientIgnoreCertificate
-            : CachedHttpClient;
-
-        using CancellationTokenSource cts = new(Timeout);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(Timeout);
 
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            using var response = await httpClient.SendAsync(request, cts.Token);
-            stopwatch.Stop();
+            // Use HttpCompletionOption.ResponseContentRead if we expect a response body.
+            // Otherwise use ResponseHeadersRead to avoid reading the body unnecessarily.
+            // https://www.stevejgordon.co.uk/using-httpcompletionoption-responseheadersread-to-improve-httpclient-performance-dotnet
+            var completionOption = ExpectedResponseBodyPattern is not null
+                ? HttpCompletionOption.ResponseContentRead
+                : HttpCompletionOption.ResponseHeadersRead;
 
-            var success = response.IsSuccessStatusCode;
-            if (ExpectedStatusCode is not null)
+            // Use the appropriate HttpClient based on whether we ignore certificate errors or not.
+            var httpClient = IgnoreCertificateErrors ?? false
+                ? CachedHttpClientIgnoreCertificate
+                : CachedHttpClient;
+
+            using var response = await httpClient.SendAsync(request, completionOption, timeoutCts.Token);
+
+            var statusCode = ExpectedStatusCode ?? HttpStatusCode.OK;
+            if (response.StatusCode != statusCode)
             {
-                if (ExpectedStatusCode != response.StatusCode)
-                {
-                    return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase);
-                }
-            }
-            else
-            {
-                if (!response.IsSuccessStatusCode)
-                {
-                    return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase);
-                }
+                return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase ?? response.StatusCode.ToString());
             }
 
             if (ExpectedResponseBodyPattern is not null)
             {
-                var responseBody = await response.Content.ReadAsStringAsync();
+                var responseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
                 if (!Regex.IsMatch(responseBody, ExpectedResponseBodyPattern))
                 {
                     var truncatedBody = responseBody.Length <= 60
@@ -82,9 +76,14 @@ public class HttpMonitor : PullMonitor
         {
             return MonitorResponse.Down(stopwatch.Elapsed, e.Message);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
         {
-            return MonitorResponse.Down(Timeout, "Timeout");
+            // Catch only if the cancellation was due to the timeout -- https://stackoverflow.com/a/67203842
+            return MonitorResponse.Down(stopwatch.Elapsed, "Timeout");
+        }
+        finally
+        {
+            stopwatch.Stop();
         }
     }
 }

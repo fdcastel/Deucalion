@@ -29,11 +29,12 @@ public class DnsMonitor : PullMonitor
 
     public DnsMonitor()
     {
+        // Dns has stricter defaults than PullMonitor
         Timeout = DefaultDnsTimeout;
         WarnTimeout = DefaultDnsWarnTimeout;
     }
 
-    public override async Task<MonitorResponse> QueryAsync()
+    public override async Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
         LookupClientOptions options = Resolver is not null
             ? new(Resolver)
@@ -46,7 +47,7 @@ public class DnsMonitor : PullMonitor
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            var result = await lookup.QueryAsync(Host, RecordType);
+            var result = await lookup.QueryAsync(Host, RecordType, cancellationToken: cancellationToken);
             stopwatch.Stop();
 
             return result.HasError
@@ -57,7 +58,13 @@ public class DnsMonitor : PullMonitor
         }
         catch (DnsResponseException e)
         {
+            stopwatch.Stop(); // Ensure stopwatch is stopped in case of exception
             return MonitorResponse.Down(stopwatch.Elapsed, e.Message);
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            return MonitorResponse.Down(stopwatch.Elapsed, "Timeout (cancelled)");
         }
     }
 }
