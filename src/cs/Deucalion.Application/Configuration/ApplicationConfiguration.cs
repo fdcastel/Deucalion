@@ -119,9 +119,9 @@ public record ApplicationConfiguration
             pullMonitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
         }
 
-        if (monitorConfiguration.Value is PushMonitorConfiguration pushMonitorConfiguration)
+        if (monitorConfiguration.Value is CheckInMonitorConfiguration checkInMonitorConfiguration)
         {
-            pushMonitorConfiguration.IntervalToDown ??= defaults.IntervalToDown;
+            checkInMonitorConfiguration.IntervalToDown ??= defaults.IntervalToDown;
         }
     }
 }

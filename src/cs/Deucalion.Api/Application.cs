@@ -8,7 +8,6 @@ using Deucalion.Application.Configuration;
 using Deucalion.Configuration;
 using Deucalion.Network.Monitors;
 using Deucalion.Storage;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Deucalion.Api;
@@ -100,7 +99,7 @@ public static class Application
             return Results.Ok(await BuildMonitorDtoAsync(storage, monitor, monitorName, cancellationToken));
         });
 
-        app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, [FromBody] MonitorCheckInDto arguments) =>
+        app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, HttpRequest request) =>
             {
                 if (!applicationMonitors.Monitors.TryGetValue(monitorName, out var monitor))
                 {
@@ -112,12 +111,12 @@ public static class Application
                     return DeucalionResults.NotCheckInMonitor(monitorName, $"/api/monitors/{monitorName}");
                 }
 
-                if (cim.Secret is not null && cim.Secret != arguments.Secret)
+                if (cim.Secret is not null && cim.Secret != request.Headers["deucalion-checkin-secret"])
                 {
                     return DeucalionResults.InvalidCheckInSecret(monitorName, $"/api/monitors/{monitorName}");
                 }
 
-                cim.CheckIn(arguments.ToMonitorResponse());
+                cim.CheckIn();
 
                 return Results.Ok();
             });

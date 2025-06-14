@@ -1,6 +1,7 @@
 defaults:
   intervalWhenUp: 00:00:03
   intervalWhenDown: 00:00:03
+  intervalToDown: 00:00:05
 
 monitors:
   # Cloudflare

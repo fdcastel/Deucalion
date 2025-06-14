@@ -2,7 +2,6 @@
 using System.Threading.Channels;
 using Deucalion.Events;
 using Deucalion.Monitors;
-using Deucalion.Network.Monitors;
 
 namespace Deucalion.Application;
 
@@ -18,12 +17,7 @@ public class Engine
 
         foreach (var (monitor, status) in catalog)
         {
-            if (monitor is CheckInMonitor checkInMonitor)
-            {
-                // Wrap event handling in a task
-                monitorTasks.Add(ProcessCheckInMonitorEventsAsync(checkInMonitor, status, writer, stopToken));
-            }
-            else if (monitor is PullMonitor pullMonitor)
+            if (monitor is PullMonitor pullMonitor)
             {
                 // Run pull monitor in its own async loop
                 monitorTasks.Add(RunPullMonitorLoopAsync(pullMonitor, status, writer, stopToken));
@@ -91,37 +85,6 @@ public class Engine
         UpdateMonitorState(pullMonitor, response, writer, status, queryStartTime);
     }
 
-    private Task ProcessCheckInMonitorEventsAsync(CheckInMonitor checkInMonitor, MonitorStatus status, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
-    {
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        EventHandler? actualCheckedInHandler = null;
-        EventHandler? actualTimedOutHandler = null;
-
-        actualCheckedInHandler = (sender, eventArgs) =>
-        {
-            var monitorResponse = eventArgs is MonitorResponseEventArgs mrea ? mrea.Response : MonitorResponse.Up();
-            UpdateMonitorState(checkInMonitor, monitorResponse, writer, status, DateTimeOffset.UtcNow);
-        };
-
-        actualTimedOutHandler = (sender, eventArgs) =>
-        {
-            UpdateMonitorState(checkInMonitor, null, writer, status, DateTimeOffset.UtcNow);
-        };
-
-        checkInMonitor.CheckedInEvent += actualCheckedInHandler;
-        checkInMonitor.TimedOutEvent += actualTimedOutHandler;
-
-        stopToken.Register(() =>
-        {
-            checkInMonitor.CheckedInEvent -= actualCheckedInHandler;
-            checkInMonitor.TimedOutEvent -= actualTimedOutHandler;
-            tcs.TrySetResult();
-        });
-
-        return tcs.Task;
-    }
-
     private void UpdateMonitorState(Monitors.Monitor monitor, MonitorResponse? monitorResponse, ChannelWriter<MonitorEventBase> writer, MonitorStatus status, DateTimeOffset eventTime)
     {
         var name = monitor.Name;
@@ -163,12 +126,14 @@ public class Engine
         var effectiveResponse = monitorResponse is null ? null : monitorResponse with { State = effectiveState };
         writer.TryWrite(new MonitorChecked(name, eventTime, effectiveResponse)); // Use eventTime
 
-        var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != effectiveState;
-        if (hasStateChanged)
+        // Send MonitorStateChanged only if the state actually changed from a known different state, or from Unknown.
+        var actualStateHasChanged = status.LastKnownState != effectiveState && status.LastKnownState == MonitorState.Unknown || // From Unknown to something else
+                                    status.LastKnownState != MonitorState.Unknown && status.LastKnownState != effectiveState;   // From a known state to a different known state
+
+        if (actualStateHasChanged)
         {
             // Notify change
             writer.TryWrite(new MonitorStateChanged(name, eventTime, effectiveState)); // Use eventTime
-
         }
 
         status.LastKnownState = effectiveState;

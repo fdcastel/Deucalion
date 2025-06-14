@@ -2,61 +2,33 @@
 
 namespace Deucalion.Network.Monitors;
 
-public sealed class CheckInMonitor : PushMonitor, IDisposable
+public sealed class CheckInMonitor : PullMonitor
 {
-    private readonly ManualResetEvent _checkInEvent = new(false);
-    private Timer? _resetTimer;
-    private bool _disposed;
+    public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromMinutes(1);
+
+    private DateTimeOffset? _lastCheckInTime;
+    private MonitorResponse? _lastResponse;
 
     public string Secret { get; set; } = string.Empty;
+    public TimeSpan IntervalToDown { get; set; } = DefaultIntervalToDown;
 
-    public event EventHandler? CheckedInEvent;
-    public event EventHandler? TimedOutEvent;
-
-    public override void CheckIn(MonitorResponse? response = null)
+    public void CheckIn(MonitorResponse? response = null)
     {
-        _checkInEvent.Set();
-        OnCheckedInEvent(response);
+        _lastCheckInTime = DateTimeOffset.UtcNow;
+        _lastResponse = response ?? MonitorResponse.Up();
 
-        var resetIn = IntervalToDown;
-        if (_resetTimer is null)
-        {
-            _resetTimer = new(Reset, null, resetIn, Timeout.InfiniteTimeSpan);
-        }
-        else
-        {
-            _resetTimer.Change(resetIn, Timeout.InfiniteTimeSpan);
-        }
+        // TODO: Add a short circuit mechanism to pull monitor logic to instantly update the monitor state
+        // without waiting for the next scheduled query.
     }
 
-    public void Dispose()
+    public override Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
-        if (!_disposed)
-        {
-            _resetTimer?.Dispose();
-            _disposed = true;
-        }
-    }
+        if (!_lastCheckInTime.HasValue)
+            return Task.FromResult(MonitorResponse.Down());
 
-    private void OnCheckedInEvent(MonitorResponse? response = null)
-    {
-        // Make a temporary copy of the event -- https://t.ly/9iROC
-        var checkedInEvent = CheckedInEvent;
+        if ((DateTimeOffset.UtcNow - _lastCheckInTime.Value) > IntervalToDown)
+            return Task.FromResult(MonitorResponse.Down());
 
-        checkedInEvent?.Invoke(this, response is null ? EventArgs.Empty : new MonitorResponseEventArgs(response));
-    }
-
-    private void OnTimedOutEvent()
-    {
-        // Make a temporary copy of the event -- https://t.ly/9iROC
-        var timedOutEvent = TimedOutEvent;
-
-        timedOutEvent?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void Reset(object? _)
-    {
-        _checkInEvent.Reset();
-        OnTimedOutEvent();
+        return Task.FromResult(_lastResponse ?? MonitorResponse.Up());
     }
 }

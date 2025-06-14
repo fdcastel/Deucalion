@@ -6,62 +6,49 @@ namespace Deucalion.Tests.Monitors;
 public class CheckInMonitorTests
 {
     [Fact]
-    public void CheckInMonitor_ReturnsUp_WhenCheckedIn()
+    public async Task CheckInMonitor_ReturnsUp_WhenCheckedIn()
     {
-        using CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
-        var result = MonitorState.Unknown;
-        checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
-        checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
-
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
         checkInMonitor.CheckIn();
-        Assert.Equal(MonitorState.Up, result);
+        var response = await checkInMonitor.QueryAsync();
+        Assert.Equal(MonitorState.Up, response.State);
     }
 
     [Fact]
     public async Task CheckInMonitor_ReturnsDown_WhenNotCheckedIn()
     {
-        using CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
-        var result = MonitorState.Unknown;
-        checkInMonitor.CheckedInEvent += (s, a) => result = MonitorState.Up;
-        checkInMonitor.TimedOutEvent += (s, a) => result = MonitorState.Down;
-
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
         checkInMonitor.CheckIn();
-        Assert.Equal(MonitorState.Up, result);
-
+        var response = await checkInMonitor.QueryAsync();
+        Assert.Equal(MonitorState.Up, response.State);
         await Task.Delay(checkInMonitor.IntervalToDown * 2);
-
-        Assert.Equal(MonitorState.Down, result);
+        response = await checkInMonitor.QueryAsync();
+        Assert.Equal(MonitorState.Down, response.State);
     }
 
     [Fact]
     public async Task CheckInMonitor_Returns_StatePassedAsArgument()
     {
-        using CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
-
-        MonitorResponse? currentResponse = null;
-        checkInMonitor.CheckedInEvent += (s, ea) => currentResponse = ea is MonitorResponseEventArgs mrea ? mrea.Response : throw new InvalidOperationException();
-        checkInMonitor.TimedOutEvent += (s, ea) => currentResponse = MonitorResponse.Down();
-
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
         var newResponse = new MonitorResponse()
         {
             State = MonitorState.Down,
             ResponseText = "Lorem Ipsum",
             ResponseTime = TimeSpan.FromMilliseconds(500)
         };
-
         checkInMonitor.CheckIn(newResponse);
-        Assert.NotNull(currentResponse);
-        Assert.Equal(newResponse.State, currentResponse.State);
-        Assert.Equal(newResponse.ResponseText, currentResponse.ResponseText);
-        Assert.Equal(newResponse.ResponseTime, currentResponse.ResponseTime);
-
+        var response = await checkInMonitor.QueryAsync();
+        Assert.NotNull(response);
+        Assert.Equal(newResponse.State, response.State);
+        Assert.Equal(newResponse.ResponseText, response.ResponseText);
+        Assert.Equal(newResponse.ResponseTime, response.ResponseTime);
         newResponse = newResponse with { State = MonitorState.Up };
         checkInMonitor.CheckIn(newResponse);
-        Assert.NotNull(currentResponse);
-        Assert.Equal(newResponse.State, currentResponse.State);
-
+        response = await checkInMonitor.QueryAsync();
+        Assert.NotNull(response);
+        Assert.Equal(newResponse.State, response.State);
         await Task.Delay(checkInMonitor.IntervalToDown * 2);
-
-        Assert.Equal(MonitorState.Down, currentResponse.State);
+        response = await checkInMonitor.QueryAsync();
+        Assert.Equal(MonitorState.Down, response.State);
     }
 }

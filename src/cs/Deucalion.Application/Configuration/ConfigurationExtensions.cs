@@ -39,7 +39,13 @@ public static class ConfigurationExtensions
     private static CheckInMonitor ConfigureCheckInMonitor(this CheckInMonitor monitor, CheckInMonitorConfiguration configuration)
     {
         monitor.Secret = configuration.Secret ?? monitor.Secret;
-        monitor.ConfigurePushMonitor(configuration);
+        monitor.IntervalToDown = configuration.IntervalToDown ?? monitor.IntervalToDown;
+
+        // Set polling intervals for CheckInMonitor based on IntervalToDown
+        monitor.IntervalWhenUp = monitor.IntervalToDown;
+        monitor.IntervalWhenDown = monitor.IntervalToDown;
+
+        monitor.ConfigureMonitor(configuration);
         return monitor;
     }
 
@@ -83,13 +89,6 @@ public static class ConfigurationExtensions
         monitor.IntervalWhenDown = configuration.IntervalWhenDown ?? monitor.IntervalWhenDown;
         monitor.Timeout = configuration.Timeout ?? monitor.Timeout;
         monitor.WarnTimeout = configuration.WarnTimeout ?? monitor.WarnTimeout;
-        monitor.ConfigureMonitor(configuration);
-        return monitor;
-    }
-
-    private static PushMonitor ConfigurePushMonitor(this PushMonitor monitor, PushMonitorConfiguration configuration)
-    {
-        monitor.IntervalToDown = configuration.IntervalToDown ?? monitor.IntervalToDown;
         monitor.ConfigureMonitor(configuration);
         return monitor;
     }

@@ -1,6 +1,6 @@
 ﻿namespace Deucalion.Events;
 
-public record MonitorEventBase(
+public abstract record MonitorEventBase(
     string Name,
     DateTimeOffset At
 );
