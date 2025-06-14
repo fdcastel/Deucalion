@@ -1,4 +1,5 @@
-﻿using Deucalion.Api.Models;
+﻿using System.Threading.Channels;
+using Deucalion.Api.Models;
 using Deucalion.Api.Options;
 using Deucalion.Application;
 using Deucalion.Application.Configuration;
@@ -29,14 +30,21 @@ internal class EngineBackgroundService(
         _internalCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var internalToken = _internalCts.Token;
 
+        var channel = Channel.CreateUnbounded<MonitorEventBase>();
+        var engine = new Engine();
+
         // Start the monitoring engine in the background
-        _ = Task.Run(() => // Removed async from lambda, Run likely expects Action
+        _ = Task.Run(() =>
         {
-            var engine = new Engine();
-            // Pass a lambda that calls the async callback method
-            // Engine.Run itself is likely synchronous or fire-and-forget within Task.Run
-            engine.Run(_monitors.Monitors.Values, async e => await CallbackAsync(e, internalToken), internalToken);
-        }, internalToken); // Pass internalToken to Task.Run
+            try
+            {
+                engine.Run(_monitors.Monitors.Values, channel.Writer, internalToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Graceful shutdown for producer
+            }
+        }, internalToken);
 
         // Start the periodic purge timer
         _purgeTimer = new Timer(
@@ -46,8 +54,18 @@ internal class EngineBackgroundService(
             _options.PurgeInterval // Interval from configuration
         );
 
-        // Keep the service running until cancellation is requested
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        // Consume events from the channel
+        try
+        {
+            await foreach (var evt in channel.Reader.ReadAllAsync(stoppingToken))
+            {
+                await CallbackAsync(evt, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Graceful shutdown for consumer
+        }
     }
 
     private async void PurgeDatabaseCallback(object? state)

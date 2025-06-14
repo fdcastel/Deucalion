@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Threading.Channels;
 using Deucalion.Application;
 using Deucalion.Events;
 using Deucalion.Network.Monitors;
@@ -13,7 +14,7 @@ public class EngineTests(ITestOutputHelper output)
     private readonly ITestOutputHelper _output = output;
 
     [Fact]
-    public void Engine_ReceiveEventsFromPushMonitors()
+    public async Task Engine_ReceiveEventsFromPushMonitors()
     {
         const string CheckedInEvent = "CheckedIn";
         const string CheckInMissedEvent = "CheckInMissed";
@@ -27,21 +28,10 @@ public class EngineTests(ITestOutputHelper output)
         using CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
 
         var eventCount = new ConcurrentDictionary<string, int>();
+        var events = new List<MonitorEventBase>();
+        var channel = Channel.CreateUnbounded<MonitorEventBase>();
 
-        void MonitorCallback(MonitorEventBase monitorEvent)
-        {
-            _output.WriteLine(monitorEvent.ToString());
-
-            var eventType = monitorEvent switch
-            {
-                MonitorChecked mr => mr.Response is null ? CheckInMissedEvent : CheckedInEvent,
-                MonitorStateChanged => MonitorStateChangedEvent,
-                _ => string.Empty
-            };
-            eventCount.AddOrUpdate(eventType, 1, (k, v) => Interlocked.Increment(ref v));
-        }
-
-        Task.Run(async () =>
+        var checkInTask = Task.Run(async () =>
         {
             var start = DateTimeOffset.UtcNow;
 
@@ -63,7 +53,22 @@ public class EngineTests(ITestOutputHelper output)
         {
             using CancellationTokenSource cts = new(pulse * 4.5);
             var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
-            engine.Run(monitors, MonitorCallback, cts.Token);
+            var engineTask = Task.Run(() => engine.Run(monitors, channel.Writer, cts.Token));
+
+            await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))
+            {
+                _output.WriteLine(monitorEvent.ToString());
+                events.Add(monitorEvent);
+                var eventType = monitorEvent switch
+                {
+                    MonitorChecked mr => mr.Response is null ? CheckInMissedEvent : CheckedInEvent,
+                    MonitorStateChanged => MonitorStateChangedEvent,
+                    _ => string.Empty
+                };
+                eventCount.AddOrUpdate(eventType, 1, (k, v) => Interlocked.Increment(ref v));
+            }
+            await engineTask;
+            await checkInTask;
         }
         catch (OperationCanceledException)
         {
@@ -76,7 +81,7 @@ public class EngineTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Engine_QueryPullMonitors()
+    public async Task Engine_QueryPullMonitors()
     {
         var pulse = TimeSpan.FromMilliseconds(500);
 
@@ -99,12 +104,8 @@ public class EngineTests(ITestOutputHelper output)
         { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
 
         var eventCount = new ConcurrentDictionary<Type, int>();
-
-        void MonitorCallback(MonitorEventBase monitorEvent)
-        {
-            _output.WriteLine(monitorEvent.ToString());
-            eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
-        }
+        var events = new List<MonitorEventBase>();
+        var channel = Channel.CreateUnbounded<MonitorEventBase>();
 
         try
         {
@@ -113,7 +114,15 @@ public class EngineTests(ITestOutputHelper output)
 
             using CancellationTokenSource cts = new(pulse * 4.5);
             var monitors = new List<Deucalion.Monitors.Monitor>() { m1, m2 };
-            engine.Run(monitors, MonitorCallback, cts.Token);
+            var engineTask = Task.Run(() => engine.Run(monitors, channel.Writer, cts.Token));
+
+            await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))
+            {
+                _output.WriteLine(monitorEvent.ToString());
+                events.Add(monitorEvent);
+                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+            }
+            await engineTask;
         }
         catch (OperationCanceledException)
         {
@@ -125,7 +134,7 @@ public class EngineTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Engine_QueryPullMonitors_WithDifferentIntervalWhenDown()
+    public async Task Engine_QueryPullMonitors_WithDifferentIntervalWhenDown()
     {
         var pulse = TimeSpan.FromMilliseconds(500);
 
@@ -140,12 +149,8 @@ public class EngineTests(ITestOutputHelper output)
         { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5 };
 
         var eventCount = new ConcurrentDictionary<Type, int>();
-
-        void MonitorCallback(MonitorEventBase monitorEvent)
-        {
-            _output.WriteLine(monitorEvent.ToString());
-            eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
-        }
+        var events = new List<MonitorEventBase>();
+        var channel = Channel.CreateUnbounded<MonitorEventBase>();
 
         try
         {
@@ -153,7 +158,15 @@ public class EngineTests(ITestOutputHelper output)
 
             using CancellationTokenSource cts = new(pulse * 7.5);
             var monitors = new List<Deucalion.Monitors.Monitor>() { m1 };
-            engine.Run(monitors, MonitorCallback, cts.Token);
+            var engineTask = Task.Run(() => engine.Run(monitors, channel.Writer, cts.Token));
+
+            await foreach (var monitorEvent in channel.Reader.ReadAllAsync(cts.Token))
+            {
+                _output.WriteLine(monitorEvent.ToString());
+                events.Add(monitorEvent);
+                eventCount.AddOrUpdate(monitorEvent.GetType(), 1, (k, v) => Interlocked.Increment(ref v));
+            }
+            await engineTask;
         }
         catch (OperationCanceledException)
         {

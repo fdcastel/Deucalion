@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Threading.Channels;
 using Deucalion.Events;
 using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
@@ -7,7 +8,7 @@ namespace Deucalion.Application;
 
 public class Engine
 {
-    public void Run(IEnumerable<Monitors.Monitor> monitors, Action<MonitorEventBase> callback, CancellationToken stopToken)
+    public void Run(IEnumerable<Monitors.Monitor> monitors, ChannelWriter<MonitorEventBase> writer, CancellationToken stopToken)
     {
         var start = DateTimeOffset.UtcNow;
 
@@ -38,6 +39,7 @@ public class Engine
             {
                 status.QueryTimer?.Dispose();
             }
+            writer.TryComplete();
         }
 
         void PushMonitorCheckedIn(object? sender, EventArgs args)
@@ -118,13 +120,13 @@ public class Engine
 
                 // Notify response
                 var effectiveResponse = monitorResponse is null ? null : monitorResponse with { State = effectiveState };
-                callback(new MonitorChecked(name, at, effectiveResponse));
+                writer.TryWrite(new MonitorChecked(name, at, effectiveResponse));
 
                 var hasStateChanged = status.LastKnownState != MonitorState.Unknown && status.LastKnownState != effectiveState;
                 if (hasStateChanged)
                 {
                     // Notify change
-                    callback(new MonitorStateChanged(name, at, effectiveState));
+                    writer.TryWrite(new MonitorStateChanged(name, at, effectiveState));
 
                     if (monitor is PullMonitor pullMonitor)
                     {
