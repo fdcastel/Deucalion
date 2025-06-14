@@ -19,8 +19,8 @@ public class EngineTests(ITestOutputHelper output)
         var pulse = TimeSpan.FromMilliseconds(500);
         CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1 };
         CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
-        var events = new List<MonitorEventBase>();
-        var channel = Channel.CreateUnbounded<MonitorEventBase>();
+        var events = new List<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<IMonitorEvent>();
         var checkInTask = Task.Run(async () =>
         {
             await Task.Delay(pulse / 2);
@@ -70,8 +70,8 @@ public class EngineTests(ITestOutputHelper output)
             (MonitorState.Up, pulse)
             )
         { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
-        var events = new List<MonitorEventBase>();
-        var channel = Channel.CreateUnbounded<MonitorEventBase>();
+        var events = new List<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<IMonitorEvent>();
         using CancellationTokenSource cts = new(pulse * 4.5);
         IEnumerable<PullMonitor> monitors = [m1, m2];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
@@ -102,8 +102,8 @@ public class EngineTests(ITestOutputHelper output)
             (MonitorState.Up, pulse)
             )
         { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5 };
-        var events = new List<MonitorEventBase>();
-        var channel = Channel.CreateUnbounded<MonitorEventBase>();
+        var events = new List<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<IMonitorEvent>();
         using CancellationTokenSource cts = new(pulse * 7.5);
         IEnumerable<PullMonitor> monitors = [m1];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));
@@ -126,8 +126,8 @@ public class EngineTests(ITestOutputHelper output)
     {
         var pulse = TimeSpan.FromMilliseconds(100);
         CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.5 };
-        var events = new List<MonitorEventBase>();
-        var channel = Channel.CreateUnbounded<MonitorEventBase>();
+        var events = new List<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<IMonitorEvent>();
         using CancellationTokenSource cts = new(pulse * 3.5);
         IEnumerable<PullMonitor> monitors = [m1];
         var engineTask = Task.Run(async () => await monitors.RunAllAsync(channel.Writer, cts.Token));

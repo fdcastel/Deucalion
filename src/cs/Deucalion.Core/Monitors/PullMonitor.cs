@@ -1,4 +1,7 @@
-﻿namespace Deucalion.Monitors;
+﻿using System.Threading.Channels;
+using Deucalion.Events;
+
+namespace Deucalion.Monitors;
 
 public abstract class PullMonitor
 {
@@ -24,7 +27,7 @@ public abstract class PullMonitor
 
     public abstract Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default);
 
-    public async Task RunMonitorLoopAsync(System.Threading.Channels.ChannelWriter<Deucalion.Events.MonitorEventBase> writer, CancellationToken stopToken)
+    public async Task RunMonitorLoopAsync(ChannelWriter<IMonitorEvent> writer, CancellationToken stopToken)
     {
         do
         {
@@ -76,7 +79,7 @@ public abstract class PullMonitor
 
             // Notify response
             var effectiveResponse = response is null ? null : response with { State = effectiveState };
-            writer.TryWrite(new Deucalion.Events.MonitorChecked(name, queryStartTime, effectiveResponse)); // Use eventTime
+            writer.TryWrite(new MonitorChecked(name, queryStartTime, effectiveResponse)); // Use eventTime
 
             // Send MonitorStateChanged only if the state actually changed from a known different state, or from Unknown.
             var actualStateHasChanged = LastKnownState != effectiveState && LastKnownState == MonitorState.Unknown || // From Unknown to something else
@@ -85,7 +88,7 @@ public abstract class PullMonitor
             if (actualStateHasChanged)
             {
                 // Notify change
-                writer.TryWrite(new Deucalion.Events.MonitorStateChanged(name, queryStartTime, effectiveState)); // Use eventTime
+                writer.TryWrite(new MonitorStateChanged(name, queryStartTime, effectiveState)); // Use eventTime
             }
 
             LastKnownState = effectiveState;

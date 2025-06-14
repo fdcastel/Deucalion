@@ -31,7 +31,7 @@ internal class EngineBackgroundService(
         _internalCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var internalToken = _internalCts.Token;
 
-        var channel = Channel.CreateUnbounded<MonitorEventBase>();
+        var channel = Channel.CreateUnbounded<IMonitorEvent>();
 
         // Start the monitoring engine in the background (now as extension method)
         _engineTask = Task.Run(async () =>
