@@ -5,11 +5,11 @@ namespace Deucalion.Tests.Mocks;
 internal class PullMonitorMock(params (MonitorState, TimeSpan)[] timeline) : PullMonitor
 {
     public (MonitorState State, TimeSpan Duration)[] Timeline { get; } = timeline; // Duration is now illustrative, not directly used by mock's timing
-    private int _queryCount = -1; // Start at -1 so first call is index 0
+    private int _queryCount = 0;
 
     public override Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
-        int currentQueryIndex = Interlocked.Increment(ref _queryCount);
+        var currentQueryIndex = _queryCount++;
         MonitorState stateToReturn;
 
         if (currentQueryIndex < Timeline.Length)
