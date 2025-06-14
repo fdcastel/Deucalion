@@ -32,6 +32,7 @@ Simply create a configuration file, start the service, and you're done.
 - .NET 9 SDK (for development and building)
 - PowerShell (for build scripts)
 - [Invoke-Build](https://github.com/nightroman/Invoke-Build) (for build automation)
+- [GitVersion](https://gitversion.net/)
 
 # Usage
 

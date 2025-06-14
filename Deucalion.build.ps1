@@ -10,8 +10,11 @@ $InformationalVersion = '0.0.0-dev'
 
 # synopsis: Determine version using GitVersion.
 task Version {
-    $versionJson = gitversion | ConvertFrom-Json
-
+    $command = Get-Command dotnet-gitversion -ErrorAction SilentlyContinue
+    if (-not $command) {
+        throw "GitVersion is not installed. Please install it using:`n`ndotnet tool install --global GitVersion.Tool"
+    }
+    $versionJson = dotnet gitversion | ConvertFrom-Json
     $script:BuildVersion = $versionJson.SemVer
     $script:InformationalVersion = $versionJson.InformationalVersion
 
