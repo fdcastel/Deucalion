@@ -48,6 +48,8 @@ public class DnsMonitor : PullMonitor
         try
         {
             var result = await lookup.QueryAsync(Host, RecordType, cancellationToken: cancellationToken);
+
+            // Freezes stopwatch.Elapsed
             stopwatch.Stop();
 
             return result.HasError
@@ -58,12 +60,10 @@ public class DnsMonitor : PullMonitor
         }
         catch (DnsResponseException e)
         {
-            stopwatch.Stop(); // Ensure stopwatch is stopped in case of exception
             return MonitorResponse.Down(stopwatch.Elapsed, e.Message);
         }
         catch (OperationCanceledException)
         {
-            stopwatch.Stop();
             return MonitorResponse.Down(stopwatch.Elapsed, "Timeout (cancelled)");
         }
     }

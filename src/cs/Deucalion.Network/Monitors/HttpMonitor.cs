@@ -51,6 +51,9 @@ public class HttpMonitor : PullMonitor
 
             using var response = await httpClient.SendAsync(request, completionOption, timeoutCts.Token);
 
+            // Freezes stopwatch.Elapsed
+            stopwatch.Stop();
+
             var statusCode = ExpectedStatusCode ?? HttpStatusCode.OK;
             if (response.StatusCode != statusCode)
             {
@@ -80,10 +83,6 @@ public class HttpMonitor : PullMonitor
         {
             // Catch only if the cancellation was due to the timeout -- https://stackoverflow.com/a/67203842
             return MonitorResponse.Down(stopwatch.Elapsed, "Timeout");
-        }
-        finally
-        {
-            stopwatch.Stop();
         }
     }
 }

@@ -32,9 +32,5 @@ public class TcpMonitor : PullMonitor
             // Catch only if the cancellation was due to the timeout -- https://stackoverflow.com/a/67203842
             return MonitorResponse.Down(Timeout, "Timeout");
         }
-        finally
-        {
-            stopwatch.Stop();
-        }
     }
 }

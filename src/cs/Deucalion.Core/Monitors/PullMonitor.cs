@@ -33,7 +33,6 @@ public abstract class PullMonitor
             var queryStartTime = DateTimeOffset.UtcNow;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var response = await QueryAsync(stopToken);
-            stopwatch.Stop();
 
             if (response.ResponseTime is null)
             {
