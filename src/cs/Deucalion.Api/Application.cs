@@ -56,6 +56,7 @@ public static class Application
         var storage = new SqliteStorage(deucalionOptions.StoragePath);
         builder.Services.AddSingleton(_ => storage);
         builder.Services.AddHostedService<EngineBackgroundService>();
+        builder.Services.AddHostedService<PurgeBackgroundService>();
 
         return builder;
     }

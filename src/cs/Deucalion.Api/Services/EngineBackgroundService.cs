@@ -24,7 +24,6 @@ internal class EngineBackgroundService(
     private readonly ILogger<EngineBackgroundService> _logger = logger;
     private CancellationTokenSource? _internalCts;
     private Task? _engineTask;
-    private Task? _purgeTask;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -47,23 +46,6 @@ internal class EngineBackgroundService(
             finally
             {
                 channel.Writer.TryComplete();
-            }
-        }, internalToken);
-
-        // Start the periodic purge using PeriodicTimer
-        _purgeTask = Task.Run(async () =>
-        {
-            using var purgeTimer = new PeriodicTimer(_options.PurgeInterval);
-            try
-            {
-                while (await purgeTimer.WaitForNextTickAsync(internalToken))
-                {
-                    await PurgeDatabaseAsync(internalToken);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Graceful shutdown for purge
             }
         }, internalToken);
 
@@ -98,7 +80,7 @@ internal class EngineBackgroundService(
             // Graceful shutdown for consumer
         }
 
-        await Task.WhenAll(_engineTask, _purgeTask);
+        if (_engineTask != null) await _engineTask;
     }
 
     private async Task HandleMonitorCheckedAsync(MonitorChecked mc, CancellationToken cancellationToken)
@@ -124,28 +106,6 @@ internal class EngineBackgroundService(
         await _hubContext.Clients.All.MonitorStateChanged(MonitorStateChangedDto.From(msc));
     }
 
-    private async Task PurgeDatabaseAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            _logger.LogInformation("Starting periodic database purge (Retention: {RetentionPeriod})...", _options.EventRetentionPeriod);
-            var deletedCount = await _storage.PurgeOldEventsAsync(_options.EventRetentionPeriod, cancellationToken);
-            _logger.LogInformation("Database purge completed. Deleted {DeletedCount} old events.", deletedCount);
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("Database purge operation was cancelled.");
-        }
-        catch (Exception ex)
-        {
-            // Avoid logging error if cancellation was requested during the operation
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                _logger.LogError(ex, "Error occurred during periodic database purge.");
-            }
-        }
-    }
-
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping EngineBackgroundService.");
@@ -155,7 +115,6 @@ internal class EngineBackgroundService(
 
         // Await background tasks
         if (_engineTask != null) await _engineTask;
-        if (_purgeTask != null) await _purgeTask;
 
         await base.StopAsync(cancellationToken);
     }
