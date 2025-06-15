@@ -8,6 +8,7 @@ public sealed class CheckInMonitor : PullMonitor
 
     private DateTimeOffset? _lastCheckInTime;
     private MonitorResponse? _lastResponse;
+    private CancellationTokenSource? _delayCts;
 
     public string Secret { get; set; } = string.Empty;
     public TimeSpan IntervalToDown { get; set; } = DefaultIntervalToDown;
@@ -16,9 +17,7 @@ public sealed class CheckInMonitor : PullMonitor
     {
         _lastCheckInTime = DateTimeOffset.UtcNow;
         _lastResponse = response ?? MonitorResponse.Up();
-
-        // TODO: Add a short circuit mechanism to pull monitor logic to instantly update the monitor state
-        // without waiting for the next scheduled query.
+        _delayCts?.Cancel(); // Short-circuit the polling delay
     }
 
     public override Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
@@ -30,5 +29,11 @@ public sealed class CheckInMonitor : PullMonitor
             return Task.FromResult(MonitorResponse.Down());
 
         return Task.FromResult(_lastResponse ?? MonitorResponse.Up());
+    }
+
+    public CancellationTokenSource? DelayCts
+    {
+        get => _delayCts;
+        set => _delayCts = value;
     }
 }

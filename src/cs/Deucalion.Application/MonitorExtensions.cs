@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Deucalion.Events;
 using Deucalion.Monitors;
+using Deucalion.Network.Monitors;
 
 namespace Deucalion.Application;
 
@@ -27,10 +28,8 @@ public static class MonitorExtensions
     {
         var lastKnownState = MonitorState.Unknown;
         var consecutiveFailCount = 0;
-        do
+        while (!stopToken.IsCancellationRequested)
         {
-            if (stopToken.IsCancellationRequested) break;
-
             var queryStartTime = DateTimeOffset.UtcNow;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var response = await monitor.QueryAsync(stopToken);
@@ -72,9 +71,7 @@ public static class MonitorExtensions
             var effectiveResponse = response is null ? null : response with { State = effectiveState };
             writer.TryWrite(new MonitorChecked(name, queryStartTime, effectiveResponse));
 
-            var actualStateHasChanged = lastKnownState != effectiveState && lastKnownState == MonitorState.Unknown ||
-                                        lastKnownState != MonitorState.Unknown && lastKnownState != effectiveState;
-
+            var actualStateHasChanged = lastKnownState != effectiveState;
             if (actualStateHasChanged)
             {
                 writer.TryWrite(new MonitorStateChanged(name, queryStartTime, effectiveState));
@@ -84,19 +81,27 @@ public static class MonitorExtensions
 
             if (stopToken.IsCancellationRequested) break;
 
-            TimeSpan delayInterval = (lastKnownState == MonitorState.Up || lastKnownState == MonitorState.Unknown)
+            var delayInterval = (lastKnownState == MonitorState.Up || lastKnownState == MonitorState.Unknown)
                 ? monitor.IntervalWhenUp
                 : monitor.IntervalWhenDown;
 
             try
             {
-                await Task.Delay(delayInterval, stopToken);
+                if (monitor is CheckInMonitor checkInMonitor)
+                {
+                    // Support short-circuit for CheckInMonitor
+                    checkInMonitor.DelayCts = new CancellationTokenSource();
+                    await Task.Delay(delayInterval, CancellationTokenSource.CreateLinkedTokenSource(stopToken, checkInMonitor.DelayCts.Token).Token);
+                }
+                else
+                {
+                    await Task.Delay(delayInterval, stopToken);
+                }
             }
             catch (OperationCanceledException)
             {
-                break;
+                // Exit delay early if cancelled
             }
         }
-        while (!stopToken.IsCancellationRequested);
     }
 }
