@@ -1,6 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@source "../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-monitor-unknown: #A0AEC0;
+  --color-monitor-down: #F56565;
+  --color-monitor-up: #48BB78;
+  --color-monitor-warn: #ECC94B;
+  --color-monitor-degraded: #C6F6D5;
+  --color-flash-light: #DBEAFE;
+  --color-flash-dark: #1E3A8A;
+}
 
 /* Tailwind will set html, body classes based on theme,
      but initial background is set in index.html <style> for FOUC prevention */

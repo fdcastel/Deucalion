@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from "vite";
 
 // https://vitejs.dev/config/
@@ -7,6 +8,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   plugins: [
+    tailwindcss(),
     react(),
     {
       // Removes pure annotations from SignalR -- https://github.com/dotnet/aspnetcore/issues/55286#issuecomment-2557288741

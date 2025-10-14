@@ -23,7 +23,7 @@
     </script>
     <style>
       /* Basic reset and full height for initial load */
-      html, body {
+      html, body, #root {
         height: 100%;
         margin: 0;
         padding: 0;
@@ -58,9 +58,11 @@
       }
     </style>
   </head>
-  <body id="root">
-    <div id="static-loader">
-      <img id="static-loader-img" src="/assets/deucalion-icon.svg" alt="Loading..." />
+  <body>
+    <div id="root">
+      <div id="static-loader">
+        <img id="static-loader-img" src="/assets/deucalion-icon.svg" alt="Loading..." />
+      </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
