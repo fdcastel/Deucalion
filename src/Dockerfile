@@ -1,7 +1,7 @@
 # Reference: https://github.com/dotnet/dotnet-docker/blob/main/samples/aspnetapp/Dockerfile
 
 # build image for .net
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build-net
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build-net
 ARG TARGETARCH
 ARG VERSION=0.0.0-dev
 ARG INFORMATIONAL_VERSION=0.0.0-dev
@@ -40,7 +40,7 @@ ENV VITE_INFORMATIONAL_VERSION=$INFORMATIONAL_VERSION
 RUN npm run build
 
 # final image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 ARG VERSION=0.0.0-dev
 ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /app
