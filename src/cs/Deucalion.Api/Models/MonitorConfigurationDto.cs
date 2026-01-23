@@ -6,14 +6,16 @@ namespace Deucalion.Api.Models;
 internal record MonitorConfigurationDto(
     string? Group,
     string? Href,
-    string? Image
+    string? Image,
+    string[]? Tags
 )
 {
     internal static MonitorConfigurationDto From(PullMonitorConfiguration c) =>
         new(
             Group: c.Group,
             Href: ExtractHref(c),
-            Image: c.Image
+            Image: c.Image,
+            Tags: c.Tags
         );
 
     private static string? ExtractHref(PullMonitorConfiguration monitor)

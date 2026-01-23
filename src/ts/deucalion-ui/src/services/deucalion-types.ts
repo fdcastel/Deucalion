@@ -12,6 +12,7 @@ export interface MonitorConfigurationDto {
   group?: string;
   href?: string;
   image?: string;
+  tags?: string[];
 }
 
 export interface MonitorStatsDto {

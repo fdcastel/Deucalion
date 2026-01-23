@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MonitorState, MonitorProps } from "../../services";
 import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
-import { Tooltip } from "@heroui/react";
+import { Tooltip, Chip } from "@heroui/react";
 
 interface MonitorComponentProps {
   monitor: MonitorProps;
@@ -30,23 +30,34 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
           {config.image ? <img src={config.image} className="icon-size-8 mr-2 min-w-8" alt="icon" /> : <span className="icon-size-8 mr-2 inline-block" />}
         </span>
       )}
-      <Tooltip content={lastSeenAt} showArrow={true} isDisabled={!lastSeenAt} placement="bottom-start">
-        <span className={`min-w-[6em] truncate md:min-w-[8em] ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
-          {config.href ? (
-            <a
-              href={config.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : undefined}
-            >
-              {name}
-            </a>
-          ) : (
-            name
-          )}
-        </span>
-      </Tooltip>
-      <span className="flex-1" />
+      <div className="flex items-center gap-2">
+        <Tooltip content={lastSeenAt} showArrow={true} isDisabled={!lastSeenAt} placement="bottom-start">
+          <span className={`${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
+            {config.href ? (
+              <a
+                href={config.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : undefined}
+              >
+                {name}
+              </a>
+            ) : (
+              name
+            )}
+          </span>
+        </Tooltip>
+        {config.tags && config.tags.length > 0 && (
+          <div className="hidden gap-1 lg:flex">
+            {config.tags.map((tag) => (
+              <Chip key={tag} size="sm" variant="flat" className="h-5 text-xs">
+                {tag}
+              </Chip>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex-1" />
       <div className="flex items-center overflow-x-hidden">
         <div className="mr-1 flex flex-row-reverse items-center justify-start overflow-x-hidden">
           {events.map((e) => (

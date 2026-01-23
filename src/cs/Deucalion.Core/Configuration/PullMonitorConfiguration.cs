@@ -6,6 +6,7 @@ public record PullMonitorConfiguration
     public string? Group { get; set; }
     public string? Href { get; set; }
     public string? Image { get; set; }
+    public string[]? Tags { get; set; }
 
     public int? IgnoreFailCount { get; set; }
     public bool? UpsideDown { get; set; }

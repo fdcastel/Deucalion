@@ -10,6 +10,7 @@ monitors:
     recordType: A
     resolver: 1.1.1.1:53
     group: Cloudflare
+    tags: [ cf, dns ]
 
   http-cf: !http
     url: https://cloudflare.com
@@ -17,6 +18,7 @@ monitors:
     timeout: 00:00:02
     href: https://example.com
     group: Cloudflare
+    tags: [ cf ]
 
   # Google
   dns-goog: !dns
@@ -24,20 +26,24 @@ monitors:
     recordType: A
     resolver: 8.8.8.8:53
     group: Google
+    tags: [ goog, dns ]
 
   http-goog: !http
     url: https://google.com
     group: Google
+    tags: [ goog ]
 
   ping-goog: !ping
     host: google.com
     group: Google
+    tags: [ goog, ping ]
 
   # Microsoft
   ping-ms: !ping
     host: microsoft.com
     image: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/microsoft.svg
     group: Microsoft
+    tags: [ ping ]
 
   # Search engines
   qry-bing: !http
