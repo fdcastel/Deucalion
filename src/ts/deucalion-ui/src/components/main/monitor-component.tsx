@@ -32,7 +32,7 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
       )}
       <div className="flex items-center gap-2">
         <Tooltip content={lastSeenAt} showArrow={true} isDisabled={!lastSeenAt} placement="bottom-start">
-          <span className={`${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
+          <span className={`min-w-[6em] truncate md:min-w-[8em] ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
             {config.href ? (
               <a
                 href={config.href}
