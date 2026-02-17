@@ -20,14 +20,9 @@ public class SqliteStorage : IDisposable // Add IDisposable
         _dbFile = Path.Combine(dbPath, "deucalion.sqlite.db"); // Store the full path
         // Enable connection pooling (Cache=Shared) and WAL mode for better concurrency
         _connectionString = $"Data Source={_dbFile};Mode=ReadWriteCreate;Cache=Shared";
-
-        // Fire-and-forget initialization is generally discouraged,
-        // but acceptable here as it's part of constructor setup.
-        // Consider a separate async initialization method if more complex setup is needed.
-        _ = InitializeDatabaseAsync();
     }
 
-    private async Task InitializeDatabaseAsync(CancellationToken cancellationToken = default)
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);

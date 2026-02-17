@@ -1,9 +1,10 @@
 using Deucalion.Storage;
 using Microsoft.Data.Sqlite;
+using Xunit;
 
 namespace Deucalion.Tests.Storage;
 
-public abstract class SqliteStorageTestBase : IDisposable
+public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
 {
     protected readonly string StoragePath;
     protected readonly string DbFilePath;
@@ -17,6 +18,10 @@ public abstract class SqliteStorageTestBase : IDisposable
         DbFilePath = Path.Combine(StoragePath, "deucalion.sqlite.db"); // Construct the full path
         Storage = new SqliteStorage(StoragePath);
     }
+
+    public Task InitializeAsync() => Storage.InitializeAsync();
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     protected async Task<(long? LastSeenUpTicks, long? LastSeenDownTicks)> GetLastStateChangeTimestampsAsync(string monitorName)
     {
