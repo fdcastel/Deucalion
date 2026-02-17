@@ -1,16 +1,15 @@
 ﻿using Deucalion.Api.Options;
 using Deucalion.Storage;
-using Microsoft.Extensions.Options;
 
 namespace Deucalion.Api.Services;
 
 internal class PurgeBackgroundService(
     SqliteStorage storage,
-    IOptions<DeucalionOptions> options,
+    DeucalionOptions options,
     ILogger<PurgeBackgroundService> logger) : BackgroundService
 {
     private readonly SqliteStorage _storage = storage;
-    private readonly DeucalionOptions _options = options.Value;
+    private readonly DeucalionOptions _options = options;
     private readonly ILogger<PurgeBackgroundService> _logger = logger;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

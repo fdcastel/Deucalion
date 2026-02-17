@@ -6,7 +6,6 @@ using Deucalion.Application.Configuration;
 using Deucalion.Events;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
 
 namespace Deucalion.Api.Services;
 
@@ -14,13 +13,13 @@ internal class EngineBackgroundService(
     ApplicationMonitors monitors,
     SqliteStorage storage,
     IHubContext<MonitorHub, IMonitorHubClient> hubContext,
-    IOptions<DeucalionOptions> options,
+    DeucalionOptions options,
     ILogger<EngineBackgroundService> logger) : BackgroundService
 {
     private readonly ApplicationMonitors _monitors = monitors;
     private readonly SqliteStorage _storage = storage;
     private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext = hubContext;
-    private readonly DeucalionOptions _options = options.Value;
+    private readonly DeucalionOptions _options = options;
     private readonly ILogger<EngineBackgroundService> _logger = logger;
     private CancellationTokenSource? _internalCts;
     private Task? _engineTask;
