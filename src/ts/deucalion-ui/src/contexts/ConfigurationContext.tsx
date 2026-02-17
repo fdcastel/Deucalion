@@ -5,11 +5,13 @@ import { DeucalionOptions } from "../services";
 import { API_CONFIGURATION_URL, SWR_OPTIONS } from "../configuration";
 
 // Fetcher function specific to configuration
-export const configurationFetcher = (url: string) =>
-  fetch(url)
-    .then((response) => response.json())
-    .then((json) => json as DeucalionOptions | undefined)
-    .catch(() => undefined);
+export const configurationFetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch configuration: ${response.status} ${response.statusText}`);
+  }
+  return (await response.json()) as DeucalionOptions;
+};
 
 // Interface for the Configuration Context
 interface IConfigurationContext {

@@ -5,12 +5,14 @@ import { MonitorProps } from "../services";
 import { API_MONITORS_URL, SWR_OPTIONS } from "../configuration";
 
 // Fetcher function specific to monitors
-export const monitorsFetcher = (url: string) =>
-  fetch(url)
-    .then((response) => response.json())
-    .then((json) => json as MonitorProps[] | undefined)
-    .then((arr) => (arr ? new Map(arr.map((x) => [x.name, x])) : undefined))
-    .catch(() => undefined);
+export const monitorsFetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch monitors: ${response.status} ${response.statusText}`);
+  }
+  const json = (await response.json()) as MonitorProps[] | undefined;
+  return json ? new Map(json.map((x) => [x.name, x])) : undefined;
+};
 
 // Helper function to group monitors
 const groupMonitors = (monitors: Map<string, MonitorProps> | undefined): Map<string, MonitorProps[]> => {
