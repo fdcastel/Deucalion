@@ -54,8 +54,14 @@ public class HttpMonitor : PullMonitor
             // Freezes stopwatch.Elapsed
             stopwatch.Stop();
 
-            var statusCode = ExpectedStatusCode ?? HttpStatusCode.OK;
-            if (response.StatusCode != statusCode)
+            if (ExpectedStatusCode is not null)
+            {
+                if (response.StatusCode != ExpectedStatusCode)
+                {
+                    return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase ?? response.StatusCode.ToString());
+                }
+            }
+            else if (!response.IsSuccessStatusCode)
             {
                 return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase ?? response.StatusCode.ToString());
             }
