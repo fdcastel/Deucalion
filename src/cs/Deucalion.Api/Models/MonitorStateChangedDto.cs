@@ -4,14 +4,14 @@ namespace Deucalion.Api.Models;
 
 public record MonitorStateChangedDto(
     string N,
-    DateTimeOffset At,
+    long At,
     MonitorState St
 )
 {
     internal static MonitorStateChangedDto From(MonitorStateChanged msc) =>
         new(
             N: msc.Name,
-            At: msc.At,
+            At: msc.At.ToUnixTimeSeconds(),
             St: msc.NewState
         );
 };
