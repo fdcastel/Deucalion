@@ -24,15 +24,19 @@ export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected
   let onlineServicesCount = 0;
   let eventCount = 0;
   let totalAvailability = 0;
+  let monitorsWithStats = 0;
   for (const [, mp] of monitors) {
     const isOnline = mp.stats?.lastState === MonitorState.Up || mp.stats?.lastState === MonitorState.Warn;
     onlineServicesCount += isOnline ? 1 : 0;
     eventCount += mp.events.length;
-    totalAvailability += ((mp.stats?.availability ?? 0) * mp.events.length) / 100;
+    if (mp.stats?.availability !== undefined) {
+      totalAvailability += mp.stats.availability;
+      monitorsWithStats++;
+    }
     firstUpdateAt = mp.events[0]?.at ? Math.min(firstUpdateAt, mp.events[0].at) : firstUpdateAt;
     lastUpdateAt = mp.stats?.lastUpdate ? Math.max(lastUpdateAt, mp.stats.lastUpdate) : lastUpdateAt;
   }
-  totalAvailability = eventCount > 0 ? (100 * totalAvailability) / eventCount : 0;
+  totalAvailability = monitorsWithStats > 0 ? totalAvailability / monitorsWithStats : 0;
 
   useEffect(() => {
     document.title = onlineServicesCount === allServicesCount ? title : `(-${String(allServicesCount - onlineServicesCount)}) ${title}`;
