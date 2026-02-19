@@ -6,8 +6,7 @@ namespace Deucalion.Application.Yaml;
 
 internal class InterpolatedStringConverter : IYamlTypeConverter
 {
-    // Not thread-safe
-    internal static string LastKey = string.Empty;
+    private string _lastKey = string.Empty;
 
     public bool Accepts(Type type) =>
         type == typeof(string) ||
@@ -19,13 +18,13 @@ internal class InterpolatedStringConverter : IYamlTypeConverter
         {
             if (sc.IsKey)
             {
-                LastKey = sc.Value;
+                _lastKey = sc.Value;
                 return parser.Consume<Scalar>().Value;
             }
         }
 
         var raw = parser.Consume<Scalar>().Value;
-        var interpolated = raw.Replace("${MONITOR_NAME}", LastKey, StringComparison.InvariantCultureIgnoreCase);
+        var interpolated = raw.Replace("${MONITOR_NAME}", _lastKey, StringComparison.InvariantCultureIgnoreCase);
 
         return type == typeof(Uri)
             ? new Uri(interpolated)
