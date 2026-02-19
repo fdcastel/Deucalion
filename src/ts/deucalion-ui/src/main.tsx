@@ -5,6 +5,7 @@ import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 import { App } from "./components/app";
+import { ErrorBoundary } from "./components/error-boundary";
 
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
 import { MonitorsProvider } from "./contexts/MonitorsContext";
@@ -23,7 +24,9 @@ ReactDOM.createRoot(container).render(
         <ConfigurationProvider>
           <MonitorsProvider>
             <MonitorHubProvider>
-              <App />
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
             </MonitorHubProvider>
           </MonitorsProvider>
         </ConfigurationProvider>
