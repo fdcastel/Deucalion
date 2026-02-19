@@ -280,9 +280,8 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         {
             if (disposing)
             {
-                // Clear the connection pool associated with this specific database file.
-                // This is important for releasing file locks when Cache=Shared is used.
-                SqliteConnection.ClearAllPools();
+                using var connection = new SqliteConnection(_connectionString);
+                SqliteConnection.ClearPool(connection);
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
