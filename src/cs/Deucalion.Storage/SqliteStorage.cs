@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Deucalion.Storage;
 
-public class SqliteStorage : IDisposable // Add IDisposable
+public class SqliteStorage : IStorage, IDisposable // Add IDisposable
 {
     private const string EventsTableName = "Events";
     private const string MonitorStateChangesTableName = "MonitorStateChanges";

@@ -11,13 +11,13 @@ namespace Deucalion.Api.Services;
 
 internal class EngineBackgroundService(
     ApplicationMonitors monitors,
-    SqliteStorage storage,
+    IStorage storage,
     IHubContext<MonitorHub, IMonitorHubClient> hubContext,
     DeucalionOptions options,
     ILogger<EngineBackgroundService> logger) : BackgroundService
 {
     private readonly ApplicationMonitors _monitors = monitors;
-    private readonly SqliteStorage _storage = storage;
+    private readonly IStorage _storage = storage;
     private readonly IHubContext<MonitorHub, IMonitorHubClient> _hubContext = hubContext;
     private readonly DeucalionOptions _options = options;
     private readonly ILogger<EngineBackgroundService> _logger = logger;

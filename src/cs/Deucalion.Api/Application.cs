@@ -83,7 +83,7 @@ public static class Application
                 options.PageDescription
             }));
 
-        app.MapGet("/api/monitors/{monitorName?}", async (SqliteStorage storage, string? monitorName, CancellationToken cancellationToken) =>
+        app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, CancellationToken cancellationToken) =>
         {
             if (monitorName is null)
             {
@@ -145,7 +145,7 @@ public static class Application
         return app;
     }
 
-    private static async Task<MonitorDto> BuildMonitorDtoAsync(SqliteStorage storage, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
+    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
         new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),

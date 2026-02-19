@@ -4,11 +4,11 @@ using Deucalion.Storage;
 namespace Deucalion.Api.Services;
 
 internal class PurgeBackgroundService(
-    SqliteStorage storage,
+    IStorage storage,
     DeucalionOptions options,
     ILogger<PurgeBackgroundService> logger) : BackgroundService
 {
-    private readonly SqliteStorage _storage = storage;
+    private readonly IStorage _storage = storage;
     private readonly DeucalionOptions _options = options;
     private readonly ILogger<PurgeBackgroundService> _logger = logger;
 
