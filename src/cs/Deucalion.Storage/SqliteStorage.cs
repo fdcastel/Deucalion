@@ -61,45 +61,59 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        // Get the last seen state
-        using (var cmdLastSeen = connection.CreateCommand())
-        {
-            cmdLastSeen.CommandText = $"""
-                SELECT LastSeenUpTicks, LastSeenDownTicks
-                FROM {MonitorStateChangesTableName}
-                WHERE MonitorName = @MonitorName;
-            """;
-            cmdLastSeen.Parameters.AddWithValue("@MonitorName", monitorName);
-
-            using var readerLastSeen = await cmdLastSeen.ExecuteReaderAsync(cancellationToken);
-            if (await readerLastSeen.ReadAsync(cancellationToken))
-            {
-                var lastSeenUpTicks = readerLastSeen.IsDBNull(0) ? (long?)null : readerLastSeen.GetInt64(0);
-                var lastSeenDownTicks = readerLastSeen.IsDBNull(1) ? (long?)null : readerLastSeen.GetInt64(1);
-                if (lastSeenUpTicks.HasValue) lastSeenUp = new DateTimeOffset(lastSeenUpTicks.Value, TimeSpan.Zero);
-                if (lastSeenDownTicks.HasValue) lastSeenDown = new DateTimeOffset(lastSeenDownTicks.Value, TimeSpan.Zero);
-            }
-        }
-
-        // Get the latest event details
         long? lastEventTimestampTicks = null;
         MonitorState? lastEventState = null;
-        using (var cmdLastEvent = connection.CreateCommand())
-        {
-            cmdLastEvent.CommandText = $"""
-                SELECT TimestampTicks, State
-                FROM {EventsTableName}
-                WHERE MonitorName = @MonitorName
-                ORDER BY TimestampTicks DESC
-                LIMIT 1;
-            """;
-            cmdLastEvent.Parameters.AddWithValue("@MonitorName", monitorName);
+        double? averageResponseTimeTicks = null;
+        long relevantEventCount = 0;
+        long downEventCount = 0;
 
-            using var readerLastEvent = await cmdLastEvent.ExecuteReaderAsync(cancellationToken);
-            if (await readerLastEvent.ReadAsync(cancellationToken))
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = $"""
+                WITH LastSeen AS (
+                    SELECT LastSeenUpTicks, LastSeenDownTicks
+                    FROM {MonitorStateChangesTableName}
+                    WHERE MonitorName = @MonitorName
+                ),
+                LastEvent AS (
+                    SELECT TimestampTicks, State
+                    FROM {EventsTableName}
+                    WHERE MonitorName = @MonitorName
+                    ORDER BY TimestampTicks DESC
+                    LIMIT 1
+                ),
+                RecentEvents AS (
+                    SELECT State, ResponseTimeTicks
+                    FROM {EventsTableName}
+                    WHERE MonitorName = @MonitorName
+                    ORDER BY TimestampTicks DESC
+                    LIMIT @HistoryCount
+                )
+                SELECT
+                    (SELECT LastSeenUpTicks FROM LastSeen) AS LastSeenUpTicks,
+                    (SELECT LastSeenDownTicks FROM LastSeen) AS LastSeenDownTicks,
+                    (SELECT TimestampTicks FROM LastEvent) AS LastEventTimestampTicks,
+                    (SELECT State FROM LastEvent) AS LastEventState,
+                    (SELECT AVG(CAST(ResponseTimeTicks AS REAL)) FROM RecentEvents) AS AverageResponseTimeTicks,
+                    (SELECT COALESCE(SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}, {(int)MonitorState.Degraded}) THEN 1 ELSE 0 END), 0) FROM RecentEvents) AS RelevantEventCount,
+                    (SELECT COALESCE(SUM(CASE WHEN State = {(int)MonitorState.Down} THEN 1 ELSE 0 END), 0) FROM RecentEvents) AS DownEventCount;
+            """;
+            command.Parameters.AddWithValue("@MonitorName", monitorName);
+            command.Parameters.AddWithValue("@HistoryCount", historyCount);
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
             {
-                lastEventTimestampTicks = readerLastEvent.GetInt64(0);
-                lastEventState = (MonitorState)readerLastEvent.GetInt64(1);
+                var lastSeenUpTicks = reader.IsDBNull(0) ? (long?)null : reader.GetInt64(0);
+                var lastSeenDownTicks = reader.IsDBNull(1) ? (long?)null : reader.GetInt64(1);
+                if (lastSeenUpTicks.HasValue) lastSeenUp = new DateTimeOffset(lastSeenUpTicks.Value, TimeSpan.Zero);
+                if (lastSeenDownTicks.HasValue) lastSeenDown = new DateTimeOffset(lastSeenDownTicks.Value, TimeSpan.Zero);
+
+                lastEventTimestampTicks = reader.IsDBNull(2) ? (long?)null : reader.GetInt64(2);
+                lastEventState = reader.IsDBNull(3) ? (MonitorState?)null : (MonitorState)reader.GetInt64(3);
+                averageResponseTimeTicks = reader.IsDBNull(4) ? (double?)null : reader.GetDouble(4);
+                relevantEventCount = reader.IsDBNull(5) ? 0 : reader.GetInt64(5);
+                downEventCount = reader.IsDBNull(6) ? 0 : reader.GetInt64(6);
             }
         }
 
@@ -109,38 +123,6 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             return (lastSeenUp.HasValue || lastSeenDown.HasValue)
                 ? new MonitorStats(MonitorState.Unknown, DateTimeOffset.MinValue, 0, TimeSpan.Zero, lastSeenDown, lastSeenUp)
                 : null;
-        }
-
-        // Get the aggregate stats for recent events
-        double? averageResponseTimeTicks = null;
-        long relevantEventCount = 0;
-        long downEventCount = 0;
-        using (var cmdAggStats = connection.CreateCommand())
-        {
-            cmdAggStats.CommandText = $"""
-                WITH RecentEvents AS (
-                    SELECT State, ResponseTimeTicks
-                    FROM {EventsTableName}
-                    WHERE MonitorName = @MonitorName
-                    ORDER BY TimestampTicks DESC
-                    LIMIT @HistoryCount
-                )
-                SELECT
-                    AVG(CAST(ResponseTimeTicks AS REAL)) as AverageResponseTimeTicks, -- Cast needed for AVG with potential NULLs
-                    SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}, {(int)MonitorState.Degraded}) THEN 1 ELSE 0 END) as RelevantEventCount,
-                    SUM(CASE WHEN State = {(int)MonitorState.Down} THEN 1 ELSE 0 END) as DownEventCount
-                FROM RecentEvents;
-            """;
-            cmdAggStats.Parameters.AddWithValue("@MonitorName", monitorName);
-            cmdAggStats.Parameters.AddWithValue("@HistoryCount", historyCount);
-
-            using var readerAggStats = await cmdAggStats.ExecuteReaderAsync(cancellationToken);
-            if (await readerAggStats.ReadAsync(cancellationToken))
-            {
-                averageResponseTimeTicks = readerAggStats.IsDBNull(0) ? (double?)null : readerAggStats.GetDouble(0);
-                relevantEventCount = readerAggStats.GetInt64(1);
-                downEventCount = readerAggStats.GetInt64(2);
-            }
         }
 
         // Calculate final stats
