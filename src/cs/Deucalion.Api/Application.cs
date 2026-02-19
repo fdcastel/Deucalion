@@ -53,9 +53,12 @@ public static class Application
         builder.Services.AddSingleton(_ => applicationMonitors);
 
         // Application services
-        var storage = new SqliteStorage(deucalionOptions.StoragePath);
-        storage.InitializeAsync().GetAwaiter().GetResult();
-        builder.Services.AddSingleton(_ => storage);
+        builder.Services.AddSingleton<SqliteStorage>(sp =>
+        {
+            var options = sp.GetRequiredService<DeucalionOptions>();
+            return new SqliteStorage(options.StoragePath);
+        });
+        builder.Services.AddSingleton<IStorage>(sp => sp.GetRequiredService<SqliteStorage>());
         builder.Services.AddHostedService<EngineBackgroundService>();
         builder.Services.AddHostedService<PurgeBackgroundService>();
 
@@ -71,6 +74,8 @@ public static class Application
         app.UseCors(x => x.AllowAnyOrigin());
 
         app.UseResponseCompression();
+
+        app.Services.GetRequiredService<IStorage>().InitializeAsync().GetAwaiter().GetResult();
 
         var applicationConfiguration = app.Services.GetRequiredService<ApplicationConfiguration>();
         var applicationMonitors = app.Services.GetRequiredService<ApplicationMonitors>();
