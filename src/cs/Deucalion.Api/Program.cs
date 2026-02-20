@@ -5,3 +5,5 @@ WebApplication.CreateBuilder(args)
     .Build()
     .ConfigureApplication()
     .Run();
+
+public partial class Program;
