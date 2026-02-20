@@ -1,7 +1,8 @@
 import React, { useState, useLayoutEffect, useMemo, useRef } from "react";
 import { MonitorState, MonitorProps } from "../../services";
 import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
-import { Tooltip, Chip } from "@heroui/react";
+import { Tooltip } from "@heroui/tooltip";
+import { Chip } from "@heroui/chip";
 
 interface MonitorComponentProps {
   monitor: MonitorProps;

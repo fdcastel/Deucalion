@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr';
-import { addToast } from "@heroui/react";
+import { addToast } from "@heroui/toast";
 
 import { MonitorCheckedDto, MonitorEventDto, MonitorProps, MonitorStateChangedDto } from '../services';
 import { monitorStateToDescription, monitorStateToStatus } from '../services';

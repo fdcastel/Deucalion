@@ -55,10 +55,8 @@ vi.mock("@microsoft/signalr", () => ({
   },
 }));
 
-vi.mock("@heroui/react", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@heroui/react")>();
+vi.mock("@heroui/toast", () => {
   return {
-    ...original,
     addToast: vi.fn(),
   };
 });

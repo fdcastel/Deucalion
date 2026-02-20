@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
-import { Tooltip } from "@heroui/react";
+import { Tooltip } from "@heroui/tooltip";
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
 import deucalionIconDataUri from '/assets/deucalion-icon.svg?inline';
 
