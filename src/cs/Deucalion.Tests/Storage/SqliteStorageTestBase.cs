@@ -9,6 +9,7 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
     protected readonly string StoragePath;
     protected readonly string DbFilePath;
     protected readonly SqliteStorage Storage;
+    private readonly string _directConnectionString;
 
     protected SqliteStorageTestBase()
     {
@@ -16,6 +17,7 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
         StoragePath = Path.Combine(Path.GetTempPath(), $"Deucalion.Tests.SqliteStorage_{Guid.NewGuid()}");
         Directory.CreateDirectory(StoragePath);
         DbFilePath = Path.Combine(StoragePath, "deucalion.sqlite.db"); // Construct the full path
+        _directConnectionString = $"Data Source={DbFilePath};Pooling=False";
         Storage = new SqliteStorage(StoragePath);
     }
 
@@ -26,7 +28,7 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
     protected async Task<(long? LastSeenUpTicks, long? LastSeenDownTicks)> GetLastStateChangeTimestampsAsync(string monitorName)
     {
         // Use the known path to the test database file
-        using var connection = new SqliteConnection($"Data Source={DbFilePath}");
+        using var connection = new SqliteConnection(_directConnectionString);
         await connection.OpenAsync();
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -58,18 +60,28 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
             // Explicitly close and dispose the storage to release the file lock
             (Storage as IDisposable)?.Dispose();
 
-            // Attempt to delete the directory. Retry logic might be needed if file locks persist briefly.
-            try
+            const int maxAttempts = 5;
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                if (Directory.Exists(StoragePath))
+                try
                 {
-                    Directory.Delete(StoragePath, true);
+                    if (Directory.Exists(StoragePath))
+                    {
+                        Directory.Delete(StoragePath, true);
+                    }
+
+                    break;
                 }
-            }
-            catch (IOException ex)
-            {
-                // Log or handle the exception if deletion fails (e.g., file still locked)
-                Console.WriteLine($"Warning: Could not delete test directory {StoragePath}. {ex.Message}");
+                catch (IOException ex) when (attempt < maxAttempts)
+                {
+                    Console.WriteLine($"Retrying test directory cleanup for {StoragePath} (attempt {attempt}/{maxAttempts}): {ex.Message}");
+                    Thread.Sleep(50 * attempt);
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"Warning: Could not delete test directory {StoragePath}. {ex.Message}");
+                    break;
+                }
             }
         }
     }
