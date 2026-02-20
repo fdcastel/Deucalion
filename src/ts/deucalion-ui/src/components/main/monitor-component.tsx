@@ -83,7 +83,7 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
         )}
       </div>
       <div className="mr-1 flex min-w-0 flex-1 items-center overflow-x-hidden">
-        <div className="flex min-w-0 flex-row-reverse items-center justify-start overflow-x-hidden">
+        <div className="flex min-w-0 flex-1 flex-row-reverse items-center justify-start overflow-x-hidden">
           {events.map((e) => (
             <Tooltip key={e.at} content={formatMonitorEvent(e)} showArrow={true} placement="bottom">
               <span
