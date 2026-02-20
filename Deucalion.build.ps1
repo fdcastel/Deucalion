@@ -83,6 +83,7 @@ task Prod {
 # synopsis: Run test suite.
 task Test {
     exec { dotnet test }
+    exec { npm --prefix './src/ts/deucalion-ui' run test }
 }
 
 task . Build
