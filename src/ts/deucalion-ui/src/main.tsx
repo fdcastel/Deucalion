@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 
 import { HeroUIProvider } from "@heroui/system";
 import { ToastProvider } from "@heroui/toast";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 import { App } from "./components/app";
 import { ErrorBoundary } from "./components/error-boundary";
@@ -20,20 +19,18 @@ if (!container) throw new Error("Failed to find the root element");
 ReactDOM.createRoot(container).render(
   <React.StrictMode>
     <HeroUIProvider>
-      <NextThemesProvider attribute="class" enableSystem={true}>
-        <ToastProvider />
-        <ErrorBoundary>
-          <React.Suspense fallback={null}>
-            <ConfigurationProvider>
-              <MonitorsProvider>
-                <MonitorHubProvider>
-                  <App />
-                </MonitorHubProvider>
-              </MonitorsProvider>
-            </ConfigurationProvider>
-          </React.Suspense>
-        </ErrorBoundary>
-      </NextThemesProvider>
+      <ToastProvider />
+      <ErrorBoundary>
+        <React.Suspense fallback={null}>
+          <ConfigurationProvider>
+            <MonitorsProvider>
+              <MonitorHubProvider>
+                <App />
+              </MonitorHubProvider>
+            </MonitorsProvider>
+          </ConfigurationProvider>
+        </React.Suspense>
+      </ErrorBoundary>
     </HeroUIProvider>
   </React.StrictMode>
 );
