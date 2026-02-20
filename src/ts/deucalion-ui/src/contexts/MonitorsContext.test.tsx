@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,17 +32,19 @@ describe("MonitorsProvider", () => {
   });
 
   it("renders monitors and grouped monitor context values", async () => {
-    render(
-      <SWRConfig value={{ provider: () => new Map() }}>
-        <Suspense fallback={<div>loading</div>}>
-          <MonitorsProvider>
-            <MonitorsProbe />
-          </MonitorsProvider>
-        </Suspense>
-      </SWRConfig>
-    );
+    await act(async () => {
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <Suspense fallback={<div>loading</div>}>
+            <MonitorsProvider>
+              <MonitorsProbe />
+            </MonitorsProvider>
+          </Suspense>
+        </SWRConfig>
+      );
+    });
 
-    await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("2"));
+    expect(await screen.findByTestId("count")).toHaveTextContent("2");
     expect(screen.getByTestId("groups")).toHaveTextContent("1");
     expect(screen.getByTestId("using-images")).toHaveTextContent("yes");
   });

@@ -21,15 +21,17 @@ ReactDOM.createRoot(container).render(
     <HeroUIProvider>
       <NextThemesProvider attribute="class" enableSystem={true}>
         <ToastProvider />
-        <ConfigurationProvider>
-          <MonitorsProvider>
-            <MonitorHubProvider>
-              <ErrorBoundary>
-                <App />
-              </ErrorBoundary>
-            </MonitorHubProvider>
-          </MonitorsProvider>
-        </ConfigurationProvider>
+        <ErrorBoundary>
+          <React.Suspense fallback={null}>
+            <ConfigurationProvider>
+              <MonitorsProvider>
+                <MonitorHubProvider>
+                  <App />
+                </MonitorHubProvider>
+              </MonitorsProvider>
+            </ConfigurationProvider>
+          </React.Suspense>
+        </ErrorBoundary>
       </NextThemesProvider>
     </HeroUIProvider>
   </React.StrictMode>

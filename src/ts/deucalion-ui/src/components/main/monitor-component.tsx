@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useLayoutEffect, useMemo, useRef } from "react";
 import { MonitorState, MonitorProps } from "../../services";
 import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
 import { Tooltip, Chip } from "@heroui/react";
@@ -12,27 +12,52 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
   const { name, config, stats, events } = monitor;
   const lastState = stats?.lastState ?? MonitorState.Unknown;
   const [isFlashing, setIsFlashing] = useState(false);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestEventAt = useMemo(() => (events.length > 0 ? events[0].at : null), [events]);
+  const previousEventAtRef = useRef<number | null>(latestEventAt);
 
-  useEffect(() => {
-    if (events.length > 0) {
-      setIsFlashing(true);
-      const timer = setTimeout(() => setIsFlashing(false), 500);
-      return () => clearTimeout(timer);
+  useLayoutEffect(() => {
+    if (!latestEventAt) {
+      previousEventAtRef.current = latestEventAt;
+      return;
     }
-  }, [events]);
+
+    if (latestEventAt !== previousEventAtRef.current) {
+      if (flashTimeoutRef.current) {
+        clearTimeout(flashTimeoutRef.current);
+      }
+
+      setIsFlashing(true);
+      flashTimeoutRef.current = setTimeout(() => {
+        setIsFlashing(false);
+        flashTimeoutRef.current = null;
+      }, 500);
+    }
+
+    previousEventAtRef.current = latestEventAt;
+
+    return () => {
+      if (flashTimeoutRef.current) {
+        clearTimeout(flashTimeoutRef.current);
+        flashTimeoutRef.current = null;
+      }
+    };
+  }, [latestEventAt]);
 
   const lastSeenAt = formatLastSeen(lastState, monitor.stats);
 
   return (
-    <div className={`flex items-center transition-colors duration-500 ${isFlashing ? "bg-flash-light dark:bg-flash-dark" : ""} my-1 h-10 rounded-md px-2`}>
+    <div
+      className={`flex items-center transition-colors ${isFlashing ? "duration-75 bg-flash-light dark:bg-flash-dark" : "duration-500"} my-1 h-10 rounded-md px-2`}
+    >
       {usingImages && (
         <span className="hidden md:inline-block">
           {config.image ? <img src={config.image} className="icon-size-8 mr-2 min-w-8" alt="icon" /> : <span className="icon-size-8 mr-2 inline-block" />}
         </span>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex w-[7.5rem] min-w-0 items-center gap-2 sm:w-[9rem] md:w-[11rem] lg:w-[14rem]">
         <Tooltip content={lastSeenAt} showArrow={true} isDisabled={!lastSeenAt} placement="bottom-start">
-          <span className={`min-w-[6em] truncate md:min-w-[8em] ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
+          <span className={`truncate ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
             {config.href ? (
               <a
                 href={config.href}
@@ -57,9 +82,8 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
           </div>
         )}
       </div>
-      <div className="flex-1" />
-      <div className="flex items-center overflow-x-hidden">
-        <div className="mr-1 flex flex-row-reverse items-center justify-start overflow-x-hidden">
+      <div className="mr-1 flex min-w-0 flex-1 items-center overflow-x-hidden">
+        <div className="flex min-w-0 flex-row-reverse items-center justify-start overflow-x-hidden">
           {events.map((e) => (
             <Tooltip key={e.at} content={formatMonitorEvent(e)} showArrow={true} placement="bottom">
               <span

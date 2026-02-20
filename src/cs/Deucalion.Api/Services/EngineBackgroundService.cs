@@ -68,6 +68,10 @@ internal class EngineBackgroundService(
                             break;
                     }
                 }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Event handling canceled during shutdown for {EventType}.", evt.GetType().Name);
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error handling event of type {EventType}.", evt.GetType().Name);

@@ -71,7 +71,10 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
     // --- Event Handlers ---
     const handleMonitorChecked = (e: MonitorCheckedDto) => {
       logger.log("[onMonitorChecked]", e);
-      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), { revalidate: false });
+      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), {
+        revalidate: false,
+        populateCache: true,
+      });
     };
 
     const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
