@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build && vite build --emptyOutDir",
+    "build:analyze": "tsc --build && vite build --mode analyze --emptyOutDir",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest run"
@@ -38,6 +39,7 @@
     "jsdom": "^28.1.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "rollup-plugin-visualizer": "^7.0.0",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.53.1",
