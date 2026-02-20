@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Deucalion.Tests.Network;
 
+[Trait("Category", "Integration")]
 public class TcpMonitorTests
 {
     [Fact]
