@@ -1,0 +1,58 @@
+import eslint from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
+import pluginReactRefresh from "eslint-plugin-react-refresh";
+
+export default tseslint.config(
+  {
+    // Global ignores
+    ignores: ["dist/**", "eslint.config.ts", "vite.config.ts", "vite.config.d.ts"],
+  },
+  // Base recommended configurations
+  eslint.configs.recommended,
+  ...tseslint.configs.strictTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        project: ["./tsconfig.json", "./tsconfig.node.json"],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // Configuration for React files (TSX)
+    files: ["src/**/*.tsx"],
+    plugins: {
+      react: pluginReact,
+      "react-hooks": pluginReactHooks,
+      "react-refresh": pluginReactRefresh,
+    },
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.es2020,
+      },
+    },
+    rules: {
+      ...pluginReact.configs.recommended.rules,
+      ...pluginReact.configs["jsx-runtime"].rules, // Enable new JSX transform
+      ...pluginReactHooks.configs.recommended.rules,
+
+      // Turn off the rule causing warnings for context files
+      "react-refresh/only-export-components": "off", 
+    },
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
+  },
+  // Turning off rules that require type checking for non-type-checked files
+  {
+    files: ["dist/**", "eslint.config.ts"],
+    extends: [tseslint.configs.disableTypeChecked],
+  }
+);
