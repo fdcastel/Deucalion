@@ -1,4 +1,4 @@
-import { heroui } from "@heroui/react";
+import { heroui } from "@heroui/theme";
 import { monitorThemeColors, monitorStateSafelist } from "./monitor-theme.js";
 
 export default {
@@ -10,5 +10,5 @@ export default {
     },
   },
   safelist: monitorStateSafelist,
-  plugins: [heroui()],
+  plugins: [heroui({ addCommonColors: false })],
 }
