@@ -11,7 +11,24 @@ export default defineConfig(({ mode }) => {
 
   return {
     build: {
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 200, // Enforce strict budget: warn on chunks > 200 KB
+      rollupOptions: {
+        output: {
+          // Attempt early code-splitting of vendor + app logic
+          manualChunks(id: string) {
+            // Isolate HeroUI/Toast to separate chunks for lazy loading
+            if (id.includes('node_modules/@heroui')) {
+              return 'heroui-vendor';
+            }
+            if (id.includes('node_modules/@microsoft/signalr')) {
+              return 'signalr-vendor';
+            }
+            if (id.includes('node_modules/react') && !id.includes('node_modules/@')) {
+              return 'react-vendor';
+            }
+          }
+        }
+      }
     },
     plugins: [
       tailwindcss(),

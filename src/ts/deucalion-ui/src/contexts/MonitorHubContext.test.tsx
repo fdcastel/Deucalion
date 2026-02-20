@@ -153,7 +153,9 @@ describe("MonitorHubProvider", () => {
     monitorChanged?.({ n: "api", at: 10, st: MonitorState.Down });
 
     expect(testDoubles.mockedMutateMonitors).toHaveBeenCalled();
-    expect(testDoubles.addToastMock).toHaveBeenCalled();
+    
+    // addToast is now lazy-loaded and async, so wait for it to be called
+    await waitFor(() => expect(testDoubles.addToastMock).toHaveBeenCalled());
 
     unmount();
 

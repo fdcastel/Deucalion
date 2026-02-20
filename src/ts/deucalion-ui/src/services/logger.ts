@@ -12,6 +12,10 @@ export const warn = (...data: unknown[]): void => {
   writeLog("warn", ...data);
 };
 
+export const error = (...data: unknown[]): void => {
+  writeLog("error", ...data);
+};
+
 export const disableLogger = (): void => {
   writeLog = () => {
     /*NOP*/

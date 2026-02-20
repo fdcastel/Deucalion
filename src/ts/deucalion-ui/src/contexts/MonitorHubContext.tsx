@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr';
-import { addToast } from "@heroui/toast";
 
 import { MonitorCheckedDto, MonitorEventDto, MonitorProps, MonitorStateChangedDto } from '../services';
 import { monitorStateToDescription, monitorStateToStatus } from '../services';
@@ -8,6 +7,17 @@ import { logger } from '../services';
 
 import { API_HUB_URL } from '../configuration';
 import { useMonitors } from './MonitorsContext';
+
+// Lazy-loaded toast function only when notifications are needed
+let addToastLazy: ((props: any) => void) | null = null;
+
+const getAddToastFunction = async () => {
+  if (!addToastLazy) {
+    const { addToast } = await import("@heroui/toast");
+    addToastLazy = addToast;
+  }
+  return addToastLazy;
+};
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: MonitorCheckedDto) => {
   const monitorName = event.n;
@@ -80,10 +90,15 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
     const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
       logger.log("[MonitorStateChanged]", e);
       const status = monitorStateToStatus(e.st);
-      addToast({
-        title: e.n,
-        description: monitorStateToDescription(e.st),
-        color: monitorStateToToastColor(status),
+      // Lazy-load toast only when state changes (not on initial connection)
+      getAddToastFunction().then((toast) => {
+        toast({
+          title: e.n,
+          description: monitorStateToDescription(e.st),
+          color: monitorStateToToastColor(status),
+        });
+      }).catch((err) => {
+        logger.error("Failed to toast state change", err);
       });
     };
 
