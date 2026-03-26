@@ -11,6 +11,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\tmp\YamlDotNet\YamlDotNet.Analyzers.StaticGenerator\YamlDotNet.Analyzers.StaticGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Deucalion.Core\Deucalion.Core.csproj" />
     <ProjectReference Include="..\Deucalion.Network\Deucalion.Network.csproj" />
   </ItemGroup>

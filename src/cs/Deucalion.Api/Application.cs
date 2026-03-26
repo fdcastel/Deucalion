@@ -20,12 +20,17 @@ public static class Application
         // Json
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
         {
-            // Ignore nulls -- https://stackoverflow.com/a/60005662/33244
+            options.SerializerOptions.TypeInfoResolverChain.Insert(0, DeucalionJsonContext.Default);
             options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
         });
 
         // SignalR
-        builder.Services.AddSignalR();
+        builder.Services.AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.TypeInfoResolverChain.Insert(0, DeucalionJsonContext.Default);
+                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
+            });
 
         // CORS
         builder.Services.AddCors();
@@ -93,11 +98,7 @@ public static class Application
 
         // Setup Api endpoints
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
-            Results.Ok(new
-            {
-                options.PageTitle,
-                options.PageDescription
-            }));
+            Results.Ok(new PageConfigurationDto(options.PageTitle, options.PageDescription)));
 
         app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, CancellationToken cancellationToken) =>
         {

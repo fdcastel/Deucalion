@@ -10,6 +10,8 @@
     
     <!-- Ignore errors about duplicate "appsettings.json" files in publish folder. Source: https://stackoverflow.com/a/69919694-->      
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>

@@ -6,8 +6,10 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Deucalion.Application.Configuration;
 
+[YamlSerializable]
 public record ApplicationConfiguration
 {
+    [YamlSerializable]
     public record ConfigurationDefaults : PullMonitorConfiguration
     {
         public TimeSpan? IntervalToDown { get; set; }
@@ -31,7 +33,7 @@ public record ApplicationConfiguration
 
     public ConfigurationDefaults? Defaults { get; set; }
 
-    public required OrderedDictionary<string, PullMonitorConfiguration> Monitors { get; set; }
+    public Dictionary<string, PullMonitorConfiguration> Monitors { get; set; } = null!;
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {
@@ -57,7 +59,8 @@ public record ApplicationConfiguration
 
     public static ApplicationConfiguration ReadFromString(string content)
     {
-        var deserializer = new DeserializerBuilder()
+        var yamlContext = new DeucalionYamlContext();
+        var deserializer = new StaticDeserializerBuilder(yamlContext)
             .IgnoreUnmatchedProperties()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .WithTagMapping("!checkin", typeof(CheckInMonitorConfiguration))
@@ -67,6 +70,8 @@ public record ApplicationConfiguration
             .WithTagMapping("!tcp", typeof(TcpMonitorConfiguration))
             .WithTypeConverter(new InterpolatedStringConverter())
             .WithTypeConverter(new HttpMethodConverter())
+            .WithTypeConverter(new TimeSpanConverter())
+            .WithTypeConverter(new IPEndPointConverter())
             .WithValidation()
             .Build();
 

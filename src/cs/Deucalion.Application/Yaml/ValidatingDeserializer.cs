@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
@@ -14,6 +15,7 @@ internal class ValidationDeserializer(INodeDeserializer nodeDeserializer) : INod
 {
     private readonly INodeDeserializer _nodeDeserializer = nodeDeserializer;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "All validated types are preserved by YamlDotNet source generator.")]
     public bool Deserialize(
         IParser parser,
         Type expectedType,
