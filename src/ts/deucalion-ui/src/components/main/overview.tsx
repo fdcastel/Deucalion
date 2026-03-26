@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
 
@@ -14,27 +14,27 @@ interface OverviewProps {
 }
 
 export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected, isConnecting, connectionError }) => {
-  const allServicesCount = monitors.size;
-
-  let firstUpdateAt = Number.MAX_VALUE;
-  let lastUpdateAt = 0;
-
-  let onlineServicesCount = 0;
-  let eventCount = 0;
-  let totalAvailability = 0;
-  let monitorsWithStats = 0;
-  for (const [, mp] of monitors) {
-    const isOnline = mp.stats?.lastState === MonitorState.Up || mp.stats?.lastState === MonitorState.Warn;
-    onlineServicesCount += isOnline ? 1 : 0;
-    eventCount += mp.events.length;
-    if (mp.stats?.availability !== undefined) {
-      totalAvailability += mp.stats.availability;
-      monitorsWithStats++;
+  const { allServicesCount, onlineServicesCount, eventCount, totalAvailability, firstUpdateAt, lastUpdateAt } = useMemo(() => {
+    let firstUpdateAt = Number.MAX_VALUE;
+    let lastUpdateAt = 0;
+    let onlineServicesCount = 0;
+    let eventCount = 0;
+    let totalAvailability = 0;
+    let monitorsWithStats = 0;
+    for (const [, mp] of monitors) {
+      const isOnline = mp.stats?.lastState === MonitorState.Up || mp.stats?.lastState === MonitorState.Warn;
+      onlineServicesCount += isOnline ? 1 : 0;
+      eventCount += mp.events.length;
+      if (mp.stats?.availability !== undefined) {
+        totalAvailability += mp.stats.availability;
+        monitorsWithStats++;
+      }
+      firstUpdateAt = mp.events[0]?.at ? Math.min(firstUpdateAt, mp.events[0].at) : firstUpdateAt;
+      lastUpdateAt = mp.stats?.lastUpdate ? Math.max(lastUpdateAt, mp.stats.lastUpdate) : lastUpdateAt;
     }
-    firstUpdateAt = mp.events[0]?.at ? Math.min(firstUpdateAt, mp.events[0].at) : firstUpdateAt;
-    lastUpdateAt = mp.stats?.lastUpdate ? Math.max(lastUpdateAt, mp.stats.lastUpdate) : lastUpdateAt;
-  }
-  totalAvailability = monitorsWithStats > 0 ? totalAvailability / monitorsWithStats : 0;
+    totalAvailability = monitorsWithStats > 0 ? totalAvailability / monitorsWithStats : 0;
+    return { allServicesCount: monitors.size, onlineServicesCount, eventCount, totalAvailability, firstUpdateAt, lastUpdateAt };
+  }, [monitors]);
 
   useEffect(() => {
     document.title = onlineServicesCount === allServicesCount ? title : `(-${String(allServicesCount - onlineServicesCount)}) ${title}`;
