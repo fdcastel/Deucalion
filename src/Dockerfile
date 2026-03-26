@@ -1,11 +1,14 @@
 # Reference: https://github.com/dotnet/dotnet-docker/blob/main/samples/aspnetapp/Dockerfile
 
 # build image for .net
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build-net
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-net
 ARG TARGETARCH
 ARG VERSION=0.0.0-dev
 ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /source
+
+# Install native AOT prerequisites
+RUN apt-get update && apt-get install -y clang zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
 COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
 COPY cs/Deucalion.Application/*.csproj ./Deucalion.Application/
@@ -14,7 +17,12 @@ COPY cs/Deucalion.Network/*.csproj ./Deucalion.Network/
 COPY cs/Deucalion.Storage/*.csproj ./Deucalion.Storage/
 COPY cs/Deucalion.Service/*.csproj ./Deucalion.Service/
 
-RUN dotnet restore Deucalion.Service -a $TARGETARCH
+RUN --mount=type=secret,id=github_token \
+    dotnet nuget add source https://nuget.pkg.github.com/fdcastel/index.json \
+        --name github-fdcastel --username fdcastel \
+        --password "$(cat /run/secrets/github_token)" \
+        --store-password-in-clear-text && \
+    dotnet restore Deucalion.Service -a $TARGETARCH
 
 COPY cs/ .
 WORKDIR /source/Deucalion.Service

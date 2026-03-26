@@ -85,5 +85,7 @@ jobs:
         build-args: |
           VERSION=${{ steps.gitversion.outputs.semVer }}
           INFORMATIONAL_VERSION=${{ steps.gitversion.outputs.informationalVersion }}
+        secrets: |
+          github_token=${{ secrets.GITHUB_TOKEN }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
