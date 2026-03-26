@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
-import { Tooltip } from "@heroui/tooltip";
+import { Tooltip } from "@heroui/react";
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
 import deucalionIconDataUri from '/assets/deucalion-icon.svg?inline';
 
@@ -74,19 +74,29 @@ export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected
           <StatCardFooter blur={firstUpdateAt === Number.MAX_VALUE}>From {dateTimeFromNow(firstUpdateAt, true)}</StatCardFooter>
         </StatCard>
         <StatCard title="Updated" className="hidden md:block" blur={lastUpdateAt === 0}>
-          <Tooltip content={dateTimeToString(lastUpdateAt)} showArrow={true} placement="left">
-            <span className="text-2xl font-semibold">{dateTimeFromNow(lastUpdateAt)}</span>
+          <Tooltip delay={0}>
+            <Tooltip.Trigger>
+              <span className="text-2xl font-semibold">{dateTimeFromNow(lastUpdateAt)}</span>
+            </Tooltip.Trigger>
+            <Tooltip.Content showArrow placement="left">
+              {dateTimeToString(lastUpdateAt)}
+            </Tooltip.Content>
           </Tooltip>
           <StatCardFooter>
-            <Tooltip content={connectionError?.message} showArrow={true} isDisabled={!connectionError?.message} placement="bottom-end">
-              <span className={isConnected ? "text-monitor-up" : "text-monitor-down"}>
-                {isConnected ? (
-                  <MdArrowUpward className="icon-size-5 mr-1 inline align-middle" />
-                ) : (
-                  <MdArrowDownward className="icon-size-5 mr-1 inline align-middle" />
-                )}
-                {connectionStatusText}
-              </span>
+            <Tooltip delay={0} isDisabled={!connectionError?.message}>
+              <Tooltip.Trigger>
+                <span className={isConnected ? "text-monitor-up" : "text-monitor-down"}>
+                  {isConnected ? (
+                    <MdArrowUpward className="icon-size-5 mr-1 inline align-middle" />
+                  ) : (
+                    <MdArrowDownward className="icon-size-5 mr-1 inline align-middle" />
+                  )}
+                  {connectionStatusText}
+                </span>
+              </Tooltip.Trigger>
+              <Tooltip.Content showArrow placement="bottom-end">
+                {connectionError?.message}
+              </Tooltip.Content>
             </Tooltip>
           </StatCardFooter>
         </StatCard>

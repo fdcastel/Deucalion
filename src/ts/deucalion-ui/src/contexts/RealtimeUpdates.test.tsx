@@ -55,9 +55,9 @@ vi.mock("@microsoft/signalr", () => ({
   },
 }));
 
-vi.mock("@heroui/toast", () => {
+vi.mock("@heroui/react", () => {
   return {
-    addToast: vi.fn(),
+    toast: vi.fn(),
   };
 });
 

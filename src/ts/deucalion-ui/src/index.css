@@ -1,8 +1,6 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 @config "../tailwind.config.js";
-@source "../node_modules/@heroui/theme/dist/components/tooltip.*";
-@source "../node_modules/@heroui/theme/dist/components/chip.*";
-@source "../node_modules/@heroui/theme/dist/components/toast.*";
 @custom-variant dark (&:is(.dark *));
 
 @theme {

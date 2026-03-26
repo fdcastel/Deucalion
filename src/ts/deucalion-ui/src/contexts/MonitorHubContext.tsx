@@ -9,14 +9,14 @@ import { API_HUB_URL } from '../configuration';
 import { useMonitors } from './MonitorsContext';
 
 // Lazy-loaded toast function only when notifications are needed
-let addToastLazy: ((props: any) => void) | null = null;
+let toastFnLazy: ((title: any, options?: any) => void) | null = null;
 
-const getAddToastFunction = async () => {
-  if (!addToastLazy) {
-    const { addToast } = await import("@heroui/toast");
-    addToastLazy = addToast;
+const getToastFunction = async () => {
+  if (!toastFnLazy) {
+    const { toast } = await import("@heroui/react");
+    toastFnLazy = toast;
   }
-  return addToastLazy;
+  return toastFnLazy;
 };
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: MonitorCheckedDto) => {
@@ -91,11 +91,10 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       logger.log("[MonitorStateChanged]", e);
       const status = monitorStateToStatus(e.st);
       // Lazy-load toast only when state changes (not on initial connection)
-      getAddToastFunction().then((toast) => {
-        toast({
-          title: e.n,
+      getToastFunction().then((toastFn) => {
+        toastFn(e.n, {
           description: monitorStateToDescription(e.st),
-          color: monitorStateToToastColor(status),
+          variant: monitorStateToToastVariant(status),
         });
       }).catch((err) => {
         logger.error("Failed to toast state change", err);
@@ -180,7 +179,7 @@ export const useMonitorHubContext = (): IMonitorHubFacade => {
   return context;
 };
 
-function monitorStateToToastColor(status: string): "success" | "warning" | "danger" | "default" {
+function monitorStateToToastVariant(status: string): "success" | "warning" | "danger" | "default" {
   switch (status) {
     case "success":
       return "success";

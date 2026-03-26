@@ -1,8 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import { HeroUIProvider } from "@heroui/system";
-import { ToastProvider } from "@heroui/toast";
+import { Toast } from "@heroui/react";
 
 import { App } from "./components/app";
 import { ErrorBoundary } from "./components/error-boundary";
@@ -18,8 +17,8 @@ if (!container) throw new Error("Failed to find the root element");
 
 ReactDOM.createRoot(container).render(
   <React.StrictMode>
-    <HeroUIProvider>
-      <ToastProvider />
+    <>
+      <Toast.Provider placement="bottom end" />
       <ErrorBoundary>
         <React.Suspense fallback={null}>
           <ConfigurationProvider>
@@ -31,6 +30,6 @@ ReactDOM.createRoot(container).render(
           </ConfigurationProvider>
         </React.Suspense>
       </ErrorBoundary>
-    </HeroUIProvider>
+    </>
   </React.StrictMode>
 );

@@ -54,8 +54,8 @@ vi.mock("@microsoft/signalr", () => ({
   },
 }));
 
-vi.mock("@heroui/toast", () => ({
-  addToast: testDoubles.addToastMock,
+vi.mock("@heroui/react", () => ({
+  toast: testDoubles.addToastMock,
 }));
 
 vi.mock("./MonitorsContext", () => ({
