@@ -20,6 +20,8 @@ public record ApplicationConfiguration
 
     public static class Messages
     {
+        public const string ConfigurationFileNotFound = "Configuration file '{0}' not found.";
+        public const string ConfigurationFileParseError = "Error parsing configuration file '{0}': {1}";
         public const string ConfigurationMustNotBeEmpty = "Configuration file must not be empty.";
         public const string ConfigurationMustHaveMonitorsSection = "Configuration file must have a 'monitors' section.";
 
@@ -32,8 +34,24 @@ public record ApplicationConfiguration
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {
+        if (!File.Exists(configurationFile))
+        {
+            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileNotFound, configurationFile));
+        }
+
         var content = File.ReadAllText(configurationFile);
-        return ReadFromString(content);
+        try
+        {
+            return ReadFromString(content);
+        }
+        catch (ConfigurationErrorException)
+        {
+            throw;
+        }
+        catch (YamlDotNet.Core.YamlException ex)
+        {
+            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileParseError, configurationFile, ex.Message), ex);
+        }
     }
 
     public static ApplicationConfiguration ReadFromString(string content)

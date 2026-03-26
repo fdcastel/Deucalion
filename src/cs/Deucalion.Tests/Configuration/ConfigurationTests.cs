@@ -268,6 +268,32 @@ public class ConfigurationTests
         Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
     }
 
+    [Fact]
+    public void ReadFromFile_MissingFile_ThrowsWithFriendlyMessage()
+    {
+        var missingFile = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}.yaml");
+
+        var exception = Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromFile(missingFile));
+        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationFileNotFound, missingFile), exception.Message);
+    }
+
+    [Fact]
+    public void ReadFromFile_MalformedYaml_ThrowsWithFriendlyMessage()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"malformed-{Guid.NewGuid()}.yaml");
+        try
+        {
+            File.WriteAllText(tempFile, "monitors:\n  m1: !http\n    url: [invalid");
+
+            var exception = Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromFile(tempFile));
+            Assert.StartsWith(string.Format(ApplicationConfiguration.Messages.ConfigurationFileParseError, tempFile, "").TrimEnd(), exception.Message);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
     private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>
         Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
 
