@@ -1,19 +1,20 @@
-﻿using Deucalion.Storage;
+﻿using System.Text.Json.Serialization;
+using Deucalion.Storage;
 
 namespace Deucalion.Api.Models;
 
 internal record MonitorEventDto(
-    long At,
-    MonitorState St,
-    int? Ms,
-    string? Te
+    [property: JsonPropertyName("at")] long Timestamp,
+    [property: JsonPropertyName("st")] MonitorState State,
+    [property: JsonPropertyName("ms")] int? ResponseTimeMs,
+    [property: JsonPropertyName("te")] string? ResponseText
 )
 {
     internal static MonitorEventDto From(StoredEvent e) =>
         new(
-            At: e.At.ToUnixTimeSeconds(),
-            St: e.State,
-            Ms: (int?)e.ResponseTime?.TotalMilliseconds,
-            Te: e.ResponseText
+            Timestamp: e.At.ToUnixTimeSeconds(),
+            State: e.State,
+            ResponseTimeMs: (int?)e.ResponseTime?.TotalMilliseconds,
+            ResponseText: e.ResponseText
         );
 };
