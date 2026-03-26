@@ -1,6 +1,5 @@
 ﻿using System.Web;
 using Deucalion.Api.Options;
-using Microsoft.AspNetCore.Http.Features;
 
 namespace Deucalion.Service;
 
@@ -34,41 +33,48 @@ internal static class WebApplicationExtensions
 
     /// <summary>
     /// Serve 'index.html' replacing SEO elements with values from app configuration.
+    /// The processed result is cached at startup since PageTitle and PageDescription don't change at runtime.
     /// </summary>
     internal static WebApplication UseIndexPage(this WebApplication app)
     {
-        app.Use(async (context, next) =>
+        // Build the processed index.html content once at startup
+        var cachedContent = BuildIndexContent(app);
+
+        if (cachedContent is not null)
         {
-            if (context.Request.Path == "/")
+            app.Use(async (context, next) =>
             {
-                // Workaround for "Synchronous operations are disallowed" error in Linux. (!?)
-                //   -- https://stackoverflow.com/a/67632199/33244
-                var syncIOFeature = context.Features.Get<IHttpBodyControlFeature>();
-                if (syncIOFeature != null)
+                if (context.Request.Path == "/")
                 {
-                    syncIOFeature.AllowSynchronousIO = true;
-                }
-
-                var indexFile = app.Environment.WebRootFileProvider.GetFileInfo("/index.html").PhysicalPath;
-                if (indexFile is not null)
-                {
-                    var options = app.Services.GetRequiredService<DeucalionOptions>();
-                    var htmlTitle = HttpUtility.HtmlEncode(options.PageTitle);
-                    var htmlDescription = HttpUtility.HtmlEncode(options.PageDescription);
-
-                    var indexContent = await File.ReadAllTextAsync(indexFile);
-                    var newContent = indexContent
-                        .Replace("<!-- $DEUCALION__PAGETITLE -->", $"<title>{htmlTitle}</title>")
-                        .Replace("<!-- $DEUCALION__PAGEDESCRIPTION -->", $"<meta name=\"description\" content=\"{htmlDescription}\">");
-
-                    using var bodyWriter = new StreamWriter(context.Response.Body);
-                    await bodyWriter.WriteAsync(newContent);
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(cachedContent);
                     return;
                 }
-            }
 
-            await next();
-        });
+                await next();
+            });
+        }
+
+        return app;
+    }
+
+    private static string? BuildIndexContent(WebApplication app)
+    {
+        var indexFile = app.Environment.WebRootFileProvider.GetFileInfo("/index.html").PhysicalPath;
+        if (indexFile is null)
+        {
+            return null;
+        }
+
+        var options = app.Services.GetRequiredService<DeucalionOptions>();
+        var htmlTitle = HttpUtility.HtmlEncode(options.PageTitle);
+        var htmlDescription = HttpUtility.HtmlEncode(options.PageDescription);
+
+        var indexContent = File.ReadAllText(indexFile);
+        return indexContent
+            .Replace("<!-- $DEUCALION__PAGETITLE -->", $"<title>{htmlTitle}</title>")
+            .Replace("<!-- $DEUCALION__PAGEDESCRIPTION -->", $"<meta name=\"description\" content=\"{htmlDescription}\">");
+    }
 
         return app;
     }
