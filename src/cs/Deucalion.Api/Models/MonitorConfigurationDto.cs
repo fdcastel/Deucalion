@@ -27,7 +27,7 @@ internal record MonitorConfigurationDto(
 
         if (string.IsNullOrWhiteSpace(monitor.Href))
         {
-            return string.Empty;
+            return null;
         }
 
         return monitor.Href;

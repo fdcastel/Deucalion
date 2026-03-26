@@ -87,6 +87,13 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         var checkInMonitor = payload.EnumerateArray().Single(x => x.GetProperty("name").GetString() == "checkin-main");
         Assert.True(checkInMonitor.TryGetProperty("stats", out var stats));
         Assert.Equal((int)MonitorState.Up, stats.GetProperty("lastState").GetInt32());
+
+        // Verify href null handling: checkin monitor has no href, so the field should be omitted (not empty string)
+        Assert.False(checkInMonitor.GetProperty("config").TryGetProperty("href", out _), "Non-HTTP monitor with no href should omit 'href' rather than return empty string");
+
+        // Verify href auto-derivation: HTTP monitor without explicit href should use URL
+        var httpMonitor = payload.EnumerateArray().Single(x => x.GetProperty("name").GetString() == "web-main");
+        Assert.Equal("https://example.com/", httpMonitor.GetProperty("config").GetProperty("href").GetString());
     }
 
     [Fact]
