@@ -1,4 +1,3 @@
-import { EMPTY_MONITORS } from "../services";
 import { Overview, MonitorList } from "./main";
 
 import { logger } from "../services";
@@ -24,11 +23,14 @@ export const App = () => {
   const { monitorsData, groupedMonitorsData, usingImages } = useMonitors();
   const { isConnected, isConnecting, connectionError } = useMonitorHubContext();
 
+  // Don't render until initial data is loaded (avoids flash of default values).
+  if (!configurationData || !monitorsData) return null;
+
   return (
     <main className="container mx-auto max-w-6xl flex-grow p-2">
       <Overview
-        title={configurationData?.pageTitle ?? "Deucalion Status"}
-        monitors={monitorsData ?? EMPTY_MONITORS}
+        title={configurationData.pageTitle ?? "Deucalion Status"}
+        monitors={monitorsData}
         isConnected={isConnected}
         isConnecting={isConnecting}
         connectionError={connectionError}
