@@ -73,7 +73,7 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
     const connection = new HubConnectionBuilder()
       .withUrl(API_HUB_URL)
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
+      .configureLogging(LogLevel.None)
       .build();
 
     setHubConnectionState(HubConnectionState.Connecting);
@@ -106,19 +106,19 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
 
     // --- Connection Lifecycle Handlers ---
     connection.onclose((error: Error | undefined) => {
-      logger.warn("Connection closed", error);
+      logger.log("Connection closed", error);
       setHubConnectionState(HubConnectionState.Disconnected);
       setHubConnectionError(error ?? null);
     });
 
     connection.onreconnecting((error: Error | undefined) => {
-      logger.warn("Connection reconnecting", error);
+      logger.log("Connection reconnecting", error);
       setHubConnectionState(HubConnectionState.Reconnecting);
       setHubConnectionError(error ?? null);
     });
 
     connection.onreconnected((connectionId?: string) => {
-      logger.warn("Connection reconnected", connectionId);
+      logger.log("Connection reconnected", connectionId);
       setHubConnectionState(HubConnectionState.Connected);
       setHubConnectionError(null);
     });
@@ -127,12 +127,12 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
     connection
       .start()
       .then(() => {
-        logger.warn("Connection started");
+        logger.log("Connection started");
         setHubConnectionState(HubConnectionState.Connected);
         setHubConnectionError(null);
       })
       .catch((err: unknown) => {
-        logger.warn("Error starting connection:", err);
+        logger.log("Error starting connection:", err);
         setHubConnectionState(HubConnectionState.Disconnected);
         if (err instanceof Error) {
           setHubConnectionError(err);
@@ -144,17 +144,17 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
 
     // --- Cleanup on unmount ---
     return () => {
-      logger.warn("Stopping connection...");
+      logger.log("Stopping connection...");
       connection.off("MonitorChecked", handleMonitorChecked);
       connection.off("MonitorStateChanged", handleMonitorStateChanged);
       connection
         .stop()
         .then(() => { 
-          logger.warn("Connection stopped"); 
+          logger.log("Connection stopped"); 
           setHubConnectionState(HubConnectionState.Disconnected);
         })
         .catch((err: unknown) => { 
-          logger.warn("Error stopping connection:", err); 
+          logger.error("Error stopping connection:", err); 
         });
     };
   }, [mutateMonitors]);

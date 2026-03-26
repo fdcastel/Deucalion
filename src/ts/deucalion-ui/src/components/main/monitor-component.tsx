@@ -2,6 +2,7 @@ import React, { useState, useLayoutEffect, useMemo, useRef } from "react";
 import { MonitorState, MonitorProps } from "../../services";
 import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
 import { Tooltip, Chip } from "@heroui/react";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 interface MonitorComponentProps {
   monitor: MonitorProps;
@@ -44,6 +45,7 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
     };
   }, [latestEventAt]);
 
+  const isMdScreen = useMediaQuery("(min-width: 768px)");
   const lastSeenAt = formatLastSeen(lastState, monitor.stats);
 
   return (
@@ -58,22 +60,22 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
       <div className="flex w-[7.5rem] min-w-0 items-center gap-2 sm:w-[9rem] md:w-[11rem] lg:w-[14rem]">
         <Tooltip delay={0} isDisabled={!lastSeenAt}>
           <Tooltip.Trigger>
-            <span className={`truncate ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
-              {config.href ? (
-                <a
-                  href={config.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : undefined}
-                >
-                  {name}
-                </a>
-              ) : (
-                name
-              )}
-            </span>
+            {config.href ? (
+              <a
+                href={config.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`truncate ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}
+              >
+                {name}
+              </a>
+            ) : (
+              <button type="button" className={`truncate text-left ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
+                {name}
+              </button>
+            )}
           </Tooltip.Trigger>
-          <Tooltip.Content showArrow placement="bottom-start">
+          <Tooltip.Content showArrow placement="bottom start">
             {lastSeenAt}
           </Tooltip.Content>
         </Tooltip>
@@ -92,7 +94,8 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
           {events.map((e) => (
             <Tooltip key={e.at} delay={0}>
               <Tooltip.Trigger>
-                <span
+                <button
+                  type="button"
                   className={`mr-1 inline-block h-6 min-w-[0.5em] rounded-xl bg-${monitorStateToColor(e.st)} transition-transform duration-200 hover:-translate-y-1`}
                 />
               </Tooltip.Trigger>
@@ -102,23 +105,23 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
             </Tooltip>
           ))}
         </div>
-        <span className="hidden md:inline-block">
+        {isMdScreen && (
           <Tooltip delay={0}>
             <Tooltip.Trigger>
-              <span className="mr-1 inline-block min-w-[4em] rounded-full bg-teal-500 text-center text-white">
+              <button type="button" className="mr-1 inline-block min-w-[4em] rounded-full bg-teal-500 text-center text-white">
                 {stats?.availability !== undefined ? stats.availability.toFixed(0) : "... "}%
-              </span>
+              </button>
             </Tooltip.Trigger>
             <Tooltip.Content showArrow>
               Availability
             </Tooltip.Content>
           </Tooltip>
-        </span>
+        )}
         <Tooltip delay={0}>
           <Tooltip.Trigger>
-            <span className="inline-block min-w-[5em] bg-cyan-500 text-center text-white">
+            <button type="button" className="inline-block min-w-[5em] bg-cyan-500 text-center text-white">
               {stats?.averageResponseTimeMs !== undefined ? stats.averageResponseTimeMs.toFixed(0) : "... "}ms
-            </span>
+            </button>
           </Tooltip.Trigger>
           <Tooltip.Content showArrow>
             Average response time

@@ -20,15 +20,13 @@ ReactDOM.createRoot(container).render(
     <>
       <Toast.Provider placement="bottom end" />
       <ErrorBoundary>
-        <React.Suspense fallback={null}>
-          <ConfigurationProvider>
-            <MonitorsProvider>
-              <MonitorHubProvider>
-                <App />
-              </MonitorHubProvider>
-            </MonitorsProvider>
-          </ConfigurationProvider>
-        </React.Suspense>
+        <ConfigurationProvider>
+          <MonitorsProvider>
+            <MonitorHubProvider>
+              <App />
+            </MonitorHubProvider>
+          </MonitorsProvider>
+        </ConfigurationProvider>
       </ErrorBoundary>
     </>
   </React.StrictMode>
