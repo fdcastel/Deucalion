@@ -75,7 +75,4 @@ internal static class WebApplicationExtensions
             .Replace("<!-- $DEUCALION__PAGETITLE -->", $"<title>{htmlTitle}</title>")
             .Replace("<!-- $DEUCALION__PAGEDESCRIPTION -->", $"<meta name=\"description\" content=\"{htmlDescription}\">");
     }
-
-        return app;
-    }
 }
