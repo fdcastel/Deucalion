@@ -33,6 +33,10 @@ jobs:
       with:
         fetch-depth: 0  # Disable shallow fetch (required for GitVersion)
 
+    - name: Normalize Git state for GitVersion
+      if: github.ref_type == 'tag'
+      run: git checkout -B ${{ github.event.repository.default_branch }} ${{ github.sha }}
+
     - name: Install GitVersion
       uses: gittools/actions/gitversion/setup@v3
       with:
