@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.RegularExpressions;
 using Deucalion.Monitors;
 
@@ -14,6 +15,8 @@ public class HttpMonitor : PullMonitor
     {
         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
     });
+
+    private const int MaxResponseBodySize = 1024 * 1024; // 1 MB
 
     public required Uri Url { get; set; }
 
@@ -65,7 +68,12 @@ public class HttpMonitor : PullMonitor
 
             if (ExpectedResponseBodyPattern is not null)
             {
-                var responseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
+                using var stream = await response.Content.ReadAsStreamAsync(timeoutCts.Token);
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                var buffer = new char[MaxResponseBodySize];
+                var charsRead = await reader.ReadBlockAsync(buffer.AsMemory(0, MaxResponseBodySize), timeoutCts.Token);
+                var responseBody = new string(buffer, 0, charsRead);
+
                 if (!Regex.IsMatch(responseBody, ExpectedResponseBodyPattern))
                 {
                     var truncatedBody = responseBody.Length <= 60
