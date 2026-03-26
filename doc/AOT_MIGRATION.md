@@ -177,7 +177,7 @@ PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) makes the source gene
 - Restore `required` on configuration record properties that had it removed (e.g., `PullMonitorConfiguration`, `TcpMonitorConfiguration.Host`, `TcpMonitorConfiguration.Port`)
 - The `[Required]` DataAnnotation attribute can stay for runtime validation; the `required` keyword adds compile-time enforcement
 
-#### 3. Restore `OrderedDictionary<string, PullMonitorConfiguration>` (revert workaround from §8)
+#### 3. ~~Restore `OrderedDictionary<string, PullMonitorConfiguration>`~~ (revert workaround from §8) — DONE
 
 PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds `OrderedDictionary<TKey, TValue>` (.NET 9+) recognition in the source generator.
 
