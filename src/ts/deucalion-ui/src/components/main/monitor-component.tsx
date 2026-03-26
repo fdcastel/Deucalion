@@ -1,8 +1,24 @@
 import React, { useState, useLayoutEffect, useMemo, useRef } from "react";
 import { MonitorState, MonitorProps } from "../../services";
-import { formatLastSeen, formatMonitorEvent, monitorStateToColor } from "../../services";
+import { formatLastSeen, formatMonitorEvent } from "../../services";
 import { Tooltip, Chip } from "@heroui/react";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+
+const stateToTextClass: Record<MonitorState, string> = {
+  [MonitorState.Up]: "",
+  [MonitorState.Warn]: "text-monitor-warn",
+  [MonitorState.Degraded]: "text-monitor-degraded",
+  [MonitorState.Down]: "text-monitor-down",
+  [MonitorState.Unknown]: "text-monitor-unknown",
+};
+
+const stateToBgClass: Record<MonitorState, string> = {
+  [MonitorState.Up]: "bg-monitor-up",
+  [MonitorState.Warn]: "bg-monitor-warn",
+  [MonitorState.Degraded]: "bg-monitor-degraded",
+  [MonitorState.Down]: "bg-monitor-down",
+  [MonitorState.Unknown]: "bg-monitor-unknown",
+};
 
 interface MonitorComponentProps {
   monitor: MonitorProps;
@@ -65,12 +81,12 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
                 href={config.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`truncate ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}
+                className={`truncate ${stateToTextClass[lastState]}`}
               >
                 {name}
               </a>
             ) : (
-              <button type="button" className={`truncate text-left ${lastState !== MonitorState.Up ? `text-${monitorStateToColor(lastState)}` : ""}`}>
+              <button type="button" className={`truncate text-left ${stateToTextClass[lastState]}`}>
                 {name}
               </button>
             )}
@@ -96,7 +112,7 @@ export const MonitorComponent: React.FC<MonitorComponentProps> = ({ monitor, usi
               <Tooltip.Trigger>
                 <button
                   type="button"
-                  className={`mr-1 inline-block h-6 min-w-[0.5em] rounded-xl bg-${monitorStateToColor(e.st)} transition-transform duration-200 hover:-translate-y-1`}
+                  className={`mr-1 inline-block h-6 min-w-[0.5em] rounded-xl ${stateToBgClass[e.st]} transition-transform duration-200 hover:-translate-y-1`}
                 />
               </Tooltip.Trigger>
               <Tooltip.Content showArrow placement="bottom">
