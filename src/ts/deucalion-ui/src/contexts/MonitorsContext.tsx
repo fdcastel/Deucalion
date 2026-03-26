@@ -51,7 +51,7 @@ const MonitorsContext = createContext<IMonitorsContext | undefined>(undefined);
 
 // Create the provider component
 export const MonitorsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const monitorsResponse = useSWR<Map<string, MonitorProps> | undefined>(API_MONITORS_URL, monitorsFetcher, {
+  const monitorsResponse = useSWR<Map<string, MonitorProps> | undefined, Error>(API_MONITORS_URL, monitorsFetcher, {
     ...SWR_OPTIONS,
     compare: (a, b) => a === b,
   });

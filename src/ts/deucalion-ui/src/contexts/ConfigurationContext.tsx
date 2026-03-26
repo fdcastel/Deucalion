@@ -25,7 +25,7 @@ const ConfigurationContext = createContext<IConfigurationContext | undefined>(un
 
 // Create the provider component
 export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const configurationResponse = useSWR<DeucalionOptions | undefined>(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
+  const configurationResponse = useSWR<DeucalionOptions | undefined, Error>(API_CONFIGURATION_URL, configurationFetcher, SWR_OPTIONS);
 
   const value: IConfigurationContext = {
     configurationData: configurationResponse.data,
