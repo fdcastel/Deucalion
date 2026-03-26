@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 import { MonitorState, MonitorProps, dateTimeFromNow, dateTimeToString } from "../../services";
-import deucalionIconDataUri from '/assets/deucalion-icon.svg?inline';
 
 import { ThemeSwitcher } from "../ui/theme-switcher";
 import { StatCard, StatCardFooter } from "../ui/stat-card";
@@ -46,7 +45,7 @@ export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected
   return (
     <div className="flex flex-col">
       <div className="mb-4 flex items-center">
-        <img src={deucalionIconDataUri} className="icon-size-12 mr-2 app-icon-effect" alt="icon" />
+        <img src="/assets/deucalion-icon.svg" className="icon-size-12 mr-2 app-icon-effect" alt="icon" />
         <span className="truncate text-3xl">{title}</span>
         <div className="flex-1" />
         <ThemeSwitcher />
