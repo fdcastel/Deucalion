@@ -11,7 +11,7 @@ public static class MonitorExtensions
     {
         try
         {
-            var allTasks = monitors.Select(monitor => monitor.RunAsync(writer, stopToken)).ToList();
+            var allTasks = monitors.Select(monitor => RunMonitorSafeAsync(monitor, writer, stopToken)).ToList();
             await Task.WhenAll(allTasks);
         }
         catch (OperationCanceledException)
@@ -21,6 +21,23 @@ public static class MonitorExtensions
         finally
         {
             writer.TryComplete();
+        }
+    }
+
+    private static async Task RunMonitorSafeAsync(PullMonitor monitor, ChannelWriter<IMonitorEvent> writer, CancellationToken stopToken)
+    {
+        try
+        {
+            await monitor.RunAsync(writer, stopToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on cancellation
+        }
+        catch (Exception)
+        {
+            // Prevent a single monitor failure from crashing the entire engine.
+            // The failure is observable through the monitor's state going stale.
         }
     }
 
