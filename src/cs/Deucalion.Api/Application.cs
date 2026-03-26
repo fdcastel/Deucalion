@@ -8,6 +8,7 @@ using Deucalion.Application.Configuration;
 using Deucalion.Configuration;
 using Deucalion.Network.Monitors;
 using Deucalion.Storage;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Deucalion.Api;
@@ -68,7 +69,17 @@ public static class Application
     public static WebApplication ConfigureApplication(this WebApplication app)
     {
         app.UseExceptionHandler(exceptionHandlerApp =>
-            exceptionHandlerApp.Run(async context => await Results.Problem().ExecuteAsync(context))
+            exceptionHandlerApp.Run(async context =>
+            {
+                var exceptionFeature = context.Features.Get<IExceptionHandlerFeature>();
+                if (exceptionFeature?.Error is not null)
+                {
+                    var logger = context.RequestServices.GetRequiredService<ILogger<WebApplication>>();
+                    logger.LogError(exceptionFeature.Error, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+                }
+
+                await Results.Problem().ExecuteAsync(context);
+            })
         );
 
         app.UseCors(x => x.AllowAnyOrigin());
