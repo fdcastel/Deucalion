@@ -33,7 +33,7 @@ public record ApplicationConfiguration
 
     public ConfigurationDefaults? Defaults { get; set; }
 
-    public Dictionary<string, PullMonitorConfiguration> Monitors { get; set; } = null!;
+    public required Dictionary<string, PullMonitorConfiguration> Monitors { get; set; }
 
     public static ApplicationConfiguration ReadFromFile(string configurationFile)
     {

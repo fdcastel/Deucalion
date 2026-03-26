@@ -169,7 +169,7 @@ PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds a built-in `Time
 - Custom `TimeSpanConverter.cs` — still required
 - `.WithTypeConverter(new TimeSpanConverter())` — still required
 
-#### 2. Restore `required` keyword on YAML configuration types (revert workaround from §7)
+#### 2. ~~Restore `required` keyword on YAML configuration types~~ (revert workaround from §7) — DONE
 
 PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) makes the source generator emit object initializer syntax (`new T() { Prop = default! }`) for types with `required` members, preventing the `CS9035` compile error.
 

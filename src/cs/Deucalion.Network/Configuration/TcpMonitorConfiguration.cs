@@ -8,8 +8,8 @@ namespace Deucalion.Network.Configuration;
 public record TcpMonitorConfiguration : PullMonitorConfiguration
 {
     [Required]
-    public string Host { get; set; } = null!;
+    public required string Host { get; set; }
 
     [Required]
-    public int Port { get; set; }
+    public required int Port { get; set; }
 }

@@ -8,5 +8,5 @@ namespace Deucalion.Network.Configuration;
 public record PingMonitorConfiguration : PullMonitorConfiguration
 {
     [Required]
-    public string Host { get; set; } = null!;
+    public required string Host { get; set; }
 }

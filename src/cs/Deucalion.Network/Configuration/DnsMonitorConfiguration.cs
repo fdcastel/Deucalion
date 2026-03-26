@@ -18,5 +18,5 @@ public record DnsMonitorOptionalConfiguration : PullMonitorConfiguration
 public record DnsMonitorConfiguration : DnsMonitorOptionalConfiguration
 {
     [Required]
-    public string Host { get; set; } = null!;
+    public required string Host { get; set; }
 }
