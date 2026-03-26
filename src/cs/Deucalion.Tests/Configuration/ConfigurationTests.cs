@@ -329,6 +329,83 @@ public class ConfigurationTests
     private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>
         Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
 
+    [Fact]
+    public void HttpMonitor_MissingUrl_Throws()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mhttp:
+                !http
+                expectedStatusCode: 200
+        ";
+
+        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+    }
+
+    [Fact]
+    public void PingMonitor_MissingHost_Throws()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mping:
+                !ping
+                timeout: 00:00:05
+        ";
+
+        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+    }
+
+    [Fact]
+    public void TcpMonitor_MissingHost_Throws()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mtcp:
+                !tcp
+                port: 8080
+        ";
+
+        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+    }
+
+    [Fact]
+    public void InvalidTypeTag_Throws()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mfoo:
+                !notavalidtype
+                host: example.com
+        ";
+
+        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+    }
+
+    [Fact]
+    public void MonitorWithoutTypeTag_DeserializesAsBaseConfiguration()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mbase:
+                intervalWhenUp: 00:00:10
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        Assert.IsType<PullMonitorConfiguration>(monitor);
+    }
+
+    [Fact]
+    public void NoMonitorsSection_Throws()
+    {
+        const string ConfigurationContent = @"
+            defaults:
+              intervalWhenUp: 00:00:10
+        ";
+
+        var exception = CatchConfigurationException(ConfigurationContent);
+        Assert.Equal(ApplicationConfiguration.Messages.ConfigurationMustHaveMonitorsSection, exception.Message);
+    }
+
     private static ApplicationConfiguration ReadConfiguration(string configurationContent)
     {
         return ApplicationConfiguration.ReadFromString(configurationContent);
