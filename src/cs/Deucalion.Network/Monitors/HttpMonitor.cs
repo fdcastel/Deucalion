@@ -9,11 +9,8 @@ namespace Deucalion.Network.Monitors;
 public class HttpMonitor : PullMonitor
 {
     // https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines#recommended-use
-    private static HttpClient? _httpClient;
-    private static HttpClient? _httpClientIgnoreCertificate;
-
-    private static HttpClient CachedHttpClient => _httpClient ??= new HttpClient();
-    private static HttpClient CachedHttpClientIgnoreCertificate => _httpClientIgnoreCertificate ??= new(new HttpClientHandler()
+    private static readonly HttpClient CachedHttpClient = new();
+    private static readonly HttpClient CachedHttpClientIgnoreCertificate = new(new HttpClientHandler()
     {
         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
     });
