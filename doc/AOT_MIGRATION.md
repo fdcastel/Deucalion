@@ -158,16 +158,16 @@ The migration is net positive for deployment and operational simplicity. The mai
 
 ## Next Steps: YamlDotNet Pre-Release Improvements
 
-YamlDotNet `17.0.0-pre.5` ([fdcastel/YamlDotNet@pre-release](https://github.com/fdcastel/YamlDotNet/tree/pre-release)) includes fixes from 7 PRs submitted upstream. The pre-release packages are configured via [nuget.config](../nuget.config) pointing to GitHub Packages. Several of these fixes allow reverting workarounds that were needed for the AOT migration.
+YamlDotNet `17.0.0-pre.6` ([fdcastel/YamlDotNet@pre-release](https://github.com/fdcastel/YamlDotNet/tree/pre-release)) includes fixes from 7 PRs submitted upstream. The pre-release packages are configured via [nuget.config](../nuget.config) pointing to GitHub Packages. Several of these fixes allow reverting workarounds that were needed for the AOT migration.
 
 ### Plan
 
-#### 1. ~~Remove custom `TimeSpanConverter`~~ — SKIPPED
+#### 1. ~~Remove custom `TimeSpanConverter`~~ (revert workaround from §5) — DONE
 
-PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds a built-in `TimeSpanConverter` registered by default in both `StaticDeserializerBuilder` and `StaticSerializerBuilder`. However, the built-in converter only handles `TimeSpan`, not `TimeSpan?` (nullable). Since all TimeSpan properties in the configuration model are `TimeSpan?`, the custom converter is still required.
+PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds a built-in `TimeSpanConverter` registered by default in both `StaticDeserializerBuilder` and `StaticSerializerBuilder`. The `17.0.0-pre.5` version only handled `TimeSpan`; `17.0.0-pre.6` fixes nullable `TimeSpan?` support.
 
-- Custom `TimeSpanConverter.cs` — still required
-- `.WithTypeConverter(new TimeSpanConverter())` — still required
+- Deleted `src/cs/Deucalion.Application/Yaml/TimeSpanConverter.cs`
+- Removed `.WithTypeConverter(new TimeSpanConverter())` from `ApplicationConfiguration.ReadFromString()`
 
 #### 2. ~~Restore `required` keyword on YAML configuration types~~ (revert workaround from §7) — DONE
 
@@ -194,18 +194,18 @@ PR #1092 adds built-in converters for `TimeSpan` and `Uri` only. `IPEndPoint` an
 
 #### 5. ~~Remove local YamlDotNet source tree~~ — DONE
 
-The `<ProjectReference>` to `tmp/YamlDotNet/YamlDotNet.Analyzers.StaticGenerator` has been replaced with a `<PackageReference>` to the NuGet package `YamlDotNet.Analyzers.StaticGenerator` version `17.0.0-pre.5`.
+The `<ProjectReference>` to `tmp/YamlDotNet/YamlDotNet.Analyzers.StaticGenerator` has been replaced with a `<PackageReference>` to the NuGet package `YamlDotNet.Analyzers.StaticGenerator` version `17.0.0-pre.6`.
 
-- The `tmp/YamlDotNet/` directory can be deleted once the pre-release packages are verified stable
+- The `tmp/YamlDotNet/` directory has been deleted
 - When the upstream packages are officially released on nuget.org, remove the `github-fdcastel` source from `nuget.config`
 
 ### Expected Outcome
 
 | Workaround | Status |
 |------------|--------|
-| Custom `TimeSpanConverter` | Can remove — built-in now |
-| `required` keyword removed | Can restore |
-| `OrderedDictionary` → `Dictionary` | Can restore |
+| Custom `TimeSpanConverter` | Removed — built-in handles `TimeSpan` and `TimeSpan?` since `17.0.0-pre.6` |
+| `required` keyword removed | Restored |
+| `OrderedDictionary` → `Dictionary` | Restored |
 | Custom `IPEndPointConverter` | Still needed |
 | Custom `HttpMethodConverter` | Still needed |
 | Local source generator `ProjectReference` | Removed — using NuGet package |

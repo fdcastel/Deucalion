@@ -70,7 +70,6 @@ public record ApplicationConfiguration
             .WithTagMapping("!tcp", typeof(TcpMonitorConfiguration))
             .WithTypeConverter(new InterpolatedStringConverter())
             .WithTypeConverter(new HttpMethodConverter())
-            .WithTypeConverter(new TimeSpanConverter())
             .WithTypeConverter(new IPEndPointConverter())
             .WithValidation()
             .Build();
