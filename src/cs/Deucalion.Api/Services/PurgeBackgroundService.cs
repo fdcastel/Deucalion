@@ -14,6 +14,9 @@ internal class PurgeBackgroundService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Run initial purge immediately at startup
+        await PurgeDatabaseAsync(stoppingToken);
+
         using var purgeTimer = new PeriodicTimer(_options.PurgeInterval);
         try
         {
