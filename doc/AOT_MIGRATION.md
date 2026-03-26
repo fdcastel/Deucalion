@@ -184,7 +184,7 @@ PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds `OrderedDictiona
 - Change `Dictionary<string, PullMonitorConfiguration>` back to `OrderedDictionary<string, PullMonitorConfiguration>` in `ApplicationConfiguration.cs`
 - This restores the explicit insertion-order guarantee that YAML documents expect
 
-#### 4. Keep custom `IPEndPointConverter` and `HttpMethodConverter`
+#### 4. ~~Keep custom `IPEndPointConverter` and `HttpMethodConverter`~~ — DONE
 
 PR #1092 adds built-in converters for `TimeSpan` and `Uri` only. `IPEndPoint` and `HttpMethod` are not yet covered upstream.
 
