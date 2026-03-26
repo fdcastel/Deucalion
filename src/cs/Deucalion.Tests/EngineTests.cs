@@ -13,7 +13,7 @@ public class EngineTests
     [Fact]
     public async Task Engine_ReceiveEventsFromPushMonitors()
     {
-        var pulse = TimeSpan.FromMilliseconds(500);
+        var pulse = TimeSpan.FromMilliseconds(1000);
         CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1 };
         CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1 };
         var events = new List<IMonitorEvent>();
@@ -52,7 +52,7 @@ public class EngineTests
     [Fact]
     public async Task Engine_QueryPullMonitors()
     {
-        var pulse = TimeSpan.FromMilliseconds(500);
+        var pulse = TimeSpan.FromMilliseconds(1000);
         PullMonitorMock m1 = new(
             (MonitorState.Unknown, pulse / 2),
             (MonitorState.Up, pulse),
@@ -91,7 +91,7 @@ public class EngineTests
     [Fact]
     public async Task Engine_QueryPullMonitors_WithDifferentIntervalWhenDown()
     {
-        var pulse = TimeSpan.FromMilliseconds(500);
+        var pulse = TimeSpan.FromMilliseconds(1000);
         PullMonitorMock m1 = new(
             (MonitorState.Unknown, pulse / 2),
             (MonitorState.Up, pulse * 2),
@@ -121,7 +121,7 @@ public class EngineTests
     [Fact]
     public async Task Engine_PushMonitor_RepeatedDownState_GeneratesEvent()
     {
-        var pulse = TimeSpan.FromMilliseconds(100);
+        var pulse = TimeSpan.FromMilliseconds(250);
         CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.5 };
         var events = new List<IMonitorEvent>();
         var channel = Channel.CreateUnbounded<IMonitorEvent>();

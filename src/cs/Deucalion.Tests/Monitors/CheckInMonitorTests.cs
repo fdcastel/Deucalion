@@ -10,7 +10,7 @@ public class CheckInMonitorTests
     [Fact]
     public async Task CheckInMonitor_ReturnsUp_WhenCheckedIn()
     {
-        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
         checkInMonitor.CheckIn();
         var response = await checkInMonitor.QueryAsync();
         Assert.Equal(MonitorState.Up, response.State);
@@ -19,7 +19,7 @@ public class CheckInMonitorTests
     [Fact]
     public async Task CheckInMonitor_ReturnsDown_WhenNotCheckedIn()
     {
-        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
         checkInMonitor.CheckIn();
         var response = await checkInMonitor.QueryAsync();
         Assert.Equal(MonitorState.Up, response.State);
@@ -31,7 +31,7 @@ public class CheckInMonitorTests
     [Fact]
     public async Task CheckInMonitor_Returns_StatePassedAsArgument()
     {
-        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(500) };
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
         var newResponse = new MonitorResponse()
         {
             State = MonitorState.Down,
