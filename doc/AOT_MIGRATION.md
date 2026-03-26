@@ -153,3 +153,59 @@ The 23-file commit bundles infrastructure, JSON, YAML, SignalR, and model change
 ## Verdict
 
 The migration is net positive for deployment and operational simplicity. The main costs are reduced type safety in SignalR messaging (mitigated by `nameof()`) and increased YamlDotNet boilerplate (a limitation of the library's AOT support maturity). The build produces a ~21 MB self-contained native executable with zero AOT warnings and all 68 tests passing.
+
+---
+
+## Next Steps: YamlDotNet Pre-Release Improvements
+
+YamlDotNet `17.0.0-pre.5` ([fdcastel/YamlDotNet@pre-release](https://github.com/fdcastel/YamlDotNet/tree/pre-release)) includes fixes from 7 PRs submitted upstream. The pre-release packages are configured via [nuget.config](../nuget.config) pointing to GitHub Packages. Several of these fixes allow reverting workarounds that were needed for the AOT migration.
+
+### Plan
+
+#### 1. Remove custom `TimeSpanConverter` (revert workaround from §5)
+
+PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds a built-in `TimeSpanConverter` registered by default in both `StaticDeserializerBuilder` and `StaticSerializerBuilder`.
+
+- Delete `src/cs/Deucalion.Application/Yaml/TimeSpanConverter.cs`
+- Remove `.WithTypeConverter(new TimeSpanConverter())` from `ApplicationConfiguration.ReadFromString()`
+
+#### 2. Restore `required` keyword on YAML configuration types (revert workaround from §7)
+
+PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) makes the source generator emit object initializer syntax (`new T() { Prop = default! }`) for types with `required` members, preventing the `CS9035` compile error.
+
+- Restore `required` on `ApplicationConfiguration.Monitors`
+- Restore `required` on configuration record properties that had it removed (e.g., `PullMonitorConfiguration`, `TcpMonitorConfiguration.Host`, `TcpMonitorConfiguration.Port`)
+- The `[Required]` DataAnnotation attribute can stay for runtime validation; the `required` keyword adds compile-time enforcement
+
+#### 3. Restore `OrderedDictionary<string, PullMonitorConfiguration>` (revert workaround from §8)
+
+PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds `OrderedDictionary<TKey, TValue>` (.NET 9+) recognition in the source generator.
+
+- Change `Dictionary<string, PullMonitorConfiguration>` back to `OrderedDictionary<string, PullMonitorConfiguration>` in `ApplicationConfiguration.cs`
+- This restores the explicit insertion-order guarantee that YAML documents expect
+
+#### 4. Keep custom `IPEndPointConverter` and `HttpMethodConverter`
+
+PR #1092 adds built-in converters for `TimeSpan` and `Uri` only. `IPEndPoint` and `HttpMethod` are not yet covered upstream.
+
+- `IPEndPointConverter.cs` — still required
+- `HttpMethodConverter.cs` — still required
+- File as follow-up suggestion to add more built-in converters (already tracked in [YAML_DOTNET_SUGGESTIONS.md §4](../tmp/YAML_DOTNET_SUGGESTIONS.md))
+
+#### 5. Remove local YamlDotNet source tree
+
+The `<ProjectReference>` to `tmp/YamlDotNet/YamlDotNet.Analyzers.StaticGenerator` has been replaced with a `<PackageReference>` to the NuGet package `YamlDotNet.Analyzers.StaticGenerator` version `17.0.0-pre.5`.
+
+- The `tmp/YamlDotNet/` directory can be deleted once the pre-release packages are verified stable
+- When the upstream packages are officially released on nuget.org, remove the `github-fdcastel` source from `nuget.config`
+
+### Expected Outcome
+
+| Workaround | Status |
+|------------|--------|
+| Custom `TimeSpanConverter` | Can remove — built-in now |
+| `required` keyword removed | Can restore |
+| `OrderedDictionary` → `Dictionary` | Can restore |
+| Custom `IPEndPointConverter` | Still needed |
+| Custom `HttpMethodConverter` | Still needed |
+| Local source generator `ProjectReference` | Removed — using NuGet package |
