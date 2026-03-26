@@ -21,9 +21,9 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
         Storage = new SqliteStorage(StoragePath);
     }
 
-    public Task InitializeAsync() => Storage.InitializeAsync();
+    public ValueTask InitializeAsync() => new(Storage.InitializeAsync());
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     protected async Task<(long? LastSeenUpTicks, long? LastSeenDownTicks)> GetLastStateChangeTimestampsAsync(string monitorName)
     {

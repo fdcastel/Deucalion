@@ -5,14 +5,11 @@ using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Deucalion.Tests.Mocks;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Deucalion.Tests;
 
-public class EngineTests(ITestOutputHelper output)
+public class EngineTests
 {
-    private readonly ITestOutputHelper _output = output;
-
     [Fact]
     public async Task Engine_ReceiveEventsFromPushMonitors()
     {

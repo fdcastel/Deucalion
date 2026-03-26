@@ -43,9 +43,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         _factory = new TestApiFactory();
     }
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async Task DisposeAsync() => await _factory.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _factory.DisposeAsync();
 
     [Fact]
     public async Task GetConfiguration_ReturnsConfiguredMetadata()

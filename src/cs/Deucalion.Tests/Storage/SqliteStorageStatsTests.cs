@@ -42,7 +42,7 @@ public class SqliteStorageStatsTests : SqliteStorageTestBase
         Assert.NotNull(s1);
         Assert.Equal(MonitorState.Up, s1.LastState);
         Assert.Equal(e1_2.At.ToUniversalTime(), s1.LastUpdate.ToUniversalTime());
-        Assert.Equal(100.0, s1.Availability, precision: 1); // Both events are Up
+        Assert.Equal(100.0, s1.Availability, tolerance: 0.1); // Both events are Up
         Assert.Equal(TimeSpan.FromMilliseconds(55), s1.AverageResponseTime); // (50+60)/2
         Assert.Equal(e1_1.At.ToUniversalTime(), s1.LastSeenUp?.ToUniversalTime()); // Set by SaveLastStateChange
         Assert.Null(s1.LastSeenDown);
@@ -53,7 +53,7 @@ public class SqliteStorageStatsTests : SqliteStorageTestBase
         Assert.Equal(MonitorState.Down, s2.LastState);
         Assert.Equal(e2_3.At.ToUniversalTime(), s2.LastUpdate.ToUniversalTime());
         // Availability: 1 Up, 2 Down -> (3 - 2) / 3 = 33.33...%
-        Assert.Equal(1.0 / 3.0 * 100.0, s2.Availability, precision: 1);
+        Assert.Equal(1.0 / 3.0 * 100.0, s2.Availability, tolerance: 0.1);
         Assert.Equal(TimeSpan.FromMilliseconds(100), s2.AverageResponseTime); // Only e2_2 has response time
         Assert.Equal(e2_2.At.ToUniversalTime(), s2.LastSeenUp?.ToUniversalTime()); // Set by SaveLastStateChange
         Assert.Equal(e2_3.At.ToUniversalTime(), s2.LastSeenDown?.ToUniversalTime()); // Set by SaveLastStateChange
@@ -64,7 +64,7 @@ public class SqliteStorageStatsTests : SqliteStorageTestBase
         Assert.Equal(MonitorState.Warn, s3.LastState);
         Assert.Equal(e3_1.At.ToUniversalTime(), s3.LastUpdate.ToUniversalTime());
         // Availability: 1 Warn -> (1 - 0) / 1 = 100% (Warn counts as available)
-        Assert.Equal(100.0, s3.Availability, precision: 1);
+        Assert.Equal(100.0, s3.Availability, tolerance: 0.1);
         Assert.Equal(TimeSpan.FromMilliseconds(200), s3.AverageResponseTime);
         Assert.Null(s3.LastSeenUp); // No SaveLastStateChange called
         Assert.Null(s3.LastSeenDown); // No SaveLastStateChange called
