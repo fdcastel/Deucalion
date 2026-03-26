@@ -192,7 +192,7 @@ PR #1092 adds built-in converters for `TimeSpan` and `Uri` only. `IPEndPoint` an
 - `HttpMethodConverter.cs` — still required
 - File as follow-up suggestion to add more built-in converters (already tracked in [YAML_DOTNET_SUGGESTIONS.md §4](../tmp/YAML_DOTNET_SUGGESTIONS.md))
 
-#### 5. Remove local YamlDotNet source tree
+#### 5. ~~Remove local YamlDotNet source tree~~ — DONE
 
 The `<ProjectReference>` to `tmp/YamlDotNet/YamlDotNet.Analyzers.StaticGenerator` has been replaced with a `<PackageReference>` to the NuGet package `YamlDotNet.Analyzers.StaticGenerator` version `17.0.0-pre.5`.
 
