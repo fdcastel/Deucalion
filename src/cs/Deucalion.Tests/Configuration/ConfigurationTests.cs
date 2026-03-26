@@ -294,6 +294,38 @@ public class ConfigurationTests
         }
     }
 
+    [Theory]
+    [InlineData("intervalWhenUp: 00:00:00")]
+    [InlineData("intervalWhenDown: -00:00:01")]
+    [InlineData("timeout: 00:00:00")]
+    [InlineData("warnTimeout: -00:05:00")]
+    public void Monitor_ZeroOrNegativeTimeSpan_Throws(string fieldLine)
+    {
+        var configurationContent = $@"
+            monitors:
+              mping:
+                !ping
+                host: 192.168.1.1
+                {fieldLine}
+        ";
+
+        Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
+    }
+
+    [Fact]
+    public void CheckInMonitor_ZeroIntervalToDown_Throws()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mcheckin:
+                !checkin
+                secret: passw0rd
+                intervalToDown: 00:00:00
+        ";
+
+        Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+    }
+
     private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>
         Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
 

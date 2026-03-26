@@ -26,6 +26,7 @@ public record ApplicationConfiguration
         public const string ConfigurationMustHaveMonitorsSection = "Configuration file must have a 'monitors' section.";
 
         public const string ConfigurationMonitorCannotBeEmpty = "Monitor '{0}' cannot be empty.";
+        public const string ConfigurationInvalidTimeSpan = "Monitor '{0}': '{1}' must be a positive value, but was '{2}'.";
     }
 
     public ConfigurationDefaults? Defaults { get; set; }
@@ -89,6 +90,17 @@ public record ApplicationConfiguration
             {
                 ApplyDefaults(result.Defaults, monitor);
             }
+
+            // Validate TimeSpan fields are positive when set
+            ValidateTimeSpan(monitor.Key, nameof(monitor.Value.IntervalWhenUp), monitor.Value.IntervalWhenUp);
+            ValidateTimeSpan(monitor.Key, nameof(monitor.Value.IntervalWhenDown), monitor.Value.IntervalWhenDown);
+            ValidateTimeSpan(monitor.Key, nameof(monitor.Value.Timeout), monitor.Value.Timeout);
+            ValidateTimeSpan(monitor.Key, nameof(monitor.Value.WarnTimeout), monitor.Value.WarnTimeout);
+
+            if (monitor.Value is CheckInMonitorConfiguration checkIn)
+            {
+                ValidateTimeSpan(monitor.Key, nameof(checkIn.IntervalToDown), checkIn.IntervalToDown);
+            }
         }
 
         return result;
@@ -140,6 +152,14 @@ public record ApplicationConfiguration
         if (monitorConfiguration.Value is CheckInMonitorConfiguration checkInMonitorConfiguration)
         {
             checkInMonitorConfiguration.IntervalToDown ??= defaults.IntervalToDown;
+        }
+    }
+
+    private static void ValidateTimeSpan(string monitorName, string fieldName, TimeSpan? value)
+    {
+        if (value.HasValue && value.Value <= TimeSpan.Zero)
+        {
+            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationInvalidTimeSpan, monitorName, fieldName, value.Value));
         }
     }
 }
