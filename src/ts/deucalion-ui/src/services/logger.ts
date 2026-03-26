@@ -1,7 +1,11 @@
 type LogLevelType = "debug" | "error" | "info" | "log" | "trace" | "warn";
 
-let writeLog = (logLevel: LogLevelType, ...data: unknown[]) => {
-  console[logLevel](...data);
+let enabled = true;
+
+const writeLog = (logLevel: LogLevelType, ...data: unknown[]) => {
+  if (enabled) {
+    console[logLevel](...data);
+  }
 };
 
 export const log = (...data: unknown[]): void => {
@@ -17,7 +21,5 @@ export const error = (...data: unknown[]): void => {
 };
 
 export const disableLogger = (): void => {
-  writeLog = () => {
-    /*NOP*/
-  };
+  enabled = false;
 };
