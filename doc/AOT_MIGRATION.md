@@ -162,12 +162,12 @@ YamlDotNet `17.0.0-pre.5` ([fdcastel/YamlDotNet@pre-release](https://github.com/
 
 ### Plan
 
-#### 1. Remove custom `TimeSpanConverter` (revert workaround from §5)
+#### 1. ~~Remove custom `TimeSpanConverter`~~ — SKIPPED
 
-PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds a built-in `TimeSpanConverter` registered by default in both `StaticDeserializerBuilder` and `StaticSerializerBuilder`.
+PR [#1092](https://github.com/aaubry/YamlDotNet/pull/1092) adds a built-in `TimeSpanConverter` registered by default in both `StaticDeserializerBuilder` and `StaticSerializerBuilder`. However, the built-in converter only handles `TimeSpan`, not `TimeSpan?` (nullable). Since all TimeSpan properties in the configuration model are `TimeSpan?`, the custom converter is still required.
 
-- Delete `src/cs/Deucalion.Application/Yaml/TimeSpanConverter.cs`
-- Remove `.WithTypeConverter(new TimeSpanConverter())` from `ApplicationConfiguration.ReadFromString()`
+- Custom `TimeSpanConverter.cs` — still required
+- `.WithTypeConverter(new TimeSpanConverter())` — still required
 
 #### 2. Restore `required` keyword on YAML configuration types (revert workaround from §7)
 
