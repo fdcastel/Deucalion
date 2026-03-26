@@ -8,17 +8,6 @@ import { logger } from '../services';
 import { API_HUB_URL } from '../configuration';
 import { useMonitors } from './MonitorsContext';
 
-// Lazy-loaded toast function only when notifications are needed
-let toastFnLazy: ((title: any, options?: any) => void) | null = null;
-
-const getToastFunction = async () => {
-  if (!toastFnLazy) {
-    const { toast } = await import("@heroui/react");
-    toastFnLazy = toast;
-  }
-  return toastFnLazy;
-};
-
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: MonitorCheckedDto) => {
   const monitorName = event.n;
   const monitor = monitors.get(monitorName);
@@ -91,8 +80,8 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       logger.log("[MonitorStateChanged]", e);
       const status = monitorStateToStatus(e.st);
       // Lazy-load toast only when state changes (not on initial connection)
-      getToastFunction().then((toastFn) => {
-        toastFn(e.n, {
+      import("@heroui/react").then(({ toast }) => {
+        toast(e.n, {
           description: monitorStateToDescription(e.st),
           variant: monitorStateToToastVariant(status),
         });
