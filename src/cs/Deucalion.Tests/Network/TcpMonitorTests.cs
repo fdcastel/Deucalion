@@ -10,7 +10,7 @@ public class TcpMonitorTests
     public async Task TcpMonitor_ReturnsUp_WhenReachable()
     {
         TcpMonitor tcpMonitor = new() { Host = "1.1.1.1", Port = 53 };
-        var result = await tcpMonitor.QueryAsync();
+        var result = await tcpMonitor.QueryAsync(TestContext.Current.CancellationToken);
         Assert.Equal(MonitorState.Up, result.State);
     }
 
@@ -18,7 +18,7 @@ public class TcpMonitorTests
     public async Task TcpMonitor_ReturnsDown_WhenUnreachable()
     {
         TcpMonitor tcpMonitor = new() { Host = "1.1.1.1", Port = 54, Timeout = TimeSpan.FromMilliseconds(200) };
-        var result = await tcpMonitor.QueryAsync();
+        var result = await tcpMonitor.QueryAsync(TestContext.Current.CancellationToken);
         Assert.Equal(MonitorState.Down, result.State);
         Assert.Equal("Timeout", result.ResponseText);
     }

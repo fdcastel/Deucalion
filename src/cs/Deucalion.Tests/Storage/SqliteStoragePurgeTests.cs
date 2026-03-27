@@ -8,6 +8,7 @@ public class SqliteStoragePurgeTests : SqliteStorageTestBase
     [Fact]
     public async Task PurgeOldEventsAsync_RemovesOldEventsAndKeepsRecentOnes()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "purge-test-monitor";
         var now = DateTimeOffset.UtcNow;
@@ -29,20 +30,20 @@ public class SqliteStoragePurgeTests : SqliteStorageTestBase
         // Save events in chronological order
         foreach (var ev in eventsToSave.OrderBy(e => e.At))
         {
-            await Storage.SaveEventAsync(monitorName, ev);
+            await Storage.SaveEventAsync(monitorName, ev, cancellationToken);
         }
 
         // Pre-assertion: Ensure all events are saved initially
-        var initialEvents = (await Storage.GetLastEventsAsync(monitorName, 10)).ToList();
+        var initialEvents = (await Storage.GetLastEventsAsync(monitorName, 10, cancellationToken)).ToList();
         Assert.Equal(eventsToSave.Count, initialEvents.Count);
 
         // Act
-        var deletedCount = await Storage.PurgeOldEventsAsync(retentionPeriod);
+        var deletedCount = await Storage.PurgeOldEventsAsync(retentionPeriod, cancellationToken);
 
         // Assert
         Assert.Equal(3, deletedCount); // Expecting 3 old events to be deleted
 
-        var remainingEvents = (await Storage.GetLastEventsAsync(monitorName, 10)).ToList();
+        var remainingEvents = (await Storage.GetLastEventsAsync(monitorName, 10, cancellationToken)).ToList();
         Assert.Equal(2, remainingEvents.Count); // Expecting 2 recent events to remain
 
         // Verify the correct events remain (newest first)
@@ -59,6 +60,7 @@ public class SqliteStoragePurgeTests : SqliteStorageTestBase
     [Fact]
     public async Task PurgeOldEventsAsync_ZeroRetention_DoesNotPurge()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "purge-zero-retention";
         var now = DateTimeOffset.UtcNow;
@@ -67,20 +69,21 @@ public class SqliteStoragePurgeTests : SqliteStorageTestBase
             new(now.AddMinutes(-10), MonitorState.Up, TimeSpan.FromMilliseconds(100), "Event 1"),
             new(now.AddMinutes(-5), MonitorState.Down, null, "Event 2"),
         };
-        foreach (var ev in eventsToSave) await Storage.SaveEventAsync(monitorName, ev);
+        foreach (var ev in eventsToSave) await Storage.SaveEventAsync(monitorName, ev, cancellationToken);
 
         // Act
-        var deletedCount = await Storage.PurgeOldEventsAsync(TimeSpan.Zero);
+        var deletedCount = await Storage.PurgeOldEventsAsync(TimeSpan.Zero, cancellationToken);
 
         // Assert
         Assert.Equal(0, deletedCount); // Nothing should be deleted with zero retention
-        var remainingEvents = (await Storage.GetLastEventsAsync(monitorName, 10)).ToList();
+        var remainingEvents = (await Storage.GetLastEventsAsync(monitorName, 10, cancellationToken)).ToList();
         Assert.Equal(eventsToSave.Count, remainingEvents.Count); // All events should remain
     }
 
     [Fact]
     public async Task PurgeOldEventsAsync_AllEventsOld_PurgesAll()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "purge-all-old";
         var now = DateTimeOffset.UtcNow;
@@ -90,20 +93,21 @@ public class SqliteStoragePurgeTests : SqliteStorageTestBase
             new(now.AddHours(-2), MonitorState.Up, TimeSpan.FromMilliseconds(100), "Old Event 1"),
             new(now.AddHours(-3), MonitorState.Down, null, "Old Event 2"),
         };
-        foreach (var ev in eventsToSave) await Storage.SaveEventAsync(monitorName, ev);
+        foreach (var ev in eventsToSave) await Storage.SaveEventAsync(monitorName, ev, cancellationToken);
 
         // Act
-        var deletedCount = await Storage.PurgeOldEventsAsync(retentionPeriod);
+        var deletedCount = await Storage.PurgeOldEventsAsync(retentionPeriod, cancellationToken);
 
         // Assert
         Assert.Equal(eventsToSave.Count, deletedCount); // All events should be deleted
-        var remainingEvents = (await Storage.GetLastEventsAsync(monitorName, 10)).ToList();
+        var remainingEvents = (await Storage.GetLastEventsAsync(monitorName, 10, cancellationToken)).ToList();
         Assert.Empty(remainingEvents); // No events should remain
     }
 
     [Fact]
     public async Task PurgeOldEventsAsync_NoEventsOrAllNew_PurgesNone()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         // Removed unused variable: var monitorNameNoEvents = "purge-no-events";
         var monitorNameAllNew = "purge-all-new";
@@ -116,17 +120,17 @@ public class SqliteStoragePurgeTests : SqliteStorageTestBase
             new(now.AddHours(-1), MonitorState.Up, TimeSpan.FromMilliseconds(100), "New Event 1"),
             new(now.AddHours(-2), MonitorState.Up, TimeSpan.FromMilliseconds(110), "New Event 2"),
         };
-        foreach (var ev in newEvents) await Storage.SaveEventAsync(monitorNameAllNew, ev);
+        foreach (var ev in newEvents) await Storage.SaveEventAsync(monitorNameAllNew, ev, cancellationToken);
 
         // Act
-        var deletedCountNoEvents = await Storage.PurgeOldEventsAsync(retentionPeriod);
-        var deletedCountAllNew = await Storage.PurgeOldEventsAsync(retentionPeriod);
+        var deletedCountNoEvents = await Storage.PurgeOldEventsAsync(retentionPeriod, cancellationToken);
+        var deletedCountAllNew = await Storage.PurgeOldEventsAsync(retentionPeriod, cancellationToken);
 
         // Assert
         Assert.Equal(0, deletedCountNoEvents); // No events existed, so 0 deleted
         Assert.Equal(0, deletedCountAllNew);   // All events were newer than retention, so 0 deleted
 
-        var remainingEventsAllNew = (await Storage.GetLastEventsAsync(monitorNameAllNew, 10)).ToList();
+        var remainingEventsAllNew = (await Storage.GetLastEventsAsync(monitorNameAllNew, 10, cancellationToken)).ToList();
         Assert.Equal(newEvents.Count, remainingEventsAllNew.Count); // All new events should remain
     }
 }

@@ -10,7 +10,7 @@ public class PingMonitorTests
     public async Task PingMonitor_ReturnsUp_WhenReachable()
     {
         PingMonitor pingMonitor = new() { Host = "1.1.1.1" };
-        var result = await pingMonitor.QueryAsync();
+        var result = await pingMonitor.QueryAsync(TestContext.Current.CancellationToken);
         Assert.Equal(MonitorState.Up, result.State);
         Assert.Null(result.ResponseText);
     }
@@ -19,7 +19,7 @@ public class PingMonitorTests
     public async Task PingMonitor_ReturnsDown_WhenUnreachable()
     {
         PingMonitor pingMonitor = new() { Host = "8.8.8.7", Timeout = TimeSpan.FromMilliseconds(200) };
-        var result = await pingMonitor.QueryAsync();
+        var result = await pingMonitor.QueryAsync(TestContext.Current.CancellationToken);
         Assert.Equal(MonitorState.Down, result.State);
         Assert.NotNull(result.ResponseText);
     }

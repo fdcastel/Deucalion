@@ -9,6 +9,7 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveEventAsync_InsertsNewEventAndCalculatesStats()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "test-monitor-1";
         var timestamp = DateTimeOffset.UtcNow;
@@ -16,8 +17,8 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         var storedEvent = new StoredEvent(timestamp, MonitorState.Up, responseTime, "OK");
 
         // Act
-        await Storage.SaveEventAsync(monitorName, storedEvent);
-        var stats = await Storage.GetStatsAsync(monitorName);
+        await Storage.SaveEventAsync(monitorName, storedEvent, cancellationToken);
+        var stats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
 
         // Assert
         // Verify stats directly, and implicitly test DB state via GetLastEvents/GetStats
@@ -30,7 +31,7 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         Assert.Equal(responseTime, stats.AverageResponseTime);
 
         // Explicitly check GetLastEventsAsync
-        var events = (await Storage.GetLastEventsAsync(monitorName)).ToList();
+        var events = (await Storage.GetLastEventsAsync(monitorName, cancellationToken: cancellationToken)).ToList();
         Assert.Single(events);
         Assert.Equal(storedEvent with { At = storedEvent.At.ToUniversalTime() }, events[0]);
     }
@@ -38,6 +39,7 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveEventAsync_UpdatesStatsCorrectly()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "test-monitor-2";
         var time1 = DateTimeOffset.UtcNow.AddMinutes(-2);
@@ -49,10 +51,10 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         var event3 = new StoredEvent(time3, MonitorState.Up, TimeSpan.FromMilliseconds(150), "OK Again");
 
         // Act
-        await Storage.SaveEventAsync(monitorName, event1);
-        await Storage.SaveEventAsync(monitorName, event2);
-        await Storage.SaveEventAsync(monitorName, event3);
-        var stats = await Storage.GetStatsAsync(monitorName);
+        await Storage.SaveEventAsync(monitorName, event1, cancellationToken);
+        await Storage.SaveEventAsync(monitorName, event2, cancellationToken);
+        await Storage.SaveEventAsync(monitorName, event3, cancellationToken);
+        var stats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
 
         // Assert
         // Check stats returned by the last SaveEvent
@@ -68,7 +70,7 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         Assert.Equal(TimeSpan.FromMilliseconds(125), stats.AverageResponseTime);
 
         // Verify GetStatsAsync reflects the latest state
-        var finalStats = await Storage.GetStatsAsync(monitorName);
+        var finalStats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
         Assert.NotNull(finalStats);
         Assert.Equal(stats.LastState, finalStats.LastState);
         Assert.Equal(stats.LastUpdate, finalStats.LastUpdate);
@@ -81,6 +83,7 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     [Fact]
     public async Task GetLastEventsAsync_ReturnsCorrectEvents()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "test-monitor-3";
         var baseTime = DateTimeOffset.UtcNow;
@@ -90,11 +93,11 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
 
         foreach (var ev in eventsToSave.OrderBy(e => e.At)) // Save in chronological order
         {
-            await Storage.SaveEventAsync(monitorName, ev);
+            await Storage.SaveEventAsync(monitorName, ev, cancellationToken);
         }
 
         // Act
-        var retrievedEvents = (await Storage.GetLastEventsAsync(monitorName, 3)).ToList();
+        var retrievedEvents = (await Storage.GetLastEventsAsync(monitorName, 3, cancellationToken)).ToList();
 
         // Assert
         Assert.Equal(3, retrievedEvents.Count);
@@ -110,20 +113,21 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     [Fact]
     public async Task SqliteStorage_SaveAndRetrieveEventsAsync_Works()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var now = DateTimeOffset.UtcNow; // Use UtcNow for consistency
         var e1 = new MonitorChecked("m1", now.AddSeconds(-20), MonitorResponse.Up(TimeSpan.FromSeconds(1), "test"));
         var se1 = StoredEvent.From(e1);
-        await Storage.SaveEventAsync(e1.Name, se1);
+        await Storage.SaveEventAsync(e1.Name, se1, cancellationToken);
 
         var e2 = new MonitorChecked("m1", now.AddSeconds(-10), MonitorResponse.Warn(TimeSpan.FromSeconds(2), "warn"));
         var se2 = StoredEvent.From(e2);
-        await Storage.SaveEventAsync(e2.Name, se2);
+        await Storage.SaveEventAsync(e2.Name, se2, cancellationToken);
 
         var e3 = new MonitorChecked("m1", now, MonitorResponse.Down(text: "down")); // Fixed parameter name
         var se3 = StoredEvent.From(e3);
-        await Storage.SaveEventAsync(e3.Name, se3);
+        await Storage.SaveEventAsync(e3.Name, se3, cancellationToken);
 
-        var evs1 = (await Storage.GetLastEventsAsync("m1")).ToList();
+        var evs1 = (await Storage.GetLastEventsAsync("m1", cancellationToken: cancellationToken)).ToList();
 
         // Assert count
         Assert.Equal(3, evs1.Count);
@@ -134,13 +138,13 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         Assert.Equal(se1 with { At = se1.At.ToUniversalTime() }, evs1[2]);
 
         // Test count limit
-        var evsLimited = (await Storage.GetLastEventsAsync("m1", 2)).ToList();
+        var evsLimited = (await Storage.GetLastEventsAsync("m1", 2, cancellationToken)).ToList();
         Assert.Equal(2, evsLimited.Count);
         Assert.Equal(se3 with { At = se3.At.ToUniversalTime() }, evsLimited[0]);
         Assert.Equal(se2 with { At = se2.At.ToUniversalTime() }, evsLimited[1]);
 
         // Test different monitor
-        var evsOther = (await Storage.GetLastEventsAsync("m2")).ToList();
+        var evsOther = (await Storage.GetLastEventsAsync("m2", cancellationToken: cancellationToken)).ToList();
         Assert.Empty(evsOther);
     }
 }

@@ -7,12 +7,13 @@ public class SqliteStorageStateChangeTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveLastStateChangeAsync_InsertUp_CreatesRecordWithUpTimestamp()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "state-change-monitor-1";
         var timestamp = DateTimeOffset.UtcNow;
 
         // Act
-        await Storage.SaveLastStateChangeAsync(monitorName, timestamp, MonitorState.Up);
+        await Storage.SaveLastStateChangeAsync(monitorName, timestamp, MonitorState.Up, cancellationToken);
 
         // Assert
         var (lastSeenUpTicks, lastSeenDownTicks) = await GetLastStateChangeTimestampsAsync(monitorName);
@@ -23,12 +24,13 @@ public class SqliteStorageStateChangeTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveLastStateChangeAsync_InsertDown_CreatesRecordWithDownTimestamp()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "state-change-monitor-2";
         var timestamp = DateTimeOffset.UtcNow;
 
         // Act
-        await Storage.SaveLastStateChangeAsync(monitorName, timestamp, MonitorState.Down);
+        await Storage.SaveLastStateChangeAsync(monitorName, timestamp, MonitorState.Down, cancellationToken);
 
         // Assert
         var (lastSeenUpTicks, lastSeenDownTicks) = await GetLastStateChangeTimestampsAsync(monitorName);
@@ -39,14 +41,15 @@ public class SqliteStorageStateChangeTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveLastStateChangeAsync_UpdateToUp_UpdatesUpTimestampAndPreservesDown()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "state-change-monitor-3";
         var downTimestamp = DateTimeOffset.UtcNow.AddMinutes(-5);
         var upTimestamp = DateTimeOffset.UtcNow;
 
         // Act
-        await Storage.SaveLastStateChangeAsync(monitorName, downTimestamp, MonitorState.Down);
-        await Storage.SaveLastStateChangeAsync(monitorName, upTimestamp, MonitorState.Up);
+        await Storage.SaveLastStateChangeAsync(monitorName, downTimestamp, MonitorState.Down, cancellationToken);
+        await Storage.SaveLastStateChangeAsync(monitorName, upTimestamp, MonitorState.Up, cancellationToken);
 
         // Assert
         var (lastSeenUpTicks, lastSeenDownTicks) = await GetLastStateChangeTimestampsAsync(monitorName);
@@ -57,14 +60,15 @@ public class SqliteStorageStateChangeTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveLastStateChangeAsync_UpdateToDown_UpdatesDownTimestampAndPreservesUp()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorName = "state-change-monitor-4";
         var upTimestamp = DateTimeOffset.UtcNow.AddMinutes(-5);
         var downTimestamp = DateTimeOffset.UtcNow;
 
         // Act
-        await Storage.SaveLastStateChangeAsync(monitorName, upTimestamp, MonitorState.Up);
-        await Storage.SaveLastStateChangeAsync(monitorName, downTimestamp, MonitorState.Down);
+        await Storage.SaveLastStateChangeAsync(monitorName, upTimestamp, MonitorState.Up, cancellationToken);
+        await Storage.SaveLastStateChangeAsync(monitorName, downTimestamp, MonitorState.Down, cancellationToken);
 
         // Assert
         var (lastSeenUpTicks, lastSeenDownTicks) = await GetLastStateChangeTimestampsAsync(monitorName);
@@ -75,6 +79,7 @@ public class SqliteStorageStateChangeTests : SqliteStorageTestBase
     [Fact]
     public async Task SaveLastStateChangeAsync_IgnoreOtherStates_DoesNotInsertOrUpdate()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var monitorNameInsert = "state-change-monitor-5-insert";
         var monitorNameUpdate = "state-change-monitor-5-update";
@@ -82,13 +87,13 @@ public class SqliteStorageStateChangeTests : SqliteStorageTestBase
         var warnTimestamp = DateTimeOffset.UtcNow;
 
         // Setup initial state for update test
-        await Storage.SaveLastStateChangeAsync(monitorNameUpdate, initialTimestamp, MonitorState.Up);
+        await Storage.SaveLastStateChangeAsync(monitorNameUpdate, initialTimestamp, MonitorState.Up, cancellationToken);
 
         // Act
-        await Storage.SaveLastStateChangeAsync(monitorNameInsert, warnTimestamp, MonitorState.Warn);
-        await Storage.SaveLastStateChangeAsync(monitorNameInsert, warnTimestamp, MonitorState.Unknown);
-        await Storage.SaveLastStateChangeAsync(monitorNameUpdate, warnTimestamp, MonitorState.Warn);
-        await Storage.SaveLastStateChangeAsync(monitorNameUpdate, warnTimestamp, MonitorState.Unknown);
+        await Storage.SaveLastStateChangeAsync(monitorNameInsert, warnTimestamp, MonitorState.Warn, cancellationToken);
+        await Storage.SaveLastStateChangeAsync(monitorNameInsert, warnTimestamp, MonitorState.Unknown, cancellationToken);
+        await Storage.SaveLastStateChangeAsync(monitorNameUpdate, warnTimestamp, MonitorState.Warn, cancellationToken);
+        await Storage.SaveLastStateChangeAsync(monitorNameUpdate, warnTimestamp, MonitorState.Unknown, cancellationToken);
 
         // Assert
         // Verify no record was created for the insert attempts

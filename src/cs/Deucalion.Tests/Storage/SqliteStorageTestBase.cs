@@ -21,15 +21,16 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
         Storage = new SqliteStorage(StoragePath);
     }
 
-    public ValueTask InitializeAsync() => new(Storage.InitializeAsync());
+    public ValueTask InitializeAsync() => new(Storage.InitializeAsync(TestContext.Current.CancellationToken));
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     protected async Task<(long? LastSeenUpTicks, long? LastSeenDownTicks)> GetLastStateChangeTimestampsAsync(string monitorName)
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Use the known path to the test database file
         using var connection = new SqliteConnection(_directConnectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
         using var command = connection.CreateCommand();
         command.CommandText = @"
             SELECT LastSeenUpTicks, LastSeenDownTicks
@@ -37,8 +38,8 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
             WHERE MonitorName = @MonitorName;";
         command.Parameters.AddWithValue("@MonitorName", monitorName);
 
-        using var reader = await command.ExecuteReaderAsync();
-        if (await reader.ReadAsync())
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
         {
             var upTicks = reader.IsDBNull(0) ? (long?)null : reader.GetInt64(0);
             var downTicks = reader.IsDBNull(1) ? (long?)null : reader.GetInt64(1);

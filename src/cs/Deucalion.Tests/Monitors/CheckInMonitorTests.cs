@@ -10,27 +10,30 @@ public class CheckInMonitorTests
     [Fact]
     public async Task CheckInMonitor_ReturnsUp_WhenCheckedIn()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
         checkInMonitor.CheckIn();
-        var response = await checkInMonitor.QueryAsync();
+        var response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Up, response.State);
     }
 
     [Fact]
     public async Task CheckInMonitor_ReturnsDown_WhenNotCheckedIn()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
         checkInMonitor.CheckIn();
-        var response = await checkInMonitor.QueryAsync();
+        var response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Up, response.State);
-        await Task.Delay(checkInMonitor.IntervalToDown * 2);
-        response = await checkInMonitor.QueryAsync();
+        await Task.Delay(checkInMonitor.IntervalToDown * 2, cancellationToken);
+        response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Down, response.State);
     }
 
     [Fact]
     public async Task CheckInMonitor_Returns_StatePassedAsArgument()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
         var newResponse = new MonitorResponse()
         {
@@ -39,18 +42,18 @@ public class CheckInMonitorTests
             ResponseTime = TimeSpan.FromMilliseconds(500)
         };
         checkInMonitor.CheckIn(newResponse);
-        var response = await checkInMonitor.QueryAsync();
+        var response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.NotNull(response);
         Assert.Equal(newResponse.State, response.State);
         Assert.Equal(newResponse.ResponseText, response.ResponseText);
         Assert.Equal(newResponse.ResponseTime, response.ResponseTime);
         newResponse = newResponse with { State = MonitorState.Up };
         checkInMonitor.CheckIn(newResponse);
-        response = await checkInMonitor.QueryAsync();
+        response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.NotNull(response);
         Assert.Equal(newResponse.State, response.State);
-        await Task.Delay(checkInMonitor.IntervalToDown * 2);
-        response = await checkInMonitor.QueryAsync();
+        await Task.Delay(checkInMonitor.IntervalToDown * 2, cancellationToken);
+        response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Down, response.State);
     }
 
@@ -59,7 +62,8 @@ public class CheckInMonitorTests
     {
         var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromSeconds(10) };
         var channel = Channel.CreateUnbounded<IMonitorEvent>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(2));
 
         // Start the monitor loop
         var monitorTask = Deucalion.Application.MonitorExtensions.RunAsync(monitor, channel.Writer, cts.Token);
@@ -87,6 +91,6 @@ public class CheckInMonitorTests
         Assert.True(sawUp, "Did not receive an Up event after CheckIn() within timeout");
 
         cts.Cancel();
-        await Task.WhenAny(monitorTask, Task.Delay(500));
+        await Task.WhenAny(monitorTask, Task.Delay(500, TestContext.Current.CancellationToken));
     }
 }

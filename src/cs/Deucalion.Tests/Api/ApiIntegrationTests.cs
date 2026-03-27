@@ -52,10 +52,10 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     {
         using var client = _factory.CreateClient();
 
-        using var response = await client.GetAsync("/api/configuration");
+        using var response = await client.GetAsync("/api/configuration", TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
 
         Assert.Equal("Deucalion (dev) 📡", payload.GetProperty("pageTitle").GetString());
         Assert.Equal("Deucalion. A high performance monitoring tool.", payload.GetProperty("pageDescription").GetString());
@@ -68,13 +68,13 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
         var now = DateTimeOffset.UtcNow;
 
-        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(123), null));
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(123), null), TestContext.Current.CancellationToken);
 
         using var client = _factory.CreateClient();
-        using var response = await client.GetAsync("/api/monitors");
+        using var response = await client.GetAsync("/api/monitors", TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         Assert.Equal(JsonValueKind.Array, payload.ValueKind);
 
         var monitorNames = payload.EnumerateArray()
@@ -101,17 +101,17 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     {
         using var client = _factory.CreateClient();
 
-        using (var unknownResponse = await client.PostAsync("/api/monitors/unknown/checkin", content: null))
+        using (var unknownResponse = await client.PostAsync("/api/monitors/unknown/checkin", content: null, TestContext.Current.CancellationToken))
         {
             Assert.Equal(HttpStatusCode.NotFound, unknownResponse.StatusCode);
         }
 
-        using (var nonCheckInResponse = await client.PostAsync("/api/monitors/web-main/checkin", content: null))
+        using (var nonCheckInResponse = await client.PostAsync("/api/monitors/web-main/checkin", content: null, TestContext.Current.CancellationToken))
         {
             Assert.Equal(HttpStatusCode.BadRequest, nonCheckInResponse.StatusCode);
         }
 
-        using (var unauthorized = await client.PostAsync("/api/monitors/checkin-main/checkin", content: null))
+        using (var unauthorized = await client.PostAsync("/api/monitors/checkin-main/checkin", content: null, TestContext.Current.CancellationToken))
         {
             Assert.Equal(HttpStatusCode.Unauthorized, unauthorized.StatusCode);
         }
@@ -119,7 +119,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
         request.Headers.Add("deucalion-checkin-secret", "test-secret");
 
-        using var okResponse = await client.SendAsync(request);
+        using var okResponse = await client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, okResponse.StatusCode);
     }
 
@@ -146,17 +146,18 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
             }
         });
 
-        await connection.StartAsync();
+        await connection.StartAsync(TestContext.Current.CancellationToken);
 
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
             request.Headers.Add("deucalion-checkin-secret", "test-secret");
 
-            using var response = await client.SendAsync(request);
+            using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
             response.EnsureSuccessStatusCode();
 
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
             var monitorName = await checkedEventReceived.Task.WaitAsync(timeout.Token);
             Assert.Equal("checkin-main", monitorName);
         }
