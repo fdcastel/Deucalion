@@ -47,10 +47,8 @@ ENV VITE_INFORMATIONAL_VERSION=$INFORMATIONAL_VERSION
 
 RUN npm run build
 
-# final image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
-ARG VERSION=0.0.0-dev
-ARG INFORMATIONAL_VERSION=0.0.0-dev
+# final image -- AOT produces a native binary, no .NET runtime needed
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
@@ -61,4 +59,4 @@ COPY --from=build-net /app ./
 COPY --from=build-node /source/dist ./wwwroot/
 
 USER $APP_UID
-ENTRYPOINT ["dotnet", "Deucalion.Service.dll"]
+ENTRYPOINT ["./Deucalion.Service"]
