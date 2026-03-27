@@ -1,0 +1,54 @@
+name: build
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore .NET dependencies
+        run: dotnet restore
+
+      - name: Build .NET
+        run: dotnet build --no-restore -c Release
+
+      - name: Test .NET
+        run: dotnet test --no-build -c Release
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: src/ts/deucalion-ui/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: src/ts/deucalion-ui
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: src/ts/deucalion-ui
+        run: npm run build
+
+      - name: Test frontend
+        working-directory: src/ts/deucalion-ui
+        run: npm test

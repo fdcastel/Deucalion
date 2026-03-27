@@ -1,91 +1,136 @@
 name: release
 
-# This workflow will run:
-#   - When you push a v* tag:
-#     - If the tag is on your default branch, images will be tagged with majorMinorPatch, major.minor, major, latest, and sha.
-#     - If the tag is on a non-default branch, the image will be tagged with the full semVer (e.g., v1.2.3-beta.1) and sha. 
-#     - If this branch is master, edge will also be tagged.
-#   - When you push a commit to the master branch (that is not a tag):
-#     - Only the edge and sha tags will be applied to the Docker image. 
-#     - The version-specific tags (latest, X.Y.Z, etc.) will not be created because github.ref_type will be branch, not tag.
-
 on:
   push:
-    branches:
-      - 'master'  # For `edge` builds    
-    tags:
-      - 'v*'  # For tagged releases
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
 
 env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/deucalion
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    uses: ./.github/workflows/build.yml
     permissions:
       contents: read
-      packages: write
+      packages: read
 
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      major: ${{ steps.gitversion.outputs.major }}
+      minor: ${{ steps.gitversion.outputs.minor }}
+      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Disable shallow fetch (required for GitVersion)
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Normalize Git state for GitVersion
-      if: github.ref_type == 'tag'
-      run: git checkout -B ${{ github.event.repository.default_branch }} ${{ github.sha }}
+      - name: Normalize Git state for GitVersion
+        run: git checkout -B ${{ github.event.repository.default_branch }} ${{ github.sha }}
 
-    - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v3
-      with:
-        versionSpec: '6.x'
+      - uses: gittools/actions/gitversion/setup@v3
+        with:
+          versionSpec: '6.x'
 
-    - name: Determine Version
-      id: gitversion
-      uses: gittools/actions/gitversion/execute@v3
-      with:
-        useConfigFile: true
+      - id: gitversion
+        uses: gittools/actions/gitversion/execute@v3
+        with:
+          useConfigFile: true
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+  docker:
+    needs: [test, version]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=raw,value=${{ steps.gitversion.outputs.semVer }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName != github.event.repository.default_branch }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-          type=raw,value=${{ steps.gitversion.outputs.majorMinorPatch }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          type=raw,value=${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          type=raw,value=${{ steps.gitversion.outputs.major }},enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.gitversion.outputs.branchName == github.event.repository.default_branch }}
-          
-          type=edge
-          type=sha
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,"name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}",push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            VERSION=${{ needs.version.outputs.semVer }}
+            INFORMATIONAL_VERSION=${{ needs.version.outputs.informationalVersion }}
+          secrets: |
+            github_token=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: ./src
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          VERSION=${{ steps.gitversion.outputs.semVer }}
-          INFORMATIONAL_VERSION=${{ steps.gitversion.outputs.informationalVersion }}
-        secrets: |
-          github_token=${{ secrets.GITHUB_TOKEN }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.runner }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: [version, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Create multi-arch manifest and push
+        run: |
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          version="${{ needs.version.outputs.majorMinorPatch }}"
+          major="${{ needs.version.outputs.major }}"
+          minor="${{ needs.version.outputs.minor }}"
+
+          digests=$(cd /tmp/digests && printf "${image}@sha256:%s " *)
+
+          docker buildx imagetools create \
+            --tag "${image}:${version}" \
+            --tag "${image}:${major}.${minor}" \
+            --tag "${image}:${major}" \
+            --tag "${image}:latest" \
+            ${digests}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create ${{ github.ref_name }} --repo ${{ github.repository }} --generate-notes
