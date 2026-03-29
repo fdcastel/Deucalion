@@ -1,8 +1,5 @@
-﻿using YamlDotNet.Serialization;
+﻿namespace Deucalion.Configuration;
 
-namespace Deucalion.Configuration;
-
-[YamlSerializable]
 public record PullMonitorConfiguration
 {
     public string? Name { get; set; }
