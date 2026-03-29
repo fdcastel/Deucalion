@@ -164,4 +164,41 @@ public record ApplicationConfiguration
             throw new ConfigurationErrorException(string.Format(Messages.ConfigurationInvalidTimeSpan, monitorName, fieldName, value.Value));
         }
     }
+
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "All configuration types are preserved by SharpYaml source generator.")]
+    private static void InterpolateMonitorName(string monitorName, PullMonitorConfiguration monitor)
+    {
+        foreach (var property in monitor.GetType().GetProperties())
+        {
+            if (property.PropertyType == typeof(string) && property.CanRead && property.CanWrite)
+            {
+                if (property.GetValue(monitor) is string s && s.Contains("${MONITOR_NAME}", StringComparison.OrdinalIgnoreCase))
+                {
+                    property.SetValue(monitor, s.Replace("${MONITOR_NAME}", monitorName, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            else if (property.PropertyType == typeof(Uri) && property.CanRead && property.CanWrite)
+            {
+                if (property.GetValue(monitor) is Uri uri && uri.OriginalString.Contains("${MONITOR_NAME}", StringComparison.OrdinalIgnoreCase))
+                {
+                    var interpolated = uri.OriginalString.Replace("${MONITOR_NAME}", monitorName, StringComparison.OrdinalIgnoreCase);
+                    property.SetValue(monitor, new Uri(interpolated));
+                }
+            }
+        }
+    }
+
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "All validated types are preserved by SharpYaml source generator.")]
+    private static void ValidateDataAnnotations(string monitorName, PullMonitorConfiguration monitor)
+    {
+        var context = new System.ComponentModel.DataAnnotations.ValidationContext(monitor);
+        try
+        {
+            System.ComponentModel.DataAnnotations.Validator.ValidateObject(monitor, context, true);
+        }
+        catch (System.ComponentModel.DataAnnotations.ValidationException ex)
+        {
+            throw new ConfigurationErrorException($"Monitor '{monitorName}': {ex.Message}", ex);
+        }
+    }
 }
