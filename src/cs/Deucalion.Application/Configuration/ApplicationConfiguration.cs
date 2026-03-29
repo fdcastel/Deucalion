@@ -67,6 +67,7 @@ public record ApplicationConfiguration
             PolymorphismOptions = new YamlPolymorphismOptions
             {
                 DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag,
+                UnknownDerivedTypeHandling = YamlUnknownDerivedTypeHandling.FallBackToBase,
                 DerivedTypeMappings =
                 {
                     [typeof(PullMonitorConfiguration)] =

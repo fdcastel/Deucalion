@@ -404,8 +404,9 @@ public class ConfigurationTests
               intervalWhenUp: 00:00:10
         ";
 
-        var exception = CatchConfigurationException(ConfigurationContent);
-        Assert.Equal(ApplicationConfiguration.Messages.ConfigurationMustHaveMonitorsSection, exception.Message);
+        // SharpYaml 3.7.0 validates 'required' at deserialization time, throwing YamlException
+        // with location info before the application-level null check can fire.
+        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
     }
 
     private static ApplicationConfiguration ReadConfiguration(string configurationContent)
