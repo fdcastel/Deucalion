@@ -168,26 +168,42 @@ public record ApplicationConfiguration
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "All configuration types are preserved by SharpYaml source generator.")]
+    [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(value))]
+    private static string? Interpolate(string monitorName, string? value) =>
+        value is not null && value.Contains("${MONITOR_NAME}", StringComparison.OrdinalIgnoreCase)
+            ? value.Replace("${MONITOR_NAME}", monitorName, StringComparison.OrdinalIgnoreCase)
+            : value;
+
     private static void InterpolateMonitorName(string monitorName, PullMonitorConfiguration monitor)
     {
-        foreach (var property in monitor.GetType().GetProperties())
+        // Base PullMonitorConfiguration string properties
+        monitor.Group = Interpolate(monitorName, monitor.Group);
+        monitor.Href = Interpolate(monitorName, monitor.Href);
+        monitor.Image = Interpolate(monitorName, monitor.Image);
+
+        // Derived type-specific string properties
+        switch (monitor)
         {
-            if (property.PropertyType == typeof(string) && property.CanRead && property.CanWrite)
-            {
-                if (property.GetValue(monitor) is string s && s.Contains("${MONITOR_NAME}", StringComparison.OrdinalIgnoreCase))
-                {
-                    property.SetValue(monitor, s.Replace("${MONITOR_NAME}", monitorName, StringComparison.OrdinalIgnoreCase));
-                }
-            }
-            else if (property.PropertyType == typeof(Uri) && property.CanRead && property.CanWrite)
-            {
-                if (property.GetValue(monitor) is Uri uri && uri.OriginalString.Contains("${MONITOR_NAME}", StringComparison.OrdinalIgnoreCase))
-                {
-                    var interpolated = uri.OriginalString.Replace("${MONITOR_NAME}", monitorName, StringComparison.OrdinalIgnoreCase);
-                    property.SetValue(monitor, new Uri(interpolated));
-                }
-            }
+            case CheckInMonitorConfiguration checkIn:
+                checkIn.Secret = Interpolate(monitorName, checkIn.Secret);
+                break;
+
+            case DnsMonitorConfiguration dns:
+                dns.Host = Interpolate(monitorName, dns.Host)!;
+                break;
+
+            case HttpMonitorConfiguration http:
+                http.Url = Interpolate(monitorName, http.Url)!;
+                http.ExpectedResponseBodyPattern = Interpolate(monitorName, http.ExpectedResponseBodyPattern);
+                break;
+
+            case PingMonitorConfiguration ping:
+                ping.Host = Interpolate(monitorName, ping.Host)!;
+                break;
+
+            case TcpMonitorConfiguration tcp:
+                tcp.Host = Interpolate(monitorName, tcp.Host)!;
+                break;
         }
     }
 
