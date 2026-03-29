@@ -57,7 +57,7 @@ public record ApplicationConfiguration
 
     public static ApplicationConfiguration ReadFromString(string content)
     {
-        var yamlContext = new DeucalionYamlContext();
+        var yamlContext = new DeucalionYamlDotNetContext();
         var deserializer = new StaticDeserializerBuilder(yamlContext)
             .IgnoreUnmatchedProperties()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)

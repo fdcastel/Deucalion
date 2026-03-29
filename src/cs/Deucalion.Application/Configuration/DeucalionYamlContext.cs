@@ -1,18 +1,23 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Deucalion.Configuration;
 using Deucalion.Network.Configuration;
-using YamlDotNet.Serialization;
+using SharpYaml.Serialization;
 
 namespace Deucalion.Application.Configuration;
 
-[YamlStaticContext]
-[YamlSerializable(typeof(ApplicationConfiguration))]
-[YamlSerializable(typeof(ApplicationConfiguration.ConfigurationDefaults))]
+// Source-gen limitations (SharpYaml 4.0.0-pre.4):
+//   CS9035: Types with 'required' members excluded — source generator emits bare 'new T()'
+//           (ApplicationConfiguration, DnsMonitorConfiguration, HttpMonitorConfiguration,
+//            PingMonitorConfiguration, TcpMonitorConfiguration)
+//   SHARPYAML002: Types containing Uri/IPEndPoint/HttpMethod members excluded until
+//                 converters are registered (Phase 4)
+//           (DnsMonitorOptionalConfiguration, HttpMonitorOptionalConfiguration,
+//            ApplicationConfiguration.ConfigurationDefaults)
+// All excluded types use reflection fallback at runtime.
+[YamlSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip)]
 [YamlSerializable(typeof(PullMonitorConfiguration))]
 [YamlSerializable(typeof(CheckInMonitorConfiguration))]
-[YamlSerializable(typeof(DnsMonitorConfiguration))]
-[YamlSerializable(typeof(DnsMonitorOptionalConfiguration))]
-[YamlSerializable(typeof(HttpMonitorConfiguration))]
-[YamlSerializable(typeof(HttpMonitorOptionalConfiguration))]
-[YamlSerializable(typeof(PingMonitorConfiguration))]
-[YamlSerializable(typeof(TcpMonitorConfiguration))]
-public partial class DeucalionYamlContext : YamlDotNet.Serialization.StaticContext;
+internal partial class DeucalionYamlContext : YamlSerializerContext;
