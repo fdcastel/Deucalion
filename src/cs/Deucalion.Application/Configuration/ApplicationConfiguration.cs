@@ -61,25 +61,10 @@ public record ApplicationConfiguration
     {
         var options = new YamlSerializerOptions
         {
+            TypeInfoResolver = DeucalionYamlContext.Default,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
             Converters = [new UriConverter(), new IPEndPointConverter(), new HttpMethodConverter()],
-            PolymorphismOptions = new YamlPolymorphismOptions
-            {
-                DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag,
-                UnknownDerivedTypeHandling = YamlUnknownDerivedTypeHandling.FallBackToBase,
-                DerivedTypeMappings =
-                {
-                    [typeof(PullMonitorConfiguration)] =
-                    [
-                        new YamlDerivedType(typeof(CheckInMonitorConfiguration), "checkin") { Tag = "!checkin" },
-                        new YamlDerivedType(typeof(DnsMonitorConfiguration), "dns") { Tag = "!dns" },
-                        new YamlDerivedType(typeof(HttpMonitorConfiguration), "http") { Tag = "!http" },
-                        new YamlDerivedType(typeof(PingMonitorConfiguration), "ping") { Tag = "!ping" },
-                        new YamlDerivedType(typeof(TcpMonitorConfiguration), "tcp") { Tag = "!tcp" },
-                    ]
-                }
-            }
         };
 
         var result = YamlSerializer.Deserialize<ApplicationConfiguration>(content, options)

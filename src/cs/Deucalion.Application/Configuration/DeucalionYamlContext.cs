@@ -25,4 +25,9 @@ namespace Deucalion.Application.Configuration;
 [YamlSerializable(typeof(HttpMonitorConfiguration))]
 [YamlSerializable(typeof(PingMonitorConfiguration))]
 [YamlSerializable(typeof(TcpMonitorConfiguration))]
+[YamlDerivedTypeMapping(typeof(PullMonitorConfiguration), typeof(CheckInMonitorConfiguration), "checkin", Tag = "!checkin")]
+[YamlDerivedTypeMapping(typeof(PullMonitorConfiguration), typeof(DnsMonitorConfiguration), "dns", Tag = "!dns")]
+[YamlDerivedTypeMapping(typeof(PullMonitorConfiguration), typeof(HttpMonitorConfiguration), "http", Tag = "!http")]
+[YamlDerivedTypeMapping(typeof(PullMonitorConfiguration), typeof(PingMonitorConfiguration), "ping", Tag = "!ping")]
+[YamlDerivedTypeMapping(typeof(PullMonitorConfiguration), typeof(TcpMonitorConfiguration), "tcp", Tag = "!tcp")]
 internal partial class DeucalionYamlContext : YamlSerializerContext;

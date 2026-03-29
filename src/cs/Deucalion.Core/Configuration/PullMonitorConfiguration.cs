@@ -3,7 +3,7 @@ using SharpYaml.Serialization;
 
 namespace Deucalion.Configuration;
 
-[YamlPolymorphic(DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag)]
+[YamlPolymorphic(DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag, UnknownDerivedTypeHandling = YamlUnknownDerivedTypeHandling.FallBackToBase)]
 public record PullMonitorConfiguration
 {
     public string? Name { get; set; }
