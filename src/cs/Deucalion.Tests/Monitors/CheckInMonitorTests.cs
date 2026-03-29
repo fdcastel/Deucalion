@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Deucalion.Events;
 using Deucalion.Network.Monitors;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Deucalion.Tests.Monitors;
@@ -11,7 +12,8 @@ public class CheckInMonitorTests
     public async Task CheckInMonitor_ReturnsUp_WhenCheckedIn()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
+        var fakeTime = new FakeTimeProvider();
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000), TimeProvider = fakeTime };
         checkInMonitor.CheckIn();
         var response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Up, response.State);
@@ -21,11 +23,12 @@ public class CheckInMonitorTests
     public async Task CheckInMonitor_ReturnsDown_WhenNotCheckedIn()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
+        var fakeTime = new FakeTimeProvider();
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000), TimeProvider = fakeTime };
         checkInMonitor.CheckIn();
         var response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Up, response.State);
-        await Task.Delay(checkInMonitor.IntervalToDown * 2, cancellationToken);
+        fakeTime.Advance(checkInMonitor.IntervalToDown * 2);
         response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Down, response.State);
     }
@@ -34,7 +37,8 @@ public class CheckInMonitorTests
     public async Task CheckInMonitor_Returns_StatePassedAsArgument()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000) };
+        var fakeTime = new FakeTimeProvider();
+        CheckInMonitor checkInMonitor = new() { IntervalToDown = TimeSpan.FromMilliseconds(1000), TimeProvider = fakeTime };
         var newResponse = new MonitorResponse()
         {
             State = MonitorState.Down,
@@ -52,7 +56,7 @@ public class CheckInMonitorTests
         response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.NotNull(response);
         Assert.Equal(newResponse.State, response.State);
-        await Task.Delay(checkInMonitor.IntervalToDown * 2, cancellationToken);
+        fakeTime.Advance(checkInMonitor.IntervalToDown * 2);
         response = await checkInMonitor.QueryAsync(cancellationToken);
         Assert.Equal(MonitorState.Down, response.State);
     }
@@ -60,37 +64,37 @@ public class CheckInMonitorTests
     [Fact]
     public async Task CheckInMonitor_CheckIn_TriggersImmediateStateUpdate()
     {
-        var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromSeconds(10) };
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fakeTime = new FakeTimeProvider();
+        var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromSeconds(10), TimeProvider = fakeTime };
         var channel = Channel.CreateUnbounded<IMonitorEvent>();
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(2));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Start the monitor loop
         var monitorTask = Deucalion.Application.MonitorExtensions.RunAsync(monitor, channel.Writer, cts.Token);
 
-        // Wait for the first event (should be Down)
+        // Wait for the first event (should be Down since no check-in yet)
         var evt1 = await channel.Reader.ReadAsync(cts.Token);
         Assert.True(evt1 is MonitorChecked mc1 && mc1.Response?.State == MonitorState.Down);
 
-        // Call CheckIn and expect an Up event soon after
+        // Call CheckIn — this cancels the polling delay, causing an immediate re-query
         monitor.CheckIn();
+
+        // The loop should re-run quickly; read the next event (expect Up)
         var sawUp = false;
-        var timeout = Task.Delay(1000, cts.Token);
-        while (!sawUp)
+        // Read a few events looking for an Up state
+        for (var i = 0; i < 5; i++)
         {
-            var readTask = channel.Reader.ReadAsync(cts.Token).AsTask();
-            var completed = await Task.WhenAny(readTask, timeout);
-            if (completed == timeout) break;
-            var evt = await readTask;
+            var evt = await channel.Reader.ReadAsync(cts.Token);
             if (evt is MonitorChecked mc2 && mc2.Response?.State == MonitorState.Up)
             {
                 sawUp = true;
                 break;
             }
         }
-        Assert.True(sawUp, "Did not receive an Up event after CheckIn() within timeout");
+        Assert.True(sawUp, "Did not receive an Up event after CheckIn()");
 
         cts.Cancel();
-        await Task.WhenAny(monitorTask, Task.Delay(500, TestContext.Current.CancellationToken));
+        try { await monitorTask; } catch (OperationCanceledException) { }
     }
 }

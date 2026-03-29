@@ -47,13 +47,13 @@ public static class MonitorExtensions
         var consecutiveFailCount = 0;
         while (!stopToken.IsCancellationRequested)
         {
-            var queryStartTime = DateTimeOffset.UtcNow;
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var queryStartTime = monitor.TimeProvider.GetUtcNow();
+            var startTimestamp = monitor.TimeProvider.GetTimestamp();
             var response = await monitor.QueryAsync(stopToken);
 
             if (response.ResponseTime is null)
             {
-                response = response with { ResponseTime = stopwatch.Elapsed };
+                response = response with { ResponseTime = monitor.TimeProvider.GetElapsedTime(startTimestamp) };
             }
 
             var name = monitor.Name;
@@ -108,11 +108,11 @@ public static class MonitorExtensions
                 {
                     // Support short-circuit for CheckInMonitor
                     checkInMonitor.DelayCts = new CancellationTokenSource();
-                    await Task.Delay(delayInterval, CancellationTokenSource.CreateLinkedTokenSource(stopToken, checkInMonitor.DelayCts.Token).Token);
+                    await Task.Delay(delayInterval, monitor.TimeProvider, CancellationTokenSource.CreateLinkedTokenSource(stopToken, checkInMonitor.DelayCts.Token).Token);
                 }
                 else
                 {
-                    await Task.Delay(delayInterval, stopToken);
+                    await Task.Delay(delayInterval, monitor.TimeProvider, stopToken);
                 }
             }
             catch (OperationCanceledException)

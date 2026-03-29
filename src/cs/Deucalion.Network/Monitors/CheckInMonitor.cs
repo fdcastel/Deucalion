@@ -15,7 +15,7 @@ public sealed class CheckInMonitor : PullMonitor
 
     public void CheckIn(MonitorResponse? response = null)
     {
-        _lastCheckInTime = DateTimeOffset.UtcNow;
+        _lastCheckInTime = TimeProvider.GetUtcNow();
         _lastResponse = response ?? MonitorResponse.Up();
         _delayCts?.Cancel(); // Short-circuit the polling delay
     }
@@ -25,7 +25,7 @@ public sealed class CheckInMonitor : PullMonitor
         if (!_lastCheckInTime.HasValue)
             return Task.FromResult(MonitorResponse.Down());
 
-        if ((DateTimeOffset.UtcNow - _lastCheckInTime.Value) > IntervalToDown)
+        if ((TimeProvider.GetUtcNow() - _lastCheckInTime.Value) > IntervalToDown)
             return Task.FromResult(MonitorResponse.Down());
 
         return Task.FromResult(_lastResponse ?? MonitorResponse.Up());
