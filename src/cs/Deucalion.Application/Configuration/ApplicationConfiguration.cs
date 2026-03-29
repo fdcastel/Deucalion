@@ -6,10 +6,8 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Deucalion.Application.Configuration;
 
-[YamlSerializable]
 public record ApplicationConfiguration
 {
-    [YamlSerializable]
     public record ConfigurationDefaults : PullMonitorConfiguration
     {
         public TimeSpan? IntervalToDown { get; set; }

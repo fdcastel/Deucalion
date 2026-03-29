@@ -1,5 +1,9 @@
-﻿namespace Deucalion.Configuration;
+﻿using SharpYaml;
+using SharpYaml.Serialization;
 
+namespace Deucalion.Configuration;
+
+[YamlPolymorphic(DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag)]
 public record PullMonitorConfiguration
 {
     public string? Name { get; set; }
