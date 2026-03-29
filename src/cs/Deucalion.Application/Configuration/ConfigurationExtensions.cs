@@ -31,7 +31,7 @@ public static class ConfigurationExtensions
 
     internal static HttpMonitor Build(this HttpMonitorConfiguration configuration)
     {
-        var monitor = new HttpMonitor() { Url = configuration.Url };
+        var monitor = new HttpMonitor() { Url = new Uri(configuration.Url) };
         monitor.ExpectedStatusCode = configuration.ExpectedStatusCode ?? monitor.ExpectedStatusCode;
         monitor.ExpectedResponseBodyPattern = configuration.ExpectedResponseBodyPattern ?? monitor.ExpectedResponseBodyPattern;
         monitor.IgnoreCertificateErrors = configuration.IgnoreCertificateErrors ?? monitor.IgnoreCertificateErrors;

@@ -102,7 +102,7 @@ public class ConfigurationTests
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
         var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitor);
         Assert.Equal("mhttp", httpMonitor.Name);
-        Assert.Equal(new Uri("http://github.com/api"), httpMonitor.Url);
+        Assert.Equal("http://github.com/api", httpMonitor.Url);
         Assert.Equal(HttpStatusCode.Accepted, httpMonitor.ExpectedStatusCode);
         Assert.Equal(".*", httpMonitor.ExpectedResponseBodyPattern);
         Assert.Equal(true, httpMonitor.IgnoreCertificateErrors);
@@ -210,7 +210,7 @@ public class ConfigurationTests
         Assert.Equal(TimeSpan.FromSeconds(40), pingMonitor.Timeout);
 
         var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors.ElementAt(1).Value);
-        Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
+        Assert.Equal("https://google.com", httpMonitor.Url);
         Assert.Equal(TimeSpan.FromSeconds(10), httpMonitor.IntervalWhenDown);
         Assert.Equal(TimeSpan.FromSeconds(20), httpMonitor.IntervalWhenUp);
         Assert.Null(httpMonitor.WarnTimeout);
@@ -265,7 +265,7 @@ public class ConfigurationTests
         Assert.Equal("bing.com", pingMonitor.Host);
 
         var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitors.Monitors.ElementAt(2).Value);
-        Assert.Equal(new Uri("https://google.com"), httpMonitor.Url);
+        Assert.Equal("https://google.com", httpMonitor.Url);
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void InvalidTypeTag_Throws()
+    public void InvalidTypeTag_DeserializesAsBaseConfiguration()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -378,7 +378,9 @@ public class ConfigurationTests
                 host: example.com
         ";
 
-        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+        // SharpYaml: unknown tags in tag-based polymorphism silently fall back to base type
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        Assert.IsType<PullMonitorConfiguration>(monitor);
     }
 
     [Fact]

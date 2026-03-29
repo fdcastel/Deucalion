@@ -1,8 +1,10 @@
-﻿using Deucalion.Application.Yaml;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Deucalion.Application.Yaml;
 using Deucalion.Configuration;
 using Deucalion.Network.Configuration;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+using SharpYaml;
+using SharpYaml.Serialization;
 
 namespace Deucalion.Application.Configuration;
 
@@ -49,7 +51,7 @@ public record ApplicationConfiguration
         {
             throw;
         }
-        catch (YamlDotNet.Core.YamlException ex)
+        catch (YamlException ex)
         {
             throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileParseError, configurationFile, ex.Message), ex);
         }
@@ -57,24 +59,33 @@ public record ApplicationConfiguration
 
     public static ApplicationConfiguration ReadFromString(string content)
     {
-        var yamlContext = new DeucalionYamlDotNetContext();
-        var deserializer = new StaticDeserializerBuilder(yamlContext)
-            .IgnoreUnmatchedProperties()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .WithTagMapping("!checkin", typeof(CheckInMonitorConfiguration))
-            .WithTagMapping("!dns", typeof(DnsMonitorConfiguration))
-            .WithTagMapping("!http", typeof(HttpMonitorConfiguration))
-            .WithTagMapping("!ping", typeof(PingMonitorConfiguration))
-            .WithTagMapping("!tcp", typeof(TcpMonitorConfiguration))
-            .WithTypeConverter(new InterpolatedStringConverter())
-            .WithTypeConverter(new HttpMethodConverter())
-            .WithTypeConverter(new IPEndPointConverter())
-            .WithValidation()
-            .Build();
+        var options = new YamlSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+            Converters = [new UriConverter(), new IPEndPointConverter(), new HttpMethodConverter()],
+            PolymorphismOptions = new YamlPolymorphismOptions
+            {
+                DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag,
+                DerivedTypeMappings =
+                {
+                    [typeof(PullMonitorConfiguration)] =
+                    [
+                        new YamlDerivedType(typeof(CheckInMonitorConfiguration), "checkin") { Tag = "!checkin" },
+                        new YamlDerivedType(typeof(DnsMonitorConfiguration), "dns") { Tag = "!dns" },
+                        new YamlDerivedType(typeof(HttpMonitorConfiguration), "http") { Tag = "!http" },
+                        new YamlDerivedType(typeof(PingMonitorConfiguration), "ping") { Tag = "!ping" },
+                        new YamlDerivedType(typeof(TcpMonitorConfiguration), "tcp") { Tag = "!tcp" },
+                    ]
+                }
+            }
+        };
 
-        var result = deserializer.Deserialize<ApplicationConfiguration>(content) ?? throw new ConfigurationErrorException(Messages.ConfigurationMustNotBeEmpty);
+        var result = YamlSerializer.Deserialize<ApplicationConfiguration>(content, options)
+            ?? throw new ConfigurationErrorException(Messages.ConfigurationMustNotBeEmpty);
 
-        result.Monitors = result.Monitors ?? throw new ConfigurationErrorException(Messages.ConfigurationMustHaveMonitorsSection);
+        result.Monitors = result.Monitors
+            ?? throw new ConfigurationErrorException(Messages.ConfigurationMustHaveMonitorsSection);
 
         foreach (var monitor in result.Monitors)
         {
@@ -83,6 +94,9 @@ public record ApplicationConfiguration
             {
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, monitor.Key));
             }
+
+            // Interpolate ${MONITOR_NAME} placeholders
+            InterpolateMonitorName(monitor.Key, monitor.Value);
 
             // Set monitor name
             monitor.Value.Name = monitor.Key;
@@ -103,6 +117,9 @@ public record ApplicationConfiguration
             {
                 ValidateTimeSpan(monitor.Key, nameof(checkIn.IntervalToDown), checkIn.IntervalToDown);
             }
+
+            // Validate DataAnnotations (e.g. [Required] fields)
+            ValidateDataAnnotations(monitor.Key, monitor.Value);
         }
 
         return result;

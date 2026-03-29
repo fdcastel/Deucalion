@@ -93,7 +93,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 
         // Verify href auto-derivation: HTTP monitor without explicit href should use URL
         var httpMonitor = payload.EnumerateArray().Single(x => x.GetProperty("name").GetString() == "web-main");
-        Assert.Equal("https://example.com/", httpMonitor.GetProperty("config").GetProperty("href").GetString());
+        Assert.Equal("https://example.com", httpMonitor.GetProperty("config").GetProperty("href").GetString());
     }
 
     [Fact]

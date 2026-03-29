@@ -1,21 +1,16 @@
-﻿using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
-using YamlDotNet.Serialization;
+﻿using SharpYaml.Serialization;
 
 namespace Deucalion.Application.Yaml;
 
-internal class HttpMethodConverter : IYamlTypeConverter
+internal class HttpMethodConverter : YamlConverter<HttpMethod>
 {
-    public bool Accepts(Type type)
+    public override HttpMethod? Read(YamlReader reader)
     {
-        return type == typeof(HttpMethod);
+        var value = reader.ScalarValue;
+        reader.Read();
+        return value is null ? null : new HttpMethod(value);
     }
 
-    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer) =>
-        new HttpMethod(parser.Consume<Scalar>().Value);
-
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
-    {
-        // Not used
-    }
+    public override void Write(YamlWriter writer, HttpMethod value)
+        => writer.WriteScalar(value.Method);
 }

@@ -8,7 +8,7 @@ internal class UriConverter : YamlConverter<Uri>
     {
         var value = reader.ScalarValue;
         reader.Read();
-        return value is null ? null : new Uri(value);
+        return value is null ? null : new Uri(value, UriKind.RelativeOrAbsolute);
     }
 
     public override void Write(YamlWriter writer, Uri value)

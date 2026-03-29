@@ -1,25 +1,17 @@
 using System.Net;
-using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
-using YamlDotNet.Serialization;
+using SharpYaml.Serialization;
 
 namespace Deucalion.Application.Yaml;
 
-internal class IPEndPointConverter : IYamlTypeConverter
+internal class IPEndPointConverter : YamlConverter<IPEndPoint>
 {
-    public bool Accepts(Type type)
+    public override IPEndPoint? Read(YamlReader reader)
     {
-        return type == typeof(IPEndPoint);
+        var value = reader.ScalarValue;
+        reader.Read();
+        return value is null ? null : IPEndPoint.Parse(value);
     }
 
-    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
-    {
-        var value = parser.Consume<Scalar>().Value;
-        return IPEndPoint.Parse(value);
-    }
-
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
-    {
-        // Not used
-    }
+    public override void Write(YamlWriter writer, IPEndPoint value)
+        => writer.WriteScalar(value.ToString());
 }

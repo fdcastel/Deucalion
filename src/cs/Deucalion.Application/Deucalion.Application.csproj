@@ -8,8 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="SharpYaml" Version="4.0.0-pre.4" />
-    <PackageReference Include="YamlDotNet" Version="17.0.0-pre.6" />
-    <PackageReference Include="YamlDotNet.Analyzers.StaticGenerator" Version="17.0.0-pre.6" />
   </ItemGroup>
 
   <ItemGroup>

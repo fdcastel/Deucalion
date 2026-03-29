@@ -15,5 +15,5 @@ public record HttpMonitorOptionalConfiguration : PullMonitorConfiguration
 public record HttpMonitorConfiguration : HttpMonitorOptionalConfiguration
 {
     [Required]
-    public required Uri Url { get; set; }
+    public required string Url { get; set; }
 }
