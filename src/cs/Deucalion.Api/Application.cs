@@ -134,11 +134,32 @@ public static class Application
             });
 
         // SSE event stream
-        app.MapGet("/api/monitors/events", (MonitorEventBroadcaster broadcaster, CancellationToken ct) =>
+        app.MapGet("/api/monitors/events", async (MonitorEventBroadcaster broadcaster, HttpContext httpContext) =>
         {
+            var response = httpContext.Response;
+            var ct = httpContext.RequestAborted;
+
+            response.ContentType = "text/event-stream";
+            response.Headers.CacheControl = "no-cache";
+
+            // Write an initial SSE comment to flush the response headers immediately.
+            // TypedResults.ServerSentEvents only flushes on first data event; with a
+            // long check interval this causes EventSource to stay in CONNECTING
+            // state until the first monitor event arrives.
+            await response.WriteAsync(": connected\n\n", ct);
+            await response.Body.FlushAsync(ct);
+
             var (reader, writer) = broadcaster.Subscribe();
             ct.Register(() => broadcaster.Unsubscribe(writer));
-            return TypedResults.ServerSentEvents(reader.ReadAllAsync(ct));
+
+            await foreach (var item in reader.ReadAllAsync(ct))
+            {
+                var payload = item.EventType is not null
+                    ? $"event: {item.EventType}\ndata: {item.Data}\n\n"
+                    : $"data: {item.Data}\n\n";
+                await response.WriteAsync(payload, ct);
+                await response.Body.FlushAsync(ct);
+            }
         });
 
         // Log application version and command-line arguments.

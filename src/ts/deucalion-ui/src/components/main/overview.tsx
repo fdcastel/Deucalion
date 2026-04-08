@@ -75,7 +75,7 @@ export const Overview: React.FC<OverviewProps> = ({ title, monitors, isConnected
           <span title={dateTimeToString(lastUpdateAt)} className="text-2xl font-semibold cursor-default">
             {dateTimeFromNow(lastUpdateAt)}
           </span>
-          <StatCardFooter>
+          <StatCardFooter blur={false}>
             <span
               title={connectionError?.message}
               className={isConnected ? "text-monitor-up" : "text-monitor-down"}

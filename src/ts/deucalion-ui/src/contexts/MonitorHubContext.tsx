@@ -58,6 +58,8 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
   const { mutateMonitors } = useMonitors();
 
   useEffect(() => {
+    setReadyState(EventSource.CONNECTING);
+
     const es = new EventSource(API_EVENTS_URL);
 
     // --- Event Handlers ---
@@ -84,29 +86,36 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       });
     };
 
-    es.addEventListener("MonitorChecked", handleMonitorChecked);
-    es.addEventListener("MonitorStateChanged", handleMonitorStateChanged);
-
     // --- Connection Lifecycle Handlers ---
-    es.addEventListener("open", () => {
+    const handleOpen = () => {
       logger.log("SSE connection opened");
       setReadyState(EventSource.OPEN);
       setConnectionError(null);
-    });
+    };
 
-    es.addEventListener("error", () => {
+    const handleError = () => {
       logger.log("SSE connection error");
       setConnectionError(new Error("SSE connection error"));
+      // EventSource sets readyState to CONNECTING before firing the error event
+      // (the browser will auto-retry), so this reflects the retry state correctly.
       setReadyState(es.readyState);
-    });
+    };
+
+    es.addEventListener("MonitorChecked", handleMonitorChecked);
+    es.addEventListener("MonitorStateChanged", handleMonitorStateChanged);
+    es.addEventListener("open", handleOpen);
+    es.addEventListener("error", handleError);
 
     // --- Cleanup on unmount ---
     return () => {
       logger.log("Closing SSE connection...");
       es.removeEventListener("MonitorChecked", handleMonitorChecked);
       es.removeEventListener("MonitorStateChanged", handleMonitorStateChanged);
+      es.removeEventListener("open", handleOpen);
+      es.removeEventListener("error", handleError);
       es.close();
-      setReadyState(EventSource.CLOSED);
+      // Do not call setReadyState(CLOSED) here: state will be reset to CONNECTING
+      // at the start of the next effect run (StrictMode re-mount or real re-mount).
     };
   }, [mutateMonitors]);
 
