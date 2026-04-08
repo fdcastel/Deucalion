@@ -1,10 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Net.ServerSentEvents;
+using System.Text;
 using System.Text.Json;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -124,47 +125,50 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
-    public async Task SignalRHub_BroadcastsMonitorCheckedEvent_ToConnectedClients()
+    public async Task SseStream_BroadcastsMonitorCheckedEvent_ToConnectedClients()
     {
         using var client = _factory.CreateClient();
-
         var checkedEventReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost/api/monitors/hub", options =>
-            {
-                options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
-            })
-            .Build();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
 
-        connection.On<JsonElement>("MonitorChecked", payload =>
+        var sseTask = Task.Run(async () =>
         {
-            var monitorName = payload.GetProperty("n").GetString();
-            if (monitorName == "checkin-main")
-            {
-                checkedEventReceived.TrySetResult(monitorName!);
-            }
-        });
-
-        await connection.StartAsync(TestContext.Current.CancellationToken);
-
-        try
-        {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
-            request.Headers.Add("deucalion-checkin-secret", "test-secret");
-
-            using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            using var response = await client.GetAsync("/api/monitors/events", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             response.EnsureSuccessStatusCode();
 
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(5));
-            var monitorName = await checkedEventReceived.Task.WaitAsync(timeout.Token);
-            Assert.Equal("checkin-main", monitorName);
-        }
-        finally
-        {
-            await connection.DisposeAsync();
-        }
+            using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+            var parser = SseParser.Create(stream, (_, data) => Encoding.UTF8.GetString(data));
+
+            await foreach (var item in parser.EnumerateAsync(timeout.Token))
+            {
+                if (item.EventType == "MonitorChecked")
+                {
+                    var payload = JsonSerializer.Deserialize<JsonElement>(item.Data);
+                    var monitorName = payload.GetProperty("n").GetString();
+                    if (monitorName == "checkin-main")
+                    {
+                        checkedEventReceived.TrySetResult(monitorName!);
+                        return;
+                    }
+                }
+            }
+        }, timeout.Token);
+
+        // Wait briefly to ensure SSE connection is established before triggering checkin
+        await Task.Delay(200, timeout.Token);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
+        request.Headers.Add("deucalion-checkin-secret", "test-secret");
+        using var response2 = await client.SendAsync(request, timeout.Token);
+        response2.EnsureSuccessStatusCode();
+
+        var monitorName = await checkedEventReceived.Task.WaitAsync(timeout.Token);
+        Assert.Equal("checkin-main", monitorName);
+
+        timeout.Cancel();
+        try { await sseTask; } catch (OperationCanceledException) { }
     }
 
     public void Dispose()

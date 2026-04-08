@@ -1,24 +1,25 @@
-﻿using System.Threading.Channels;
+﻿using System.Net.ServerSentEvents;
+using System.Text.Json;
+using System.Threading.Channels;
 using Deucalion.Api.Models;
 using Deucalion.Api.Options;
 using Deucalion.Application;
 using Deucalion.Application.Configuration;
 using Deucalion.Events;
 using Deucalion.Storage;
-using Microsoft.AspNetCore.SignalR;
 
 namespace Deucalion.Api.Services;
 
 internal class EngineBackgroundService(
     ApplicationMonitors monitors,
     IStorage storage,
-    IHubContext<MonitorHub> hubContext,
+    MonitorEventBroadcaster broadcaster,
     DeucalionOptions options,
     ILogger<EngineBackgroundService> logger) : BackgroundService
 {
     private readonly ApplicationMonitors _monitors = monitors;
     private readonly IStorage _storage = storage;
-    private readonly IHubContext<MonitorHub> _hubContext = hubContext;
+    private readonly MonitorEventBroadcaster _broadcaster = broadcaster;
     private readonly DeucalionOptions _options = options;
     private readonly ILogger<EngineBackgroundService> _logger = logger;
     private CancellationTokenSource? _internalCts;
@@ -94,7 +95,9 @@ internal class EngineBackgroundService(
         var newStats = await _storage.GetStatsAsync(mc.Name, cancellationToken: cancellationToken);
         if (newStats != null)
         {
-            await _hubContext.Clients.All.SendAsync(nameof(IMonitorHubClient.MonitorChecked), MonitorCheckedDto.From(mc, newStats), cancellationToken);
+            var dto = MonitorCheckedDto.From(mc, newStats);
+            var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorCheckedDto);
+            _broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
         }
         else
         {
@@ -106,7 +109,9 @@ internal class EngineBackgroundService(
     {
         _logger.LogDebug("MonitorStateChanged: {@event}", msc);
         await _storage.SaveLastStateChangeAsync(msc.Name, msc.At, msc.NewState, cancellationToken);
-        await _hubContext.Clients.All.SendAsync(nameof(IMonitorHubClient.MonitorStateChanged), MonitorStateChangedDto.From(msc), cancellationToken);
+        var dto = MonitorStateChangedDto.From(msc);
+        var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorStateChangedDto);
+        _broadcaster.Broadcast(new SseItem<string>(json, "MonitorStateChanged"));
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr';
 
 import { MonitorCheckedDto, MonitorEventDto, MonitorProps, MonitorStateChangedDto } from '../services';
 import { monitorStateToDescription, monitorStateToStatus } from '../services';
 import { logger } from '../services';
 
-import { API_HUB_URL } from '../configuration';
+import { API_EVENTS_URL } from '../configuration';
 import { useMonitors } from './MonitorsContext';
 
 export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: MonitorCheckedDto) => {
@@ -45,7 +44,7 @@ export const appendNewEvent = (monitors: Map<string, MonitorProps>, event: Monit
 
 interface IMonitorHubFacade {
   isConnected: boolean;
-  isConnecting: boolean; // Includes connecting and reconnecting states
+  isConnecting: boolean;
   connectionError: Error | null;
 }
 
@@ -53,36 +52,31 @@ const MonitorHubContext = createContext<IMonitorHubFacade | undefined>(undefined
 
 // Create the provider component
 export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [hubConnectionState, setHubConnectionState] = useState<HubConnectionState>(HubConnectionState.Disconnected);
-  const [hubConnectionError, setHubConnectionError] = useState<Error | null>(null);
+  const [readyState, setReadyState] = useState<number>(EventSource.CONNECTING);
+  const [connectionError, setConnectionError] = useState<Error | null>(null);
 
-  const { mutateMonitors } = useMonitors(); 
+  const { mutateMonitors } = useMonitors();
 
   useEffect(() => {
-    const connection = new HubConnectionBuilder()
-      .withUrl(API_HUB_URL)
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.None)
-      .build();
-
-    setHubConnectionState(HubConnectionState.Connecting);
+    const es = new EventSource(API_EVENTS_URL);
 
     // --- Event Handlers ---
-    const handleMonitorChecked = (e: MonitorCheckedDto) => {
-      logger.log("[onMonitorChecked]", e);
-      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, e) : undefined), {
+    const handleMonitorChecked = (e: MessageEvent<string>) => {
+      const event = JSON.parse(e.data) as MonitorCheckedDto;
+      logger.log("[onMonitorChecked]", event);
+      void mutateMonitors((oldMonitors) => (oldMonitors ? appendNewEvent(oldMonitors, event) : undefined), {
         revalidate: false,
         populateCache: true,
       });
     };
 
-    const handleMonitorStateChanged = (e: MonitorStateChangedDto) => {
-      logger.log("[MonitorStateChanged]", e);
-      const status = monitorStateToStatus(e.st);
-      // Lazy-load toast only when state changes (not on initial connection)
+    const handleMonitorStateChanged = (e: MessageEvent<string>) => {
+      const event = JSON.parse(e.data) as MonitorStateChangedDto;
+      logger.log("[MonitorStateChanged]", event);
+      const status = monitorStateToStatus(event.st);
       import("@heroui/react").then(({ toast }) => {
-        toast(e.n, {
-          description: monitorStateToDescription(e.st),
+        toast(event.n, {
+          description: monitorStateToDescription(event.st),
           variant: monitorStateToToastVariant(status),
         });
       }).catch((err) => {
@@ -90,69 +84,37 @@ export const MonitorHubProvider: React.FC<{ children: ReactNode }> = ({ children
       });
     };
 
-    connection.on("MonitorChecked", handleMonitorChecked);
-    connection.on("MonitorStateChanged", handleMonitorStateChanged);
+    es.addEventListener("MonitorChecked", handleMonitorChecked);
+    es.addEventListener("MonitorStateChanged", handleMonitorStateChanged);
 
     // --- Connection Lifecycle Handlers ---
-    connection.onclose((error: Error | undefined) => {
-      logger.log("Connection closed", error);
-      setHubConnectionState(HubConnectionState.Disconnected);
-      setHubConnectionError(error ?? null);
+    es.addEventListener("open", () => {
+      logger.log("SSE connection opened");
+      setReadyState(EventSource.OPEN);
+      setConnectionError(null);
     });
 
-    connection.onreconnecting((error: Error | undefined) => {
-      logger.log("Connection reconnecting", error);
-      setHubConnectionState(HubConnectionState.Reconnecting);
-      setHubConnectionError(error ?? null);
+    es.addEventListener("error", () => {
+      logger.log("SSE connection error");
+      setConnectionError(new Error("SSE connection error"));
+      setReadyState(es.readyState);
     });
-
-    connection.onreconnected((connectionId?: string) => {
-      logger.log("Connection reconnected", connectionId);
-      setHubConnectionState(HubConnectionState.Connected);
-      setHubConnectionError(null);
-    });
-
-    // --- Start Connection ---
-    connection
-      .start()
-      .then(() => {
-        logger.log("Connection started");
-        setHubConnectionState(HubConnectionState.Connected);
-        setHubConnectionError(null);
-      })
-      .catch((err: unknown) => {
-        logger.log("Error starting connection:", err);
-        setHubConnectionState(HubConnectionState.Disconnected);
-        if (err instanceof Error) {
-          setHubConnectionError(err);
-        } else {
-          const errorMessage = typeof err === "string" ? err : JSON.stringify(err ?? "Unknown error starting connection");
-          setHubConnectionError(new Error(errorMessage));
-        }
-      });
 
     // --- Cleanup on unmount ---
     return () => {
-      logger.log("Stopping connection...");
-      connection.off("MonitorChecked", handleMonitorChecked);
-      connection.off("MonitorStateChanged", handleMonitorStateChanged);
-      connection
-        .stop()
-        .then(() => { 
-          logger.log("Connection stopped"); 
-          setHubConnectionState(HubConnectionState.Disconnected);
-        })
-        .catch((err: unknown) => { 
-          logger.error("Error stopping connection:", err); 
-        });
+      logger.log("Closing SSE connection...");
+      es.removeEventListener("MonitorChecked", handleMonitorChecked);
+      es.removeEventListener("MonitorStateChanged", handleMonitorStateChanged);
+      es.close();
+      setReadyState(EventSource.CLOSED);
     };
   }, [mutateMonitors]);
 
   // --- Context Value (Facade) ---
   const value: IMonitorHubFacade = {
-    isConnected: hubConnectionState === HubConnectionState.Connected,
-    isConnecting: hubConnectionState === HubConnectionState.Connecting || hubConnectionState === HubConnectionState.Reconnecting,
-    connectionError: hubConnectionError,
+    isConnected: readyState === EventSource.OPEN,
+    isConnecting: readyState === EventSource.CONNECTING,
+    connectionError,
   };
 
   return <MonitorHubContext.Provider value={value}>{children}</MonitorHubContext.Provider>;

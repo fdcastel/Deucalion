@@ -5,10 +5,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <NoWarn>IL2026;IL3050</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.5" />
-  </ItemGroup>
 
 </Project>

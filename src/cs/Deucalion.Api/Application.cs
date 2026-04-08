@@ -24,14 +24,6 @@ public static class Application
             options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
         });
 
-        // SignalR
-        builder.Services.AddSignalR()
-            .AddJsonProtocol(options =>
-            {
-                options.PayloadSerializerOptions.TypeInfoResolverChain.Insert(0, DeucalionJsonContext.Default);
-                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
-            });
-
         // CORS
         builder.Services.AddCors();
 
@@ -67,6 +59,7 @@ public static class Application
         builder.Services.AddSingleton<IStorage>(sp => sp.GetRequiredService<SqliteStorage>());
         builder.Services.AddHostedService<EngineBackgroundService>();
         builder.Services.AddHostedService<PurgeBackgroundService>();
+        builder.Services.AddSingleton<MonitorEventBroadcaster>();
 
         return builder;
     }
@@ -140,8 +133,13 @@ public static class Application
                 return Results.Ok();
             });
 
-        // Setup SignalR hubs
-        app.MapHub<MonitorHub>("/api/monitors/hub");
+        // SSE event stream
+        app.MapGet("/api/monitors/events", (MonitorEventBroadcaster broadcaster, CancellationToken ct) =>
+        {
+            var (reader, writer) = broadcaster.Subscribe();
+            ct.Register(() => broadcaster.Unsubscribe(writer));
+            return TypedResults.ServerSentEvents(reader.ReadAllAsync(ct));
+        });
 
         // Log application version and command-line arguments.
         var logger = app.Services.GetRequiredService<ILogger<Program>>();

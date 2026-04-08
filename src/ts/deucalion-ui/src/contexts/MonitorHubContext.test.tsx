@@ -9,50 +9,26 @@ const testDoubles = vi.hoisted(() => ({
   addToastMock: vi.fn(),
 }));
 
-const signalRState = vi.hoisted(() => {
-  const handlers = new Map<string, (payload: unknown) => void>();
-
-  const connection = {
-    on: vi.fn((event: string, handler: (payload: unknown) => void) => {
-      handlers.set(event, handler);
-    }),
-    off: vi.fn(),
-    onclose: vi.fn(),
-    onreconnecting: vi.fn(),
-    onreconnected: vi.fn(),
-    start: vi.fn(async () => undefined),
-    stop: vi.fn(async () => undefined),
-  };
-
-  return { handlers, connection };
+// Mock EventSource
+const eventSourceState = vi.hoisted(() => {
+  const listeners = new Map<string, (e: MessageEvent) => void>();
+  const close = vi.fn();
+  const removeEventListener = vi.fn();
+  return { listeners, close, removeEventListener };
 });
 
-vi.mock("@microsoft/signalr", () => ({
-  LogLevel: { Warning: 3 },
-  HubConnectionState: {
-    Disconnected: 0,
-    Connected: 1,
-    Connecting: 2,
-    Reconnecting: 3,
-  },
-  HubConnectionBuilder: class {
-    withUrl() {
-      return this;
-    }
-
-    withAutomaticReconnect() {
-      return this;
-    }
-
-    configureLogging() {
-      return this;
-    }
-
-    build() {
-      return signalRState.connection;
-    }
-  },
-}));
+class MockEventSource {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSED = 2;
+  readyState = MockEventSource.CONNECTING;
+  close = eventSourceState.close;
+  removeEventListener = eventSourceState.removeEventListener;
+  addEventListener(event: string, handler: (e: MessageEvent) => void) {
+    eventSourceState.listeners.set(event, handler);
+  }
+}
+vi.stubGlobal("EventSource", MockEventSource);
 
 vi.mock("@heroui/react", () => ({
   toast: testDoubles.addToastMock,
@@ -117,48 +93,53 @@ describe("MonitorHubProvider", () => {
   beforeEach(() => {
     testDoubles.mockedMutateMonitors.mockClear();
     testDoubles.addToastMock.mockClear();
-    signalRState.handlers.clear();
-    signalRState.connection.start.mockClear();
-    signalRState.connection.stop.mockClear();
+    eventSourceState.listeners.clear();
+    eventSourceState.close.mockClear();
   });
 
   afterEach(() => {
     testDoubles.mockedMutateMonitors.mockReset();
   });
 
-  it("starts SignalR connection and handles incoming hub events", async () => {
+  it("opens SSE connection and handles incoming events", async () => {
     const { unmount } = render(
       <MonitorHubProvider>
         <HubProbe />
       </MonitorHubProvider>
     );
 
+    // Simulate connection open
+    const openHandler = eventSourceState.listeners.get("open") as (e: Event) => void;
+    openHandler(new Event("open"));
+
     await waitFor(() => expect(screen.getByTestId("connected")).toHaveTextContent("yes"));
 
-    const monitorChecked = signalRState.handlers.get("MonitorChecked");
-    const monitorChanged = signalRState.handlers.get("MonitorStateChanged");
+    const monitorChecked = eventSourceState.listeners.get("MonitorChecked") as (e: MessageEvent) => void;
+    const monitorChanged = eventSourceState.listeners.get("MonitorStateChanged") as (e: MessageEvent) => void;
 
-    monitorChecked?.({
-      n: "api",
-      at: 10,
-      st: MonitorState.Up,
-      ns: {
-        lastState: MonitorState.Up,
-        lastUpdate: 10,
-        availability: 100,
-        averageResponseTimeMs: 1,
-      },
-    });
+    monitorChecked?.(new MessageEvent("MonitorChecked", {
+      data: JSON.stringify({
+        n: "api",
+        at: 10,
+        st: MonitorState.Up,
+        ns: {
+          lastState: MonitorState.Up,
+          lastUpdate: 10,
+          availability: 100,
+          averageResponseTimeMs: 1,
+        },
+      }),
+    }));
 
-    monitorChanged?.({ n: "api", at: 10, st: MonitorState.Down });
+    monitorChanged?.(new MessageEvent("MonitorStateChanged", {
+      data: JSON.stringify({ n: "api", at: 10, st: MonitorState.Down }),
+    }));
 
     expect(testDoubles.mockedMutateMonitors).toHaveBeenCalled();
-    
-    // addToast is now lazy-loaded and async, so wait for it to be called
     await waitFor(() => expect(testDoubles.addToastMock).toHaveBeenCalled());
 
     unmount();
 
-    await waitFor(() => expect(signalRState.connection.stop).toHaveBeenCalled());
+    expect(eventSourceState.close).toHaveBeenCalled();
   });
 });

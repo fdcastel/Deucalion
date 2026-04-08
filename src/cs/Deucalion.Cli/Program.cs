@@ -1,17 +1,31 @@
-﻿using Deucalion.Cli.Models;
-using Microsoft.AspNetCore.SignalR.Client;
+﻿using System.Net.Http;
+using System.Net.ServerSentEvents;
+using System.Text;
+using System.Text.Json;
+using Deucalion.Cli.Models;
 
-var url = "http://localhost:5000/api/monitors/hub";
+var url = "http://localhost:5000/api/monitors/events";
 
-var hubConnection = new HubConnectionBuilder()
-    .WithUrl(url)
-    .WithAutomaticReconnect()
-    .Build();
+using var client = new HttpClient();
+using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+response.EnsureSuccessStatusCode();
 
-hubConnection.On<MonitorCheckedDto>("MonitorChecked", Console.WriteLine);
-hubConnection.On<MonitorStateChangedDto>("MonitorStateChanged", Console.WriteLine);
+using var stream = await response.Content.ReadAsStreamAsync();
+var parser = SseParser.Create(stream, (_, data) => Encoding.UTF8.GetString(data));
 
-await hubConnection.StartAsync();
-Console.WriteLine("Connected to hub. Press any key to close.");
+Console.WriteLine("Connected to SSE stream. Press Ctrl+C to close.");
 
-Console.ReadKey(true);
+await foreach (var item in parser.EnumerateAsync())
+{
+    switch (item.EventType)
+    {
+        case "MonitorChecked":
+            var mc = JsonSerializer.Deserialize<MonitorCheckedDto>(item.Data);
+            Console.WriteLine(mc);
+            break;
+        case "MonitorStateChanged":
+            var msc = JsonSerializer.Deserialize<MonitorStateChangedDto>(item.Data);
+            Console.WriteLine(msc);
+            break;
+    }
+}

@@ -14,7 +14,6 @@
   "dependencies": {
     "@heroui/react": "^3.0.0",
     "@heroui/styles": "^3.0.0",
-    "@microsoft/signalr": "^10.0.0",
     "@tailwindcss/vite": "^4.1.18",
     "dayjs": "^1.11.19",
     "react": "^19.2.4",

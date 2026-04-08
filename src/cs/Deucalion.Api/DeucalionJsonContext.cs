@@ -4,6 +4,7 @@ using Deucalion.Api.Models;
 namespace Deucalion.Api;
 
 [JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull
 )]
 [JsonSerializable(typeof(MonitorCheckedDto))]
