@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
+import viteCompression from "vite-plugin-compression";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -20,9 +21,6 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/@heroui')) {
               return 'heroui-vendor';
             }
-            if (id.includes('node_modules/@microsoft/signalr')) {
-              return 'signalr-vendor';
-            }
             if (id.includes('node_modules/react') && !id.includes('node_modules/@')) {
               return 'react-vendor';
             }
@@ -33,15 +31,17 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       react(),
-      {
-        // Removes pure annotations from SignalR -- https://github.com/dotnet/aspnetcore/issues/55286#issuecomment-2557288741
-        name: 'remove-pure-annotations',
-        enforce: 'pre',
-        transform: (code, id) =>
-          id.indexOf('node_modules/@microsoft/signalr') !== -1
-            ? code.replace(/\/\*#__PURE__\*\//g, '')
-            : null
-      },
+      viteCompression({
+        algorithm: 'brotliCompress',
+        ext: '.br',
+        threshold: 256,
+      }),
+      viteCompression({
+        algorithm: 'gzip',
+        ext: '.gz',
+        threshold: 256,
+        compressionOptions: { level: 9 },
+      }),
       ...(isAnalyze
         ? [
             visualizer({
@@ -61,10 +61,6 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       proxy: {
-        "/api/monitors/hub": {
-          target: "ws://localhost:5000",
-          ws: true,
-        },
         "/api": {
           target: "http://localhost:5000",
         },

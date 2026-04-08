@@ -1,6 +1,7 @@
 ﻿using Deucalion.Api;
 using Deucalion.Application.Configuration;
 using Deucalion.Service;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 try
 {
@@ -15,6 +16,15 @@ try
     });
 
     builder.Services.AddWindowsService();
+
+    // Enable HTTP/2 (multiplexed asset loading, HPACK header compression)
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ConfigureEndpointDefaults(listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+        });
+    });
 
     builder.ConfigureApplicationBuilder()
         .Build()

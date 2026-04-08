@@ -1,13 +1,12 @@
 import { Overview, MonitorList } from "./main";
 
-import { logger } from "../services";
+import { preloadInit, logger } from "../services";
 
-import { preloadConfiguration, useConfiguration } from "../contexts/ConfigurationContext";
-import { preloadMonitors, useMonitors } from "../contexts/MonitorsContext";
+import { useConfiguration } from "../contexts/ConfigurationContext";
+import { useMonitors } from "../contexts/MonitorsContext";
 import { useMonitorHubContext } from "../contexts/MonitorHubContext";
 
-preloadConfiguration();
-preloadMonitors();
+preloadInit();
 
 // Log version information to console.
 const buildInfo = { version: import.meta.env.VITE_BUILD_VERSION, build: import.meta.env.VITE_INFORMATIONAL_VERSION };

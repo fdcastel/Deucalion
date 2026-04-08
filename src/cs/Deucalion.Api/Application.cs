@@ -93,6 +93,17 @@ public static class Application
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
             Results.Ok(new PageConfigurationDto(options.PageTitle, options.PageDescription)));
 
+        app.MapGet("/api/init", async (DeucalionOptions options, IStorage storage, CancellationToken cancellationToken) =>
+        {
+            var tasks = applicationConfiguration.Monitors
+                              .Select(kvp => BuildMonitorDtoAsync(storage, kvp.Value, kvp.Key, cancellationToken));
+            var monitors = await Task.WhenAll(tasks);
+            return Results.Ok(new InitDto(
+                new PageConfigurationDto(options.PageTitle, options.PageDescription),
+                monitors
+            ));
+        });
+
         app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, CancellationToken cancellationToken) =>
         {
             if (monitorName is null)

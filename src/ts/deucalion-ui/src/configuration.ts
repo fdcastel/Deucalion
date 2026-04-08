@@ -1,3 +1,4 @@
+export const API_INIT_URL = "/api/init";
 export const API_CONFIGURATION_URL = "/api/configuration";
 export const API_MONITORS_URL = "/api/monitors";
 export const API_EVENTS_URL = "/api/monitors/events";

@@ -1,5 +1,22 @@
+/* HeroUI/Tailwind layer ordering (must precede layer content) */
+@layer theme, base, components, utilities;
+
 @import "tailwindcss";
-@import "@heroui/styles";
+@import "tw-animate-css";
+
+/* HeroUI base & theme (selective — only components actually used) */
+@import "@heroui/styles/base" layer(base);
+@import "@heroui/styles/themes/default" layer(theme);
+@import "@heroui/styles/utilities";
+@import "@heroui/styles/variants";
+
+/* HeroUI components: Tooltip, Chip, Toast (+ dependencies) */
+@import "@heroui/styles/components/close-button.css" layer(components);
+@import "@heroui/styles/components/chip.css" layer(components);
+@import "@heroui/styles/components/popover.css" layer(components);
+@import "@heroui/styles/components/tooltip.css" layer(components);
+@import "@heroui/styles/components/toast.css" layer(components);
+
 @config "../tailwind.config.js";
 @custom-variant dark (&:is(.dark *));
 
