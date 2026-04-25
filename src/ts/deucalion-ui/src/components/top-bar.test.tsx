@@ -14,10 +14,12 @@ describe("<TopBar>", () => {
     __resetTweaksForTests();
   });
 
-  it("renders the brand mark and the page title", () => {
+  it("renders the brand icon and the page title", () => {
     __seedMonitorsForTests([buildMonitor({ name: "a" })]);
     const { container } = render(() => <TopBar />);
-    expect(container.querySelector(".brand-mark")).not.toBeNull();
+    const icon = container.querySelector("img.brand-icon");
+    expect(icon).not.toBeNull();
+    expect(icon).toHaveAttribute("src", "/assets/deucalion-icon.svg");
     expect(container.querySelector(".brand-name")?.textContent).toBeTruthy();
   });
 

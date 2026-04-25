@@ -50,7 +50,7 @@ export const TopBar: Component = () => {
   return (
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true" />
+        <img class="brand-icon" src="/assets/deucalion-icon.svg" alt="" />
         <h1 class="brand-name">
           {parseTitle(pageTitle()).head}
           <Show when={parseTitle(pageTitle()).emphasis}>

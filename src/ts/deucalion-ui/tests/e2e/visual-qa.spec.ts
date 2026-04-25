@@ -130,9 +130,28 @@ test.describe("visual QA — V5 dashboard vs. prototype", () => {
     httpServer = undefined;
   });
 
-  test("V5 — dark + light", async ({ page }) => {
+  test("V5 — splash, dark + light", async ({ page }) => {
     const outDir = await ensureDir("v5");
+
+    // First navigation establishes the origin so we can write to localStorage.
     await page.goto("/");
+
+    // Capture the splash for each theme: seed localStorage, route /api/** to
+    // hang so the splash stays up, reload, then screenshot before unblocking.
+    for (const theme of ["dark", "light"] as const) {
+      await page.evaluate((t) => {
+        localStorage.setItem("deucalion.tweaks", JSON.stringify({ theme: t }));
+      }, theme);
+      await page.route("**/api/**", () => { /* hang forever */ });
+      await page.reload();
+      await page.locator("#splash").waitFor({ state: "visible" });
+      await page.waitForTimeout(300); // let the pulse settle on a frame
+      await page.screenshot({ path: path.join(outDir, `v5-${theme}-splash.png`), fullPage: false });
+      await page.unroute("**/api/**");
+    }
+
+    // Reload (no API block) and capture the rest of the dashboard.
+    await page.reload();
     await page.locator(".row").first().waitFor({ state: "visible", timeout: 30_000 });
     await setTheme(page, "v5", "dark");
     await captureRegions(page, outDir, "v5", "dark");

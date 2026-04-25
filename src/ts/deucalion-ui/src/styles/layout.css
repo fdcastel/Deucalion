@@ -23,54 +23,40 @@
 
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
 }
 
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  position: relative;
-  display: inline-block;
-  align-self: center;
-  background: radial-gradient(circle at 35% 35%, var(--accent), var(--accent-dim));
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent),
-    0 0 24px -2px color-mix(in oklch, var(--accent) 60%, transparent);
+/* Real SVG icon instead of the prototype's CSS-only pulsing dot. The icon
+   ships as black-on-transparent; we invert in dark mode so the silhouette
+   pops on the dark backdrop, then layer two accent-tinted drop-shadows for
+   a soft glow. Light mode keeps the original ink and uses softer shadows. */
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter:
+    invert(1)
+    drop-shadow(0 0 8px color-mix(in oklch, var(--accent) 35%, transparent))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+  transition: filter 0.2s ease-out;
 }
-.brand-mark::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--bg);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 35%, transparent);
+[data-theme="light"] .brand-icon {
+  filter:
+    drop-shadow(0 0 6px color-mix(in oklch, var(--accent) 25%, transparent))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
 }
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  inset: 11px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: pulse 2.4s ease-in-out infinite;
+.brand-icon:hover {
+  filter:
+    invert(1)
+    drop-shadow(0 0 12px color-mix(in oklch, var(--accent) 55%, transparent))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
 }
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.55;
-    transform: scale(0.7);
-  }
-}
-
-.brand-text {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
+[data-theme="light"] .brand-icon:hover {
+  filter:
+    drop-shadow(0 0 10px color-mix(in oklch, var(--accent) 40%, transparent))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.22));
 }
 
 .brand-name {
@@ -85,23 +71,6 @@
   font-style: var(--display-italic);
   color: var(--accent);
   font-weight: 400;
-}
-
-.brand-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--fg-3);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.brand-sep {
-  width: 1px;
-  height: 14px;
-  background: var(--line-2);
-  display: inline-block;
 }
 
 .topbar-right {
