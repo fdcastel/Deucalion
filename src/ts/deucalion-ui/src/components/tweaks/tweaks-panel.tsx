@@ -2,7 +2,7 @@ import { For, Show, type Component, createSignal, onCleanup, onMount } from "sol
 
 import { tweaks } from "../../stores/tweaks-store";
 import { DISPLAY_FONTS, MONO_FONTS, UI_FONTS } from "./fonts";
-import { TweakRadio, TweakSection, TweakSelect, TweakSlider } from "./tweaks-controls";
+import { TweakSection, TweakSelect, TweakSlider } from "./tweaks-controls";
 import { XIcon } from "../common/icons";
 
 const PAD = 16;
@@ -100,14 +100,6 @@ const PanelBody: Component = () => {
         </button>
       </div>
       <div class="twk-body">
-        <TweakSection label="Theme">
-          <TweakRadio
-            label="Mode"
-            value={tweaks.theme()}
-            options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]}
-            onChange={(v) => { tweaks.setTheme(v as "dark" | "light"); }}
-          />
-        </TweakSection>
         <TweakSection label="Accent">
           <TweakSlider
             label="Hue" min={0} max={360} step={1}

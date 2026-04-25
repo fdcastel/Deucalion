@@ -20,9 +20,11 @@ const DEFAULTS: TweaksState = {
   theme: "dark",
   accentHue: 178,
   accentChroma: 0.12,
-  displayFont: "newsreader",
-  uiFont: "inter",
-  monoFont: "jetbrains",
+  // IBM Plex preset — matches the "IBM Plex" font preset shown in the
+  // tweaks panel.
+  displayFont: "ibmsans",
+  uiFont: "ibmsans",
+  monoFont: "ibmmono",
 };
 
 const loadFromStorage = (): TweaksState => {

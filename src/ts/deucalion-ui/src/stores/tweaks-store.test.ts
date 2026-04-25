@@ -53,4 +53,10 @@ describe("tweaks-store", () => {
     tweaks.setPanelOpen(true);
     expect(tweaks.panelOpen()).toBe(true);
   });
+
+  it("defaults to the IBM Plex font preset", () => {
+    expect(tweaks.displayFont()).toBe("ibmsans");
+    expect(tweaks.uiFont()).toBe("ibmsans");
+    expect(tweaks.monoFont()).toBe("ibmmono");
+  });
 });

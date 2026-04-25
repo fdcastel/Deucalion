@@ -32,17 +32,10 @@ describe("<MonitorList>", () => {
     expect(subs).toContain("Origin");
   });
 
-  it("tallies the up/warn/down counts in the header", () => {
-    __seedMonitorsForTests([
-      buildMonitor({ name: "a" }),
-      buildMonitor({
-        name: "b",
-        stats: { lastState: 1, lastUpdate: 0, availability: 0, averageResponseTimeMs: 0 },
-      }),
-    ]);
+  it("does not render a group-header any more (count + tally moved to the hero)", () => {
+    __seedMonitorsForTests([buildMonitor({ name: "a" }), buildMonitor({ name: "b" })]);
     const { container } = render(() => <MonitorList />);
-    const meta = container.querySelector(".group-meta")?.textContent ?? "";
-    expect(meta).toContain("1 up");
-    expect(meta).toContain("1 down");
+    expect(container.querySelector(".group-header")).toBeNull();
+    expect(container.querySelector(".group-title")).toBeNull();
   });
 });

@@ -14,10 +14,11 @@ describe("<TopBar>", () => {
     __resetTweaksForTests();
   });
 
-  it("shows the monitor count", () => {
-    __seedMonitorsForTests([buildMonitor({ name: "a" }), buildMonitor({ name: "b" })]);
+  it("renders the brand mark and the page title", () => {
+    __seedMonitorsForTests([buildMonitor({ name: "a" })]);
     const { container } = render(() => <TopBar />);
-    expect(container.querySelector(".brand-meta")?.textContent).toContain("2 monitors");
+    expect(container.querySelector(".brand-mark")).not.toBeNull();
+    expect(container.querySelector(".brand-name")?.textContent).toBeTruthy();
   });
 
   it("toggles theme via the theme button", () => {

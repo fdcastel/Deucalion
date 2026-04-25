@@ -34,12 +34,12 @@ describe("<TweaksPanel>", () => {
     expect(document.querySelector(".twk-panel")).toBeNull();
   });
 
-  it("renders Theme/Accent/Typography sections", () => {
+  it("renders Accent + Typography sections (theme lives on the top-bar button)", () => {
     tweaks.setPanelOpen(true);
     render(() => <TweaksPanel />);
     const sections = document.querySelectorAll(".twk-sect");
     const text = [...sections].map((s) => s.textContent).join(" ");
-    expect(text).toMatch(/Theme/);
+    expect(text).not.toMatch(/Theme/);
     expect(text).toMatch(/Accent/);
     expect(text).toMatch(/Typography/);
   });

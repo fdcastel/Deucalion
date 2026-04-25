@@ -22,7 +22,6 @@ const parseTitle = (t: string): { head: string; emphasis: string; tail: string }
 
 export const TopBar: Component = () => {
   const pageTitle = (): string => configuration()?.pageTitle ?? "Deucalion";
-  const monitorCount = (): number => monitorList().length;
 
   const downCount = (): number => {
     let n = 0;
@@ -52,20 +51,13 @@ export const TopBar: Component = () => {
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true" />
-        <div class="brand-text">
-          <h1 class="brand-name">
-            {parseTitle(pageTitle()).head}
-            <Show when={parseTitle(pageTitle()).emphasis}>
-              <em>{parseTitle(pageTitle()).emphasis}</em>
-            </Show>
-            {parseTitle(pageTitle()).tail}
-          </h1>
-          <div class="brand-meta">
-            <span>Production</span>
-            <span class="brand-sep" />
-            <span>{monitorCount()} monitors</span>
-          </div>
-        </div>
+        <h1 class="brand-name">
+          {parseTitle(pageTitle()).head}
+          <Show when={parseTitle(pageTitle()).emphasis}>
+            <em>{parseTitle(pageTitle()).emphasis}</em>
+          </Show>
+          {parseTitle(pageTitle()).tail}
+        </h1>
       </div>
       <div class="topbar-right">
         <span class={`connection-dot ${sseStatus() === "open" ? "" : sseStatus()}`} />
