@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Deucalion dashboard", () => {
-  test("renders the brand mark, top bar and a row per configured monitor", async ({ page }) => {
+  test("renders the brand icon, top bar and a row per configured monitor", async ({ page }) => {
     await page.goto("/");
 
-    // Brand mark
-    await expect(page.locator(".brand-mark")).toBeVisible();
-    await expect(page.locator(".brand-name")).toContainText(/Deucalion|status/i);
-
-    // Wait for the SPA to swap the static loader out and render rows.
+    // Wait for the SPA to swap the splash out and render rows.
     await expect(page.locator(".row").first()).toBeVisible({ timeout: 30_000 });
+
+    // Brand icon (the satellite-dish SVG, not the prototype's CSS dot)
+    await expect(page.locator("img.brand-icon")).toBeVisible();
+    await expect(page.locator(".brand-name")).toContainText(/Deucalion|status/i);
 
     // The sample yaml has 10 monitors.
     const rows = page.locator(".row");
