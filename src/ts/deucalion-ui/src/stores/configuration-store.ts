@@ -2,10 +2,10 @@ import { createResource } from "solid-js";
 
 import { API_CONFIGURATION_URL } from "../configuration";
 import type { PageConfigurationDto } from "../services/deucalion-types";
+import { fetchWithRetry } from "../services/fetch-with-retry";
 
 const fetchConfiguration = async (): Promise<PageConfigurationDto> => {
-  const response = await fetch(API_CONFIGURATION_URL);
-  if (!response.ok) throw new Error(`Failed to fetch configuration: ${response.status.toString()}`);
+  const response = await fetchWithRetry(API_CONFIGURATION_URL);
   return await response.json() as PageConfigurationDto;
 };
 

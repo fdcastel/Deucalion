@@ -1,9 +1,18 @@
 <Project>
   <PropertyGroup>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <IsAotCompatible>true</IsAotCompatible>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+  </PropertyGroup>
+
+  <!--
+    Trim/AOT static analysis is expensive. It only matters for the AOT publish
+    flow (Deucalion.Service.csproj sets PublishAot=true), so scope it to Release
+    builds. Debug builds — including `dotnet watch` from the Dev invoke-build
+    task — skip it and start ~30 s faster.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 </Project>

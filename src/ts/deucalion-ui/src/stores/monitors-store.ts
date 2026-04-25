@@ -7,6 +7,7 @@ import type {
   MonitorEventDto,
   MonitorProps,
 } from "../services/deucalion-types";
+import { fetchWithRetry } from "../services/fetch-with-retry";
 
 interface MonitorsStoreState {
   byName: Record<string, MonitorProps>;
@@ -21,8 +22,7 @@ const [state, setState] = createStore<MonitorsStoreState>({
 });
 
 const fetchMonitors = async (): Promise<MonitorProps[]> => {
-  const response = await fetch(API_MONITORS_URL);
-  if (!response.ok) throw new Error(`Failed to fetch monitors: ${response.status.toString()}`);
+  const response = await fetchWithRetry(API_MONITORS_URL);
   return await response.json() as MonitorProps[];
 };
 

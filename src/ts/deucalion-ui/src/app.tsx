@@ -2,6 +2,7 @@ import { ErrorBoundary, Show, type Component } from "solid-js";
 
 import { configuration } from "./stores/configuration-store";
 import { monitorsLoaded } from "./stores/monitors-store";
+import { backendPhase } from "./services/fetch-with-retry";
 
 import { TopBar } from "./components/top-bar";
 import { Hero } from "./components/hero/hero";
@@ -12,7 +13,12 @@ import { TweaksPanel } from "./components/tweaks/tweaks-panel";
 
 const Loading: Component = () => (
   <div class="shell" style={{ "min-height": "100vh", display: "grid", "place-items": "center" }}>
-    <div class="hero-label">Loading…</div>
+    <div style={{ display: "flex", "flex-direction": "column", "align-items": "center", gap: "10px" }}>
+      <span class="connection-dot connecting" aria-hidden="true" />
+      <div class="hero-label">
+        {backendPhase() === "waiting" ? "Waiting for backend…" : "Loading…"}
+      </div>
+    </div>
   </div>
 );
 
