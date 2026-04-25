@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 # Temporary files
 /tmp
+
+# Playwright e2e storage (created by visual-qa harness)
+**/.e2e-storage/

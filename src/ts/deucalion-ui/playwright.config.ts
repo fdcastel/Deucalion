@@ -53,5 +53,16 @@ export default defineConfig({
       stdout: "pipe",
       stderr: "pipe",
     },
+    // Serves the design prototype HTML so the visual-QA harness can compare
+    // against it. Chromium blocks file:// CORS for the relative .jsx fetches
+    // Babel makes, so a minimal HTTP server is required.
+    {
+      command: "npx http-server ../../../tmp/New-Deucalion -p 5180 -s --cors",
+      url: "http://localhost:5180/Deucalion%20Redesign.html",
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      stdout: "pipe",
+      stderr: "pipe",
+    },
   ],
 });
