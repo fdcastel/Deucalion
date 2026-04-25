@@ -87,7 +87,6 @@ export const mergeChecked = (event: MonitorCheckedDto): void => {
         at: event.at,
         st: event.st,
         ms: event.ms,
-        te: event.te,
       };
 
       monitor.events = [newEvent, ...monitor.events.slice(0, 59)];

@@ -179,7 +179,6 @@ public record ApplicationConfiguration
         // Base PullMonitorConfiguration string properties
         monitor.Group = Interpolate(monitorName, monitor.Group);
         monitor.Href = Interpolate(monitorName, monitor.Href);
-        monitor.Image = Interpolate(monitorName, monitor.Image);
 
         // Derived type-specific string properties
         switch (monitor)

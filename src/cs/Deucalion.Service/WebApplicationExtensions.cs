@@ -87,7 +87,7 @@ internal static class WebApplicationExtensions
 
     /// <summary>
     /// Serve 'index.html' replacing SEO elements with values from app configuration.
-    /// The processed result is cached at startup since PageTitle and PageDescription don't change at runtime.
+    /// The processed result is cached at startup since PageTitle doesn't change at runtime.
     /// Supports conditional requests via ETag for efficient revalidation.
     /// </summary>
     internal static WebApplication UseIndexPage(this WebApplication app)
@@ -150,11 +150,9 @@ internal static class WebApplicationExtensions
 
         var options = app.Services.GetRequiredService<DeucalionOptions>();
         var htmlTitle = HttpUtility.HtmlEncode(options.PageTitle);
-        var htmlDescription = HttpUtility.HtmlEncode(options.PageDescription);
 
         var indexContent = File.ReadAllText(indexFile);
         return indexContent
-            .Replace("<!-- $DEUCALION__PAGETITLE -->", $"<title>{htmlTitle}</title>")
-            .Replace("<!-- $DEUCALION__PAGEDESCRIPTION -->", $"<meta name=\"description\" content=\"{htmlDescription}\">");
+            .Replace("<!-- $DEUCALION__PAGETITLE -->", $"<title>{htmlTitle}</title>");
     }
 }

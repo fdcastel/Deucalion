@@ -27,7 +27,7 @@ if (typeof window.matchMedia !== "function") {
 const defaultFetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
   const url = typeof input === "string" ? input : input.toString();
   if (url.endsWith("/api/configuration")) {
-    return new Response(JSON.stringify({ pageTitle: "Test", pageDescription: "" }), {
+    return new Response(JSON.stringify({ pageTitle: "Test" }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });

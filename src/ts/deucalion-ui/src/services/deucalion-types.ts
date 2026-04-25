@@ -12,31 +12,23 @@ export interface MonitorConfigurationDto {
   type: MonitorType;
   group?: string;
   href?: string;
-  image?: string;
-  tags?: string[];
 }
 
 export interface MonitorStatsDto {
   lastState: MonitorState;
-  lastUpdate: number;
 
   availability: number;
-  averageResponseTimeMs: number;
 
   minResponseTimeMs?: number;
   latency50Ms?: number;
   latency95Ms?: number;
   latency99Ms?: number;
-
-  lastSeenUp?: number;
-  lastSeenDown?: number;
 }
 
 export interface MonitorEventDto {
   at: number;
   st: MonitorState;
   ms?: number;
-  te?: string;
 }
 
 export interface MonitorCheckedDto {
@@ -45,7 +37,6 @@ export interface MonitorCheckedDto {
   fr: MonitorState;
   st: MonitorState;
   ms?: number;
-  te?: string;
   ns: MonitorStatsDto;
 }
 
@@ -65,5 +56,4 @@ export interface MonitorProps {
 
 export interface PageConfigurationDto {
   pageTitle: string;
-  pageDescription?: string;
 }

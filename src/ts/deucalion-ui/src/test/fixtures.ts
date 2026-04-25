@@ -35,9 +35,7 @@ export const buildEvents = (
 
 export const buildStats = (over: Partial<MonitorStatsDto> = {}): MonitorStatsDto => ({
   lastState: MonitorState.Up,
-  lastUpdate: NOW,
   availability: 100,
-  averageResponseTimeMs: 50,
   minResponseTimeMs: 40,
   latency50Ms: 50,
   latency95Ms: 70,

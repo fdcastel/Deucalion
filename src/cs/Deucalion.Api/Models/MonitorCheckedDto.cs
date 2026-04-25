@@ -10,7 +10,6 @@ public record MonitorCheckedDto(
     [property: JsonPropertyName("fr")] MonitorState From,
     [property: JsonPropertyName("st")] MonitorState State,
     [property: JsonPropertyName("ms")] int? ResponseTimeMs,
-    [property: JsonPropertyName("te")] string? ResponseText,
     [property: JsonPropertyName("ns")] MonitorStatsDto NewStats
 )
 {
@@ -21,7 +20,6 @@ public record MonitorCheckedDto(
             From: mc.From,
             State: mc.Response?.State ?? MonitorState.Unknown,
             ResponseTimeMs: (int?)mc.Response?.ResponseTime?.TotalMilliseconds,
-            ResponseText: mc.Response?.ResponseText,
             NewStats: MonitorStatsDto.From(stats)!
         );
 }

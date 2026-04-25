@@ -129,7 +129,6 @@ This section defines the individual monitors. Each monitor has a unique name (e.
 
 The following optional parameters are available for all monitors:
 - `group`: A string to group monitors together in the UI.
-- `image`: URL for a custom icon to display for the monitor.
 - `href`: URL to link to when the monitor name is clicked.
 - `intervalWhenUp`: Check interval when the monitor is UP (except for `checkin`).
 - `intervalWhenDown`: Check interval when the monitor is DOWN (except for `checkin`).
@@ -148,11 +147,11 @@ This will set the URL to `https://google.com`.
 
 | Type     | Required Fields                  | Optional Fields                                                                |
 |----------|----------------------------------|--------------------------------------------------------------------------------|
-| ping     | `host`                           | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href` |
-| tcp      | `host`, `port`                   | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href` |
-| dns      | `host`, `recordType`, `resolver` | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href` |
-| http     | `url`                            | `expectedStatusCode`, `expectedResponseBodyPattern`, `ignoreCertificateErrors`, `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `image`, `href`, `method` |
-| checkin  | `secret`                         | `intervalWhenUp`, `group`, `image`, `href`                                      |
+| ping     | `host`                           | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href` |
+| tcp      | `host`, `port`                   | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href` |
+| dns      | `host`, `recordType`, `resolver` | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href` |
+| http     | `url`                            | `expectedStatusCode`, `expectedResponseBodyPattern`, `ignoreCertificateErrors`, `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href`, `method` |
+| checkin  | `secret`                         | `intervalWhenUp`, `group`, `href`                                              |
 
 ### `ping` Monitor
 

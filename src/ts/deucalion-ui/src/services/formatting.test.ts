@@ -5,7 +5,6 @@ import {
   fmtAgo,
   fmtDur,
   fmtMs,
-  formatLastSeen,
   monitorStateToDescription,
   monitorStateToToastVariant,
   stateLabel,
@@ -84,38 +83,3 @@ describe("monitorStateToDescription", () => {
   });
 });
 
-describe("formatLastSeen", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-25T12:00:00Z"));
-  });
-  afterEach(() => { vi.useRealTimers(); });
-
-  it("returns undefined when stats are absent", () => {
-    expect(formatLastSeen(MonitorState.Up, undefined)).toBeUndefined();
-  });
-
-  it("describes the last-seen-down for currently-up monitors", () => {
-    const stats = {
-      lastState: MonitorState.Up,
-      lastUpdate: 0,
-      availability: 100,
-      averageResponseTimeMs: 0,
-      lastSeenDown: Math.floor(Date.now() / 1000) - 60,
-    };
-    const out = formatLastSeen(MonitorState.Up, stats);
-    expect(out).toMatch(/^Last seen down /);
-  });
-
-  it("describes the last-seen-up for currently-down monitors", () => {
-    const stats = {
-      lastState: MonitorState.Down,
-      lastUpdate: 0,
-      availability: 0,
-      averageResponseTimeMs: 0,
-      lastSeenUp: Math.floor(Date.now() / 1000) - 300,
-    };
-    const out = formatLastSeen(MonitorState.Down, stats);
-    expect(out).toMatch(/^Last seen up /);
-  });
-});

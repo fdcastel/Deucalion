@@ -40,7 +40,6 @@ public static class Application
         var deucalionOptions = new DeucalionOptions();
         builder.Configuration.GetSection("Deucalion").Bind(deucalionOptions);
         deucalionOptions.PageTitle ??= "Deucalion status";
-        deucalionOptions.PageDescription ??= "Deucalion. A high performance monitoring tool.";
         builder.Services.AddSingleton(_ => deucalionOptions);
 
         var applicationConfiguration = ApplicationConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
@@ -91,18 +90,7 @@ public static class Application
 
         // Setup Api endpoints
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
-            Results.Ok(new PageConfigurationDto(options.PageTitle, options.PageDescription)));
-
-        app.MapGet("/api/init", async (DeucalionOptions options, IStorage storage, CancellationToken cancellationToken) =>
-        {
-            var tasks = applicationConfiguration.Monitors
-                              .Select(kvp => BuildMonitorDtoAsync(storage, kvp.Value, kvp.Key, cancellationToken));
-            var monitors = await Task.WhenAll(tasks);
-            return Results.Ok(new InitDto(
-                new PageConfigurationDto(options.PageTitle, options.PageDescription),
-                monitors
-            ));
-        });
+            Results.Ok(new PageConfigurationDto(options.PageTitle)));
 
         app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, CancellationToken cancellationToken) =>
         {
@@ -192,12 +180,17 @@ public static class Application
         return app;
     }
 
+    // The frontend's heartbeat strip scales from 60 (mobile) up to 120 ticks
+    // (wide desktop) — request the upper bound so the wide-desktop layout
+    // gets full history and narrower viewports clip from the left.
+    private const int EventHistoryCount = 120;
+
     private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
         new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
-            Stats: MonitorStatsDto.From(await storage.GetStatsAsync(mn, cancellationToken: cancellationToken)),
-            Events: from e in await storage.GetLastEventsAsync(mn, cancellationToken: cancellationToken)
+            Stats: MonitorStatsDto.From(await storage.GetStatsAsync(mn, historyCount: EventHistoryCount, cancellationToken: cancellationToken)),
+            Events: from e in await storage.GetLastEventsAsync(mn, count: EventHistoryCount, cancellationToken: cancellationToken)
                     select MonitorEventDto.From(e)
         );
 }

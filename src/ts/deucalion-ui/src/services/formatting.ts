@@ -1,5 +1,4 @@
-import { MonitorState, type MonitorStatsDto } from "./deucalion-types";
-import { dateTimeFromNow } from "./converters";
+import { MonitorState } from "./deucalion-types";
 
 export const fmtMs = (ms?: number): string => {
   if (ms == null) return "—";
@@ -46,21 +45,6 @@ export const stateLabel = (s: MonitorState): string => {
     case MonitorState.Degraded: return "Degraded";
     default: return "Unknown";
   }
-};
-
-export const formatLastSeen = (state: MonitorState, m?: MonitorStatsDto): string | undefined => {
-  if (!m) return undefined;
-  switch (state) {
-    case MonitorState.Up:
-    case MonitorState.Warn:
-      if (m.lastSeenDown) return `Last seen down ${dateTimeFromNow(m.lastSeenDown)}`;
-      break;
-    case MonitorState.Down:
-    case MonitorState.Degraded:
-      if (m.lastSeenUp) return `Last seen up ${dateTimeFromNow(m.lastSeenUp)}`;
-      break;
-  }
-  return undefined;
 };
 
 export const monitorStateToDescription = (state: MonitorState): string => {

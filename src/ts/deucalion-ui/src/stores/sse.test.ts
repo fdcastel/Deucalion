@@ -96,7 +96,7 @@ describe("connectSSE()", () => {
       fr: MonitorState.Up,
       st: MonitorState.Down,
       ms: 250,
-      ns: { lastState: MonitorState.Down, lastUpdate: 100, availability: 0, averageResponseTimeMs: 250 },
+      ns: { lastState: MonitorState.Down, availability: 0 },
     });
 
     expect(monitors.byName.m1.events[0]).toMatchObject({ at: 100, st: MonitorState.Down, ms: 250 });

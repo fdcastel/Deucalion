@@ -1,6 +1,5 @@
 namespace Deucalion.Api.Models;
 
 internal record PageConfigurationDto(
-    string? PageTitle,
-    string? PageDescription
+    string? PageTitle
 );

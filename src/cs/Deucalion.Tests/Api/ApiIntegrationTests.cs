@@ -59,7 +59,6 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
 
         Assert.Equal("Deucalion (dev) 📡", payload.GetProperty("pageTitle").GetString());
-        Assert.Equal("Deucalion. A high performance monitoring tool.", payload.GetProperty("pageDescription").GetString());
     }
 
     [Fact]

@@ -11,5 +11,4 @@ public sealed class DeucalionOptions
 
     // Client-only
     public string? PageTitle { get; set; }
-    public string? PageDescription { get; set; }
 }

@@ -17,9 +17,7 @@ const checked = (over: Partial<MonitorCheckedDto> = {}): MonitorCheckedDto => ({
   ms: 100,
   ns: {
     lastState: MonitorState.Warn,
-    lastUpdate: 0,
     availability: 100,
-    averageResponseTimeMs: 0,
   },
   ...over,
 });
