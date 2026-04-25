@@ -1,7 +1,7 @@
 import { createResource } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 
-import { API_MONITORS_URL } from "../configuration";
+import { API_MONITORS_URL, MAX_EVENT_HISTORY } from "../configuration";
 import type {
   MonitorCheckedDto,
   MonitorEventDto,
@@ -89,7 +89,7 @@ export const mergeChecked = (event: MonitorCheckedDto): void => {
         ms: event.ms,
       };
 
-      monitor.events = [newEvent, ...monitor.events.slice(0, 59)];
+      monitor.events = [newEvent, ...monitor.events.slice(0, MAX_EVENT_HISTORY - 1)];
       monitor.stats = event.ns;
     }),
   );

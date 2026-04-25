@@ -1,5 +1,6 @@
 import { type Component, createMemo } from "solid-js";
 
+import { MAX_EVENT_HISTORY } from "../../configuration";
 import { monitorList } from "../../stores/monitors-store";
 import { aggregateAvailability } from "../../services/monitor-stats";
 import { Sparkline } from "../monitor/sparkline";
@@ -8,14 +9,13 @@ export const HeroAvailability: Component = () => {
   const agg = createMemo(() => aggregateAvailability(monitorList()));
 
   const trend = createMemo(() => {
-    // Build a 60-bucket trend by averaging the i-th most-recent event across
-    // all monitors. Events are newest-first, so we walk index 0..59 and the
-    // resulting array is also newest-first; reverse it so the sparkline draws
-    // oldest -> newest left-to-right.
+    // Average the i-th most-recent event across all monitors to build a
+    // per-bucket trend. Events are newest-first; reverse so the sparkline
+    // draws oldest -> newest left-to-right.
     const monitors = monitorList();
     if (monitors.length === 0) return [];
     const buckets: number[] = [];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < MAX_EVENT_HISTORY; i++) {
       let sum = 0;
       let n = 0;
       for (const m of monitors) {
@@ -36,7 +36,9 @@ export const HeroAvailability: Component = () => {
   return (
     <div class="hero-stat">
       <div class="hero-stat-grid">
-        <div>
+        <div class="hero-meta hero-meta-left">availability</div>
+        <div class="hero-meta hero-meta-right">trend <em>response</em></div>
+        <div class="hero-content-left">
           <div class="hero-availability">
             <span>{fmtPct(agg().weightedAvailability).whole}</span>
             <span class="pct">.{fmtPct(agg().weightedAvailability).dec}%</span>
@@ -46,14 +48,10 @@ export const HeroAvailability: Component = () => {
             {agg().states.warn > 0 && <span class="hero-chip warn"><strong>{agg().states.warn.toString()}</strong> warn</span>}
             {agg().states.degraded > 0 && <span class="hero-chip warn"><strong>{agg().states.degraded.toString()}</strong> degraded</span>}
             {agg().states.down > 0 && <span class="hero-chip down"><strong>{agg().states.down.toString()}</strong> down</span>}
-            <span class="hero-chip hero-chip-total">of <strong>{agg().total.toString()}</strong></span>
           </div>
         </div>
         <div class="hero-spark-wrap">
-          <div class="hero-spark-meta">trend <em>response</em></div>
-          <div style={{ width: "100%", height: "56px" }}>
-            <Sparkline values={trend()} height={56} />
-          </div>
+          <Sparkline values={trend()} height={48} />
         </div>
       </div>
     </div>

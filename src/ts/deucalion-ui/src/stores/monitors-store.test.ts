@@ -51,12 +51,12 @@ describe("monitors-store", () => {
       expect(m.stats?.lastState).toBe(MonitorState.Warn);
     });
 
-    it("caps the rolling window at 60 events", () => {
-      seed({ events: buildEvents(Array.from<MonitorState>({ length: 60 }).fill(MonitorState.Up)) });
+    it("caps the rolling window at 120 events", () => {
+      seed({ events: buildEvents(Array.from<MonitorState>({ length: 120 }).fill(MonitorState.Up)) });
 
       mergeChecked(checked({ at: 1_800_000_000 }));
 
-      expect(monitors.byName.m1.events).toHaveLength(60);
+      expect(monitors.byName.m1.events).toHaveLength(120);
       expect(monitors.byName.m1.events[0].at).toBe(1_800_000_000);
     });
 
