@@ -16,9 +16,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 28px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .brand {
@@ -29,34 +28,30 @@
 
 /* Real SVG icon instead of the prototype's CSS-only pulsing dot. The icon
    ships as black-on-transparent; we invert in dark mode so the silhouette
-   pops on the dark backdrop, then layer two accent-tinted drop-shadows for
-   a soft glow. Light mode keeps the original ink and uses softer shadows. */
+   pops on the dark backdrop. The "embossed/3D" feel is carried by layered
+   neutral drop-shadows (one short + sharp, one long + diffuse) that mimic
+   the v4 status-page treatment — the shadow lifts the icon off the page
+   instead of an accent-tinted glow. */
 .brand-icon {
-  width: 32px;
-  height: 32px;
+  /* Larger size to match the v4 status page; the engraved shadows have
+     more silhouette to bevel against. */
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   flex-shrink: 0;
+  /* v4 emboss recipe: keep the icon BLACK in both themes (no invert),
+     and use the same sharp 1px directional shadows (down-right shadow,
+     up-left highlight) the v4 page used. The page background is lifted
+     toward v4's #1a202c so a black silhouette still reads at 44px. */
   filter:
-    invert(1)
-    drop-shadow(0 0 8px color-mix(in oklch, var(--accent) 35%, transparent))
-    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+    drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.7))
+    drop-shadow(-1px -1px 1px rgba(255, 255, 255, 0.35));
   transition: filter 0.2s ease-out;
 }
 [data-theme="light"] .brand-icon {
   filter:
-    drop-shadow(0 0 6px color-mix(in oklch, var(--accent) 25%, transparent))
-    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
-}
-.brand-icon:hover {
-  filter:
-    invert(1)
-    drop-shadow(0 0 12px color-mix(in oklch, var(--accent) 55%, transparent))
-    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
-}
-[data-theme="light"] .brand-icon:hover {
-  filter:
-    drop-shadow(0 0 10px color-mix(in oklch, var(--accent) 40%, transparent))
-    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.22));
+    drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3))
+    drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5));
 }
 
 .brand-name {
@@ -120,17 +115,8 @@
 
 /* ============= HERO ============= */
 .hero {
-  display: grid;
-  grid-template-columns: 1.15fr 1fr;
-  gap: 28px;
-  margin-bottom: 36px;
-}
-
-@media (max-width: 980px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
+  display: block;
+  margin-bottom: 20px;
 }
 
 .hero-stat {
@@ -376,6 +362,30 @@
   white-space: nowrap;
 }
 
+/* Mobile trim: drop the live-event feed and the trend sparkline so the
+   hero counters can collapse onto one line, and hide the verbose
+   "disconnected" label in the topbar — the dot already encodes status.
+   Placed after the hero/feed/topbar rules so equal-specificity
+   selectors don't lose to a later default. */
+@media (max-width: 720px) {
+  .hero-spark-wrap {
+    display: none;
+  }
+  .hero-stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero-summary-row {
+    flex-wrap: nowrap;
+    gap: 14px;
+  }
+  .hero-chip {
+    gap: 4px;
+  }
+  .topbar-right .connection-label {
+    display: none;
+  }
+}
+
 /* ============= GROUP ============= */
 .group {
   margin-top: 36px;
@@ -424,8 +434,7 @@
   grid-template-columns: minmax(180px, 220px) 1fr 200px 110px;
   gap: 18px;
   align-items: center;
-  padding: 12px 12px 12px 8px;
-  border-bottom: 1px solid color-mix(in oklch, var(--line) 60%, transparent);
+  padding: 6px 12px 6px 8px;
   position: relative;
   transition: background 0.6s ease-out;
 }
@@ -433,10 +442,6 @@
 .row.flash {
   background: var(--flash);
   transition: background 0.05s ease-in;
-}
-
-.row:last-child {
-  border-bottom: none;
 }
 
 @media (max-width: 980px) {
@@ -453,6 +458,39 @@
     grid-template-columns: 130px 1fr 70px;
     gap: 10px;
     padding: 10px 4px;
+  }
+}
+
+/* Mobile: drop the type badge (~46px the heartbeat strip uses better),
+   pin name and right columns so every row's strip starts and ends at
+   the same x-coordinate, and right-align the right column's contents
+   so the incident text sits flush under the percentage. */
+@media (max-width: 720px) {
+  .row {
+    /* 90px name leaves room for the longest sample name ("http-goog");
+       80px right column matches the width of "100.00%" so summary
+       text never extends past the percentage above it. */
+    grid-template-columns: 90px minmax(0, 1fr) 80px;
+    gap: 10px;
+    padding: 10px 4px;
+  }
+  .row .type-badge {
+    display: none;
+  }
+  .row .col-name {
+    gap: 0;
+  }
+  .row .last-incident {
+    /* Stack <ago> on top of <state> so each fits in the 80px column
+       cleanly; the inline separator is meaningless when the parts
+       are on separate lines. */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.25;
+  }
+  .row .last-incident-sep {
+    display: none;
   }
 }
 
@@ -542,13 +580,50 @@
   100% { transform: scaleY(1); opacity: 1; }
 }
 
-/* sparkline + stats */
+/* sparkline + stats — the .col-stats element is a button so the latency
+   percentile readout can be toggled (touch) or hovered (mouse) without
+   spending a row of vertical space on it permanently. */
 .col-stats {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
   padding: 0 6px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: inherit;
+  position: relative;
+}
+.col-stats:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.lat-stats-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+}
+.col-stats:hover .lat-stats-pop,
+.col-stats.is-open .lat-stats-pop {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .spark {

@@ -139,6 +139,14 @@ createEffect(() => {
   persist();
 });
 
+// Easter-egg trigger: the visible "Open tweaks panel" button is gone, so
+// power users summon the panel from the JS console via window.deucalion().
+if (typeof window !== "undefined") {
+  (window as unknown as { deucalion?: () => void }).deucalion = (): void => {
+    setPanelOpen(true);
+  };
+}
+
 // Test-only: reset signals to defaults and clear the storage key.
 export const __resetTweaksForTests = (): void => {
   setTheme(DEFAULTS.theme);

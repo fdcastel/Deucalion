@@ -1,9 +1,11 @@
 :root {
   --accent-h: 178;
   --accent-c: 0.12;
-  --bg: oklch(0.18 0.012 230);
-  --bg-2: oklch(0.215 0.014 230);
-  --bg-3: oklch(0.255 0.016 230);
+  /* Lifted from near-black to roughly match v4's #1a202c so a v4-style
+     BLACK embossed brand icon reads at small sizes against the page. */
+  --bg: oklch(0.26 0.022 245);
+  --bg-2: oklch(0.295 0.022 245);
+  --bg-3: oklch(0.33 0.024 245);
   --line: oklch(0.32 0.018 230);
   --line-2: oklch(0.38 0.018 230);
   --fg: oklch(0.96 0.005 230);

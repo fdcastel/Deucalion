@@ -35,14 +35,11 @@ describe("<TopBar>", () => {
     expect(tweaks.theme()).toBe("dark");
   });
 
-  it("toggles the tweaks panel via the discreet trigger", () => {
+  it("does not render a visible tweaks trigger (panel is now console-only)", () => {
     __seedMonitorsForTests([]);
     render(() => <TopBar />);
-    const trigger = document.querySelector('button[aria-label="Open tweaks panel"]')!;
-
-    expect(tweaks.panelOpen()).toBe(false);
-    fireEvent.click(trigger);
-    expect(tweaks.panelOpen()).toBe(true);
+    const trigger = document.querySelector('button[aria-label="Open tweaks panel"]');
+    expect(trigger).toBeNull();
   });
 
   it("updates document.title with a (-N) prefix when monitors are down", () => {

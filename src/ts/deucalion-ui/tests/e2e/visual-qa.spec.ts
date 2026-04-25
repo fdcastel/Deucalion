@@ -161,7 +161,9 @@ test.describe("visual QA — V5 dashboard vs. prototype", () => {
 
     // Tweaks panel (open) — dark only.
     await setTheme(page, "v5", "dark");
-    await page.getByRole("button", { name: "Open tweaks panel" }).click();
+    await page.evaluate(() => {
+      (window as unknown as { deucalion: () => void }).deucalion();
+    });
     await page.locator(".twk-panel").waitFor({ state: "visible" });
     await page.waitForTimeout(200);
     await page.screenshot({ path: path.join(outDir, "v5-dark-tweaks-open.png"), fullPage: false });

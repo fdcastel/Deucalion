@@ -2,7 +2,7 @@ import { type Component, createEffect, createMemo, createSignal, onCleanup, Show
 
 import { MonitorState, type MonitorProps } from "../../services/deucalion-types";
 import { avail, lastIncident } from "../../services/monitor-stats";
-import { fmtAgo, fmtDur, stateName } from "../../services/formatting";
+import { fmtAgo, stateName } from "../../services/formatting";
 
 import { HeartbeatStrip } from "./heartbeat-strip";
 import { LatStats } from "./lat-stats";
@@ -67,6 +67,8 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
 
   const typeClass = (): string => `type-badge t-${props.monitor.config.type}`;
 
+  const [statsOpen, setStatsOpen] = createSignal(false);
+
   return (
     <div class={rowClass()}>
       <div class="col-name">
@@ -78,10 +80,18 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
         </span>
       </div>
       <HeartbeatStrip events={props.monitor.events} />
-      <div class="col-stats">
+      <button
+        type="button"
+        class={`col-stats${statsOpen() ? " is-open" : ""}`}
+        aria-label="Toggle latency percentiles"
+        aria-expanded={statsOpen()}
+        onClick={() => { setStatsOpen((v) => !v); }}
+      >
         <Sparkline values={sparkValues()} />
-        <LatStats monitor={props.monitor} />
-      </div>
+        <div class="lat-stats-pop" role="tooltip">
+          <LatStats monitor={props.monitor} />
+        </div>
+      </button>
       <div class="col-right">
         <span class={availClass()}>{availability().toFixed(2)}%</span>
         <Show
@@ -90,7 +100,9 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
         >
           {(inc) => (
             <span class="last-incident">
-              {stateName(inc().state)} · {fmtDur(inc().durationSec)} · {fmtAgo(inc().end)}
+              <span class="last-incident-ago">{fmtAgo(inc().end)}</span>
+              <span class="last-incident-sep"> · </span>
+              <span class="last-incident-state">{stateName(inc().state)}</span>
             </span>
           )}
         </Show>

@@ -27,9 +27,16 @@ test.describe("Deucalion dashboard", () => {
   test("at least one row picks up the heartbeat strip", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".row").first()).toBeVisible({ timeout: 30_000 });
-    // Each row renders 60 ticks (some may be unknown padding)
+    // Strip length is viewport-tier'd (60 / 90 / 120). The Playwright
+    // default desktop viewport (1280×720) lands in the 90 tier.
     const ticks = page.locator(".row").first().locator(".tick");
-    await expect(ticks).toHaveCount(60);
+    const expected = await page.evaluate(() => {
+      const w = window.innerWidth;
+      if (w >= 1480) return 120;
+      if (w >= 1280) return 90;
+      return 60;
+    });
+    await expect(ticks).toHaveCount(expected);
   });
 
   test("type badge uses the backend-provided type", async ({ page }) => {
@@ -47,13 +54,17 @@ test.describe("Deucalion dashboard", () => {
 });
 
 test.describe("Tweaks panel", () => {
-  test("opens via the discreet trigger and closes via the X button", async ({ page }) => {
+  test("opens via the window.deucalion() easter-egg and closes via the X button", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".row").first()).toBeVisible({ timeout: 30_000 });
 
-    const trigger = page.getByRole("button", { name: "Open tweaks panel" });
+    // The visible trigger is gone; the panel is now summoned from the console.
+    await expect(page.getByRole("button", { name: "Open tweaks panel" })).toHaveCount(0);
     await expect(page.locator(".twk-panel")).toHaveCount(0);
-    await trigger.click();
+
+    await page.evaluate(() => {
+      (window as unknown as { deucalion: () => void }).deucalion();
+    });
     await expect(page.locator(".twk-panel")).toBeVisible();
 
     await page.getByRole("button", { name: "Close tweaks" }).click();
@@ -90,10 +101,9 @@ test.describe("Hero", () => {
     await expect(page.locator(".hero-chip.up")).toBeVisible();
   });
 
-  test("event feed appears alongside the hero stat", async ({ page }) => {
+  test("event feed is no longer rendered (data still flows via SSE)", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator(".feed")).toBeVisible({ timeout: 30_000 });
-    // The header uses two `.feed-title` blocks — the first is the "Live events" label.
-    await expect(page.locator(".feed-title").first()).toContainText(/Live events/i);
+    await expect(page.locator(".hero-availability")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(".feed")).toHaveCount(0);
   });
 });

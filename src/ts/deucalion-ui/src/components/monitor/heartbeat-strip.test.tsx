@@ -1,20 +1,27 @@
 import { render } from "@solidjs/testing-library";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { buildEvent, buildEvents } from "../../test/fixtures";
 import { MonitorState } from "../../services/deucalion-types";
 
 import { HeartbeatStrip } from "./heartbeat-strip";
 
+// Strip length is viewport-tier'd: <720 → 60, 720–1279 → 90, ≥1280 → 120.
+// Pin a narrow viewport for these tests so we exercise the 60-tick tier
+// (the assertions about padding + colour ordering are tier-agnostic).
 const STRIP_LEN = 60;
 
 describe("<HeartbeatStrip>", () => {
-  it("always renders 60 ticks", () => {
+  beforeAll(() => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 500 });
+  });
+
+  it("always renders 60 ticks at narrow viewports", () => {
     const { container } = render(() => <HeartbeatStrip events={[]} />);
     expect(container.querySelectorAll(".tick")).toHaveLength(STRIP_LEN);
   });
 
-  it("pads the left with unknown ticks when fewer than 60 events are present", () => {
+  it("pads the left with unknown ticks when fewer than STRIP_LEN events are present", () => {
     const events = buildEvents([MonitorState.Up, MonitorState.Up, MonitorState.Up]);
     const { container } = render(() => <HeartbeatStrip events={events} />);
     const ticks = container.querySelectorAll(".tick");

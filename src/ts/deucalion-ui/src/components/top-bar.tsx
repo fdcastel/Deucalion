@@ -6,7 +6,7 @@ import { sseStatus } from "../stores/sse";
 import { tweaks } from "../stores/tweaks-store";
 import { MonitorState } from "../services/deucalion-types";
 
-import { MoonIcon, SlidersIcon, SunIcon } from "./common/icons";
+import { MoonIcon, SunIcon } from "./common/icons";
 
 // Strip any *emphasis* markers so the "(-N) Title" effect is plain text.
 const cleanTitle = (t: string): string => t.replace(/\*([^*]+)\*/g, "$1");
@@ -61,21 +61,13 @@ export const TopBar: Component = () => {
       </div>
       <div class="topbar-right">
         <span class={`connection-dot ${sseStatus() === "open" ? "" : sseStatus()}`} />
-        <span class="mono">{connectionLabel()}</span>
+        <span class="mono connection-label">{connectionLabel()}</span>
         <button
           class="theme-btn"
           aria-label="Toggle theme"
           onClick={() => { tweaks.setTheme(tweaks.theme() === "dark" ? "light" : "dark"); }}
         >
           {tweaks.theme() === "dark" ? <MoonIcon /> : <SunIcon />}
-        </button>
-        <button
-          class="twk-trigger"
-          aria-label="Open tweaks panel"
-          data-tip="Tweaks"
-          onClick={() => { tweaks.setPanelOpen(!tweaks.panelOpen()); }}
-        >
-          <SlidersIcon />
         </button>
       </div>
     </header>
