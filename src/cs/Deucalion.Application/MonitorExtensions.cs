@@ -86,12 +86,12 @@ public static class MonitorExtensions
             }
 
             var effectiveResponse = response is null ? null : response with { State = effectiveState };
-            writer.TryWrite(new MonitorChecked(name, queryStartTime, effectiveResponse));
+            writer.TryWrite(new MonitorChecked(name, queryStartTime, lastKnownState, effectiveResponse));
 
             var actualStateHasChanged = lastKnownState != effectiveState;
             if (actualStateHasChanged)
             {
-                writer.TryWrite(new MonitorStateChanged(name, queryStartTime, effectiveState));
+                writer.TryWrite(new MonitorStateChanged(name, queryStartTime, lastKnownState, effectiveState));
             }
 
             lastKnownState = effectiveState;

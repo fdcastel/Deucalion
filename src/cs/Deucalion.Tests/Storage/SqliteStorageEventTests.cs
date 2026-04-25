@@ -115,15 +115,15 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var now = DateTimeOffset.UtcNow; // Use UtcNow for consistency
-        var e1 = new MonitorChecked("m1", now.AddSeconds(-20), MonitorResponse.Up(TimeSpan.FromSeconds(1), "test"));
+        var e1 = new MonitorChecked("m1", now.AddSeconds(-20), MonitorState.Unknown, MonitorResponse.Up(TimeSpan.FromSeconds(1), "test"));
         var se1 = StoredEvent.From(e1);
         await Storage.SaveEventAsync(e1.Name, se1, cancellationToken);
 
-        var e2 = new MonitorChecked("m1", now.AddSeconds(-10), MonitorResponse.Warn(TimeSpan.FromSeconds(2), "warn"));
+        var e2 = new MonitorChecked("m1", now.AddSeconds(-10), MonitorState.Up, MonitorResponse.Warn(TimeSpan.FromSeconds(2), "warn"));
         var se2 = StoredEvent.From(e2);
         await Storage.SaveEventAsync(e2.Name, se2, cancellationToken);
 
-        var e3 = new MonitorChecked("m1", now, MonitorResponse.Down(text: "down")); // Fixed parameter name
+        var e3 = new MonitorChecked("m1", now, MonitorState.Warn, MonitorResponse.Down(text: "down")); // Fixed parameter name
         var se3 = StoredEvent.From(e3);
         await Storage.SaveEventAsync(e3.Name, se3, cancellationToken);
 

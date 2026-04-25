@@ -95,7 +95,7 @@ internal class EngineBackgroundService(
         var newStats = await _storage.GetStatsAsync(mc.Name, cancellationToken: cancellationToken);
         if (newStats != null)
         {
-            var dto = MonitorCheckedDto.From(mc, newStats);
+            var dto = MonitorCheckedDto.FromEvent(mc, newStats);
             var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorCheckedDto);
             _broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
         }
@@ -109,7 +109,7 @@ internal class EngineBackgroundService(
     {
         _logger.LogDebug("MonitorStateChanged: {@event}", msc);
         await _storage.SaveLastStateChangeAsync(msc.Name, msc.At, msc.NewState, cancellationToken);
-        var dto = MonitorStateChangedDto.From(msc);
+        var dto = MonitorStateChangedDto.FromEvent(msc);
         var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorStateChangedDto);
         _broadcaster.Broadcast(new SseItem<string>(json, "MonitorStateChanged"));
     }

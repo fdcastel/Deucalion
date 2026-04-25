@@ -13,26 +13,26 @@ public class SqliteStorageStatsTests : SqliteStorageTestBase
         var now = DateTimeOffset.UtcNow; // Use UtcNow
 
         // Monitor 1: Up
-        var e1_1 = new MonitorChecked("m1", now.AddMinutes(-5), MonitorResponse.Up(TimeSpan.FromMilliseconds(50), "up1"));
+        var e1_1 = new MonitorChecked("m1", now.AddMinutes(-5), MonitorState.Unknown, MonitorResponse.Up(TimeSpan.FromMilliseconds(50), "up1"));
         await Storage.SaveEventAsync(e1_1.Name, StoredEvent.From(e1_1), cancellationToken);
         await Storage.SaveLastStateChangeAsync(e1_1.Name, e1_1.At, MonitorState.Up, cancellationToken);
-        var e1_2 = new MonitorChecked("m1", now.AddMinutes(-2), MonitorResponse.Up(TimeSpan.FromMilliseconds(60), "up2"));
+        var e1_2 = new MonitorChecked("m1", now.AddMinutes(-2), MonitorState.Up, MonitorResponse.Up(TimeSpan.FromMilliseconds(60), "up2"));
         await Storage.SaveEventAsync(e1_2.Name, StoredEvent.From(e1_2), cancellationToken);
         // No state change here, LastSeenUp should remain e1_1.At
 
         // Monitor 2: Down -> Up -> Down
-        var e2_1 = new MonitorChecked("m2", now.AddMinutes(-10), MonitorResponse.Down(text: "down1")); // Fixed parameter name
+        var e2_1 = new MonitorChecked("m2", now.AddMinutes(-10), MonitorState.Unknown, MonitorResponse.Down(text: "down1")); // Fixed parameter name
         await Storage.SaveEventAsync(e2_1.Name, StoredEvent.From(e2_1), cancellationToken);
         await Storage.SaveLastStateChangeAsync(e2_1.Name, e2_1.At, MonitorState.Down, cancellationToken);
-        var e2_2 = new MonitorChecked("m2", now.AddMinutes(-5), MonitorResponse.Up(TimeSpan.FromMilliseconds(100), "up1"));
+        var e2_2 = new MonitorChecked("m2", now.AddMinutes(-5), MonitorState.Down, MonitorResponse.Up(TimeSpan.FromMilliseconds(100), "up1"));
         await Storage.SaveEventAsync(e2_2.Name, StoredEvent.From(e2_2), cancellationToken);
         await Storage.SaveLastStateChangeAsync(e2_2.Name, e2_2.At, MonitorState.Up, cancellationToken);
-        var e2_3 = new MonitorChecked("m2", now.AddMinutes(-1), MonitorResponse.Down(text: "down2")); // Fixed parameter name
+        var e2_3 = new MonitorChecked("m2", now.AddMinutes(-1), MonitorState.Up, MonitorResponse.Down(text: "down2")); // Fixed parameter name
         await Storage.SaveEventAsync(e2_3.Name, StoredEvent.From(e2_3), cancellationToken);
         await Storage.SaveLastStateChangeAsync(e2_3.Name, e2_3.At, MonitorState.Down, cancellationToken);
 
         // Monitor 3: Only Warn
-        var e3_1 = new MonitorChecked("m3", now.AddMinutes(-3), MonitorResponse.Warn(TimeSpan.FromMilliseconds(200), "warn1"));
+        var e3_1 = new MonitorChecked("m3", now.AddMinutes(-3), MonitorState.Unknown, MonitorResponse.Warn(TimeSpan.FromMilliseconds(200), "warn1"));
         await Storage.SaveEventAsync(e3_1.Name, StoredEvent.From(e3_1), cancellationToken);
         // No Up/Down state change saved
 

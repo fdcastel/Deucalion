@@ -63,7 +63,6 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
 
         long? lastEventTimestampTicks = null;
         MonitorState? lastEventState = null;
-        double? averageResponseTimeTicks = null;
         long relevantEventCount = 0;
         long downEventCount = 0;
 
@@ -94,7 +93,6 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
                     (SELECT LastSeenDownTicks FROM LastSeen) AS LastSeenDownTicks,
                     (SELECT TimestampTicks FROM LastEvent) AS LastEventTimestampTicks,
                     (SELECT State FROM LastEvent) AS LastEventState,
-                    (SELECT AVG(CAST(ResponseTimeTicks AS REAL)) FROM RecentEvents) AS AverageResponseTimeTicks,
                     (SELECT COALESCE(SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}, {(int)MonitorState.Degraded}) THEN 1 ELSE 0 END), 0) FROM RecentEvents) AS RelevantEventCount,
                     (SELECT COALESCE(SUM(CASE WHEN State = {(int)MonitorState.Down} THEN 1 ELSE 0 END), 0) FROM RecentEvents) AS DownEventCount;
             """;
@@ -111,9 +109,29 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
 
                 lastEventTimestampTicks = reader.IsDBNull(2) ? (long?)null : reader.GetInt64(2);
                 lastEventState = reader.IsDBNull(3) ? (MonitorState?)null : (MonitorState)reader.GetInt64(3);
-                averageResponseTimeTicks = reader.IsDBNull(4) ? (double?)null : reader.GetDouble(4);
-                relevantEventCount = reader.IsDBNull(5) ? 0 : reader.GetInt64(5);
-                downEventCount = reader.IsDBNull(6) ? 0 : reader.GetInt64(6);
+                relevantEventCount = reader.IsDBNull(4) ? 0 : reader.GetInt64(4);
+                downEventCount = reader.IsDBNull(5) ? 0 : reader.GetInt64(5);
+            }
+        }
+
+        // Pull the recent response times so we can compute average + percentiles in C#.
+        var responseTimes = new List<long>();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = $"""
+                SELECT ResponseTimeTicks
+                FROM {EventsTableName}
+                WHERE MonitorName = @MonitorName AND ResponseTimeTicks IS NOT NULL
+                ORDER BY TimestampTicks DESC
+                LIMIT @HistoryCount;
+            """;
+            command.Parameters.AddWithValue("@MonitorName", monitorName);
+            command.Parameters.AddWithValue("@HistoryCount", historyCount);
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                responseTimes.Add(reader.GetInt64(0));
             }
         }
 
@@ -121,7 +139,7 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         {
             // There are no events at all. Return based on LastSeenUp/Down or null
             return (lastSeenUp.HasValue || lastSeenDown.HasValue)
-                ? new MonitorStats(MonitorState.Unknown, DateTimeOffset.MinValue, 0, TimeSpan.Zero, lastSeenDown, lastSeenUp)
+                ? new MonitorStats(MonitorState.Unknown, DateTimeOffset.MinValue, 0, TimeSpan.Zero, LastSeenDown: lastSeenDown, LastSeenUp: lastSeenUp)
                 : null;
         }
 
@@ -133,18 +151,44 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             availability = 100.0 * availableCount / relevantEventCount;
         }
 
-        var averageResponseTime = averageResponseTimeTicks.HasValue
-            ? TimeSpan.FromTicks((long)averageResponseTimeTicks.Value)
-            : TimeSpan.Zero;
+        var averageResponseTime = TimeSpan.Zero;
+        TimeSpan? minResponseTime = null;
+        TimeSpan? p50 = null;
+        TimeSpan? p95 = null;
+        TimeSpan? p99 = null;
+
+        if (responseTimes.Count > 0)
+        {
+            averageResponseTime = TimeSpan.FromTicks((long)responseTimes.Average());
+            var sorted = responseTimes.ToArray();
+            Array.Sort(sorted);
+            minResponseTime = TimeSpan.FromTicks(sorted[0]);
+            p50 = TimeSpan.FromTicks(Percentile(sorted, 0.50));
+            p95 = TimeSpan.FromTicks(Percentile(sorted, 0.95));
+            p99 = TimeSpan.FromTicks(Percentile(sorted, 0.99));
+        }
 
         return new MonitorStats(
             LastState: lastEventState.Value,
             LastUpdate: new DateTimeOffset(lastEventTimestampTicks.Value, TimeSpan.Zero),
             Availability: availability,
             AverageResponseTime: averageResponseTime,
+            MinResponseTime: minResponseTime,
+            Latency50: p50,
+            Latency95: p95,
+            Latency99: p99,
             LastSeenDown: lastSeenDown,
             LastSeenUp: lastSeenUp
         );
+    }
+
+    // Nearest-rank percentile on a pre-sorted array.
+    private static long Percentile(long[] sortedValues, double p)
+    {
+        var rank = (int)Math.Ceiling(p * sortedValues.Length);
+        if (rank < 1) rank = 1;
+        if (rank > sortedValues.Length) rank = sortedValues.Length;
+        return sortedValues[rank - 1];
     }
 
     public async Task<IEnumerable<StoredEvent>> GetLastEventsAsync(string monitorName, int count = 60, CancellationToken cancellationToken = default)
