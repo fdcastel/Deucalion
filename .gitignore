@@ -285,6 +285,9 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Visual Studio 6 build log
 *.plg
 
