@@ -43,10 +43,48 @@ jobs:
         working-directory: src/ts/deucalion-ui
         run: npm ci
 
+      - name: Lint frontend
+        working-directory: src/ts/deucalion-ui
+        run: npm run lint
+
       - name: Build frontend
         working-directory: src/ts/deucalion-ui
         run: npm run build
 
-      - name: Test frontend
+      - name: Test frontend (unit)
         working-directory: src/ts/deucalion-ui
         run: npm test
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('src/ts/deucalion-ui/package-lock.json') }}
+
+      - name: Install Playwright browser + system deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: src/ts/deucalion-ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (browser cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: src/ts/deucalion-ui
+        run: npx playwright install-deps chromium
+
+      - name: Test frontend (e2e)
+        working-directory: src/ts/deucalion-ui
+        # Skip the visual-QA spec in CI — it pulls Babel + Google Fonts from
+        # CDNs to render the prototype HTML and the runner's outbound network
+        # is sometimes flaky for those.
+        run: npx playwright test tests/e2e/dashboard.spec.ts --reporter=list
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            src/ts/deucalion-ui/test-results/
+            src/ts/deucalion-ui/playwright-report/
+          retention-days: 7
