@@ -56,22 +56,22 @@
         pointer-events: none;
       }
       #splash-icon {
-        width: 14em;
-        height: 14em;
+        width: 28em;
+        height: 28em;
         object-fit: contain;
-        /* invert(1) flips the icon's pure-black fills to pure-white so the
-           silhouette is visible on the dark backdrop; the drop-shadows give
-           it the V5 accent glow. */
+        /* v4 emboss recipe (matches .brand-icon in the topbar): keep the
+           icon BLACK in both themes and bevel the silhouette with layered
+           directional shadows (down-right dark + up-left highlight). The
+           1px shadows used at 44px scale to ~5px at this 14em size. */
         filter:
-          invert(1)
-          drop-shadow(0 0 40px oklch(0.78 0.12 178 / 0.55))
-          drop-shadow(0 8px 32px rgba(0, 0, 0, 0.55));
+          drop-shadow(5px 5px 4px rgba(0, 0, 0, 0.7))
+          drop-shadow(-5px -5px 4px rgba(255, 255, 255, 0.35));
         animation: splash-pulse 2.4s ease-in-out infinite;
       }
       html[data-theme="light"] #splash-icon {
         filter:
-          drop-shadow(0 0 28px oklch(0.55 0.12 178 / 0.35))
-          drop-shadow(0 4px 16px rgba(0, 0, 0, 0.18));
+          drop-shadow(5px 5px 4px rgba(0, 0, 0, 0.3))
+          drop-shadow(-5px -5px 4px rgba(0, 0, 0, 0.5));
       }
       @keyframes splash-pulse {
         0%, 100% { opacity: 1; transform: scale(1); }
