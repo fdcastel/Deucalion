@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 
-import react from "@vitejs/plugin-react";
-import tailwindcss from '@tailwindcss/vite';
+import solid from "vite-plugin-solid";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
@@ -12,33 +12,19 @@ export default defineConfig(({ mode }) => {
 
   return {
     build: {
-      chunkSizeWarningLimit: 200, // Enforce strict budget: warn on chunks > 200 KB
-      rollupOptions: {
-        output: {
-          // Attempt early code-splitting of vendor + app logic
-          manualChunks(id: string) {
-            // Isolate HeroUI/Toast to separate chunks for lazy loading
-            if (id.includes('node_modules/@heroui')) {
-              return 'heroui-vendor';
-            }
-            if (id.includes('node_modules/react') && !id.includes('node_modules/@')) {
-              return 'react-vendor';
-            }
-          }
-        }
-      }
+      chunkSizeWarningLimit: 200,
     },
     plugins: [
       tailwindcss(),
-      react(),
+      solid(),
       viteCompression({
-        algorithm: 'brotliCompress',
-        ext: '.br',
+        algorithm: "brotliCompress",
+        ext: ".br",
         threshold: 256,
       }),
       viteCompression({
-        algorithm: 'gzip',
-        ext: '.gz',
+        algorithm: "gzip",
+        ext: ".gz",
         threshold: 256,
         compressionOptions: { level: 9 },
       }),

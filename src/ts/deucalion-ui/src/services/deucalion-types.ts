@@ -1,6 +1,4 @@
-export const EMPTY_MONITORS = new Map<string, MonitorProps>();
-
-export enum MonitorState {
+export const enum MonitorState {
   Unknown = 0,
   Down = 1,
   Up = 2,
@@ -8,7 +6,10 @@ export enum MonitorState {
   Degraded = 4,
 }
 
+export type MonitorType = "ping" | "http" | "dns" | "tcp" | "checkin" | "unknown";
+
 export interface MonitorConfigurationDto {
+  type: MonitorType;
   group?: string;
   href?: string;
   image?: string;
@@ -16,29 +17,19 @@ export interface MonitorConfigurationDto {
 }
 
 export interface MonitorStatsDto {
-  lastState: MonitorState,
-  lastUpdate: number,
+  lastState: MonitorState;
+  lastUpdate: number;
 
-  availability: number,
-  averageResponseTimeMs: number,
+  availability: number;
+  averageResponseTimeMs: number;
+
+  minResponseTimeMs?: number;
+  latency50Ms?: number;
+  latency95Ms?: number;
+  latency99Ms?: number;
 
   lastSeenUp?: number;
   lastSeenDown?: number;
-}
-
-export interface MonitorCheckedDto {
-  n: string;
-  at: number;
-  st: MonitorState;
-  ms?: number;
-  te?: string;
-  ns: MonitorStatsDto
-}
-
-export interface MonitorStateChangedDto {
-  n: string;
-  at: number;
-  st: MonitorState;
 }
 
 export interface MonitorEventDto {
@@ -48,6 +39,23 @@ export interface MonitorEventDto {
   te?: string;
 }
 
+export interface MonitorCheckedDto {
+  n: string;
+  at: number;
+  fr: MonitorState;
+  st: MonitorState;
+  ms?: number;
+  te?: string;
+  ns: MonitorStatsDto;
+}
+
+export interface MonitorStateChangedDto {
+  n: string;
+  at: number;
+  fr: MonitorState;
+  st: MonitorState;
+}
+
 export interface MonitorProps {
   name: string;
   config: MonitorConfigurationDto;
@@ -55,6 +63,7 @@ export interface MonitorProps {
   events: MonitorEventDto[];
 }
 
-export interface DeucalionOptions {
+export interface PageConfigurationDto {
   pageTitle: string;
+  pageDescription?: string;
 }

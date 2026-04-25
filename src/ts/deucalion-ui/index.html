@@ -3,60 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/assets/deucalion-icon.svg" />
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- $DEUCALION__PAGETITLE -->
     <!-- $DEUCALION__PAGEDESCRIPTION -->
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Inter:wght@300..600&family=JetBrains+Mono:wght@400..600&family=IBM+Plex+Sans:wght@400..600&family=IBM+Plex+Mono:wght@400..600&family=Space+Grotesk:wght@400..600&family=Space+Mono:wght@400..600&display=swap" rel="stylesheet">
+
     <script>
       (function() {
-        /* Detect dark mode preference and set the class before Tailwind loads.
-             This avoids a flash of unstyled content (FOUC) when the page loads. */
+        /* Read tweaks-store theme to set data-theme before stylesheets load,
+           avoiding a flash of unstyled content. Falls back to system preference. */
         try {
-          var theme = localStorage.getItem('theme');
-          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (theme === 'dark' || (!theme && systemDark)) {
-            document.documentElement.classList.add('dark');
+          var stored = localStorage.getItem('deucalion.tweaks');
+          var theme = null;
+          if (stored) {
+            try { theme = JSON.parse(stored).theme; } catch (e) { /* ignore */ }
           }
+          if (!theme) {
+            var legacy = localStorage.getItem('theme');
+            if (legacy === 'dark' || legacy === 'light') theme = legacy;
+          }
+          if (!theme) {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', theme);
         } catch (e) {}
       })();
     </script>
     <style>
-      /* Basic reset and full height for initial load */
-      html, body, #root {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-
-      /* Apply background colors here for instant effect */
-      html {
-        background-color: #fff; /* Default light mode background. Moved from index.css. */
-      }
-      html.dark {
-        background-color: #1a202c; /* Default dark mode background. Moved from index.css. */
-      }
-
+      html, body, #root { height: 100%; margin: 0; padding: 0; }
+      html { background-color: var(--bg, #1a202c); }
       #static-loader {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100%;
       }
-
-      #static-loader-img {
-        width: 100%;
-        height: 36em; /* Max image size: 36em */
-
-        /* Light mode shadow effect */
-        filter: drop-shadow(1em 1em 1em rgba(0,0,0,0.3)) drop-shadow(-1px -1px 1px rgba(0,0,0,0.7));
-      }
-
-      html.dark #static-loader-img {
-        /* Dark mode engraved effect */
-        filter: drop-shadow(1em 1em 1em rgba(0,0,0,0.7)) drop-shadow(-1px -1px 1px rgba(255,255,255,0.15));
-      }
+      #static-loader-img { width: 100%; height: 36em; }
     </style>
   </head>
   <body>
@@ -65,6 +50,6 @@
         <img id="static-loader-img" src="/assets/deucalion-icon.svg" alt="Loading..." />
       </div>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
