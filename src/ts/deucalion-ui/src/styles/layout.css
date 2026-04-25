@@ -136,7 +136,7 @@
 .hero-stat {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 24px 28px;
+  padding: 20px 28px;
   background: linear-gradient(
     180deg,
     color-mix(in oklch, var(--accent) 5%, transparent) 0%,
@@ -146,8 +146,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 220px;
+  justify-content: center;
 }
 
 .hero-stat-grid {
@@ -207,7 +206,6 @@
 .hero-chip.warn strong { color: var(--warn); }
 .hero-chip.down strong { color: var(--down); }
 .hero-chip-total {
-  margin-left: auto;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 11px;
@@ -252,8 +250,9 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 220px;
-  max-height: 220px;
+  /* The feed and the hero-availability frame share the same grid row, so
+     `align-items: stretch` (the grid default) makes them match heights.
+     `overflow: hidden` clips the list to the row height. */
   overflow: hidden;
 }
 

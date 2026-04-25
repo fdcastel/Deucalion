@@ -35,27 +35,24 @@ export const HeroAvailability: Component = () => {
 
   return (
     <div class="hero-stat">
-      <div>
-        <div class="hero-label">Availability · 60 ticks</div>
-        <div class="hero-stat-grid" style={{ "margin-top": "10px" }}>
-          <div>
-            <div class="hero-availability">
-              <span>{fmtPct(agg().weightedAvailability).whole}</span>
-              <span class="pct">.{fmtPct(agg().weightedAvailability).dec}%</span>
-            </div>
-            <div class="hero-summary-row">
-              <span class="hero-chip up"><strong>{agg().states.up.toString()}</strong> online</span>
-              {agg().states.warn > 0 && <span class="hero-chip warn"><strong>{agg().states.warn.toString()}</strong> warn</span>}
-              {agg().states.degraded > 0 && <span class="hero-chip warn"><strong>{agg().states.degraded.toString()}</strong> degraded</span>}
-              {agg().states.down > 0 && <span class="hero-chip down"><strong>{agg().states.down.toString()}</strong> down</span>}
-              <span class="hero-chip hero-chip-total">of <strong>{agg().total.toString()}</strong></span>
-            </div>
+      <div class="hero-stat-grid">
+        <div>
+          <div class="hero-availability">
+            <span>{fmtPct(agg().weightedAvailability).whole}</span>
+            <span class="pct">.{fmtPct(agg().weightedAvailability).dec}%</span>
           </div>
-          <div class="hero-spark-wrap">
-            <div class="hero-spark-meta">trend <em>response</em></div>
-            <div style={{ width: "100%", height: "56px" }}>
-              <Sparkline values={trend()} height={56} />
-            </div>
+          <div class="hero-summary-row">
+            <span class="hero-chip up"><strong>{agg().states.up.toString()}</strong> online</span>
+            {agg().states.warn > 0 && <span class="hero-chip warn"><strong>{agg().states.warn.toString()}</strong> warn</span>}
+            {agg().states.degraded > 0 && <span class="hero-chip warn"><strong>{agg().states.degraded.toString()}</strong> degraded</span>}
+            {agg().states.down > 0 && <span class="hero-chip down"><strong>{agg().states.down.toString()}</strong> down</span>}
+            <span class="hero-chip hero-chip-total">of <strong>{agg().total.toString()}</strong></span>
+          </div>
+        </div>
+        <div class="hero-spark-wrap">
+          <div class="hero-spark-meta">trend <em>response</em></div>
+          <div style={{ width: "100%", height: "56px" }}>
+            <Sparkline values={trend()} height={56} />
           </div>
         </div>
       </div>
