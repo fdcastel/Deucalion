@@ -237,6 +237,12 @@
 .hero-chip.up strong { color: var(--up); }
 .hero-chip.warn strong { color: var(--warn); }
 .hero-chip.down strong { color: var(--down); }
+.hero-chip-total {
+  margin-left: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+}
 
 .hero-spark-wrap {
   display: flex;
@@ -338,8 +344,8 @@
   grid-template-columns: 56px 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 6px 20px;
-  font-size: 12.5px;
+  padding: 4px 20px;
+  font-size: 12px;
   color: var(--fg-2);
   animation: feed-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

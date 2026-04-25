@@ -1,4 +1,4 @@
-import { createEffect, type Component } from "solid-js";
+import { createEffect, Show, type Component } from "solid-js";
 
 import { configuration } from "../stores/configuration-store";
 import { monitorList } from "../stores/monitors-store";
@@ -7,6 +7,18 @@ import { tweaks } from "../stores/tweaks-store";
 import { MonitorState } from "../services/deucalion-types";
 
 import { MoonIcon, SlidersIcon, SunIcon } from "./common/icons";
+
+// Strip any *emphasis* markers so the "(-N) Title" effect is plain text.
+const cleanTitle = (t: string): string => t.replace(/\*([^*]+)\*/g, "$1");
+
+// `pageTitle` may carry an inline `*emphasis*` marker (e.g. "Araponga *status*").
+// The marker is what produces the prototype's italic accent fragment; backends
+// that don't opt in get a flat title with no italic guesswork.
+const parseTitle = (t: string): { head: string; emphasis: string; tail: string } => {
+  const m = /^(.*?)\*([^*]+)\*(.*)$/.exec(t);
+  if (!m) return { head: t, emphasis: "", tail: "" };
+  return { head: m[1], emphasis: m[2], tail: m[3] };
+};
 
 export const TopBar: Component = () => {
   const pageTitle = (): string => configuration()?.pageTitle ?? "Deucalion";
@@ -21,19 +33,12 @@ export const TopBar: Component = () => {
     return n;
   };
 
-  // Preserve "(-N) Title" page-title pattern
+  // Preserve "(-N) Title" page-title pattern (without the asterisk markers).
   createEffect(() => {
-    const t = pageTitle();
+    const t = cleanTitle(pageTitle());
     const d = downCount();
     document.title = d > 0 ? `(-${d.toString()}) ${t}` : t;
   });
-
-  const splitTitle = (): { head: string; tail: string } => {
-    const t = pageTitle();
-    const idx = t.lastIndexOf(" ");
-    if (idx < 0) return { head: t, tail: "" };
-    return { head: t.slice(0, idx), tail: t.slice(idx + 1) };
-  };
 
   const connectionLabel = (): string => {
     switch (sseStatus()) {
@@ -49,7 +54,11 @@ export const TopBar: Component = () => {
         <span class="brand-mark" aria-hidden="true" />
         <div class="brand-text">
           <h1 class="brand-name">
-            {splitTitle().head} {splitTitle().tail && <em>{splitTitle().tail}</em>}
+            {parseTitle(pageTitle()).head}
+            <Show when={parseTitle(pageTitle()).emphasis}>
+              <em>{parseTitle(pageTitle()).emphasis}</em>
+            </Show>
+            {parseTitle(pageTitle()).tail}
           </h1>
           <div class="brand-meta">
             <span>Production</span>

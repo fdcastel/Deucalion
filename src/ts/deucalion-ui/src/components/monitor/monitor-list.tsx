@@ -1,6 +1,5 @@
 import { For, type Component, createMemo, Show } from "solid-js";
 
-import { configuration } from "../../stores/configuration-store";
 import { monitorList } from "../../stores/monitors-store";
 import { MonitorState, type MonitorProps } from "../../services/deucalion-types";
 
@@ -45,7 +44,7 @@ export const MonitorList: Component = () => {
     <section class="group">
       <div class="group-header">
         <h2 class="group-title">
-          {configuration()?.pageTitle ?? "Status"} <em>· {monitorList().length.toString()} monitors</em>
+          <em>{monitorList().length.toString()} monitors</em>
         </h2>
         <div class="group-meta tnum">
           <span class="group-meta-up">● {totals().up.toString()} up</span>

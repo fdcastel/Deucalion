@@ -48,7 +48,7 @@ export const HeroAvailability: Component = () => {
               {agg().states.warn > 0 && <span class="hero-chip warn"><strong>{agg().states.warn.toString()}</strong> warn</span>}
               {agg().states.degraded > 0 && <span class="hero-chip warn"><strong>{agg().states.degraded.toString()}</strong> degraded</span>}
               {agg().states.down > 0 && <span class="hero-chip down"><strong>{agg().states.down.toString()}</strong> down</span>}
-              <span class="hero-chip"><strong>{agg().total.toString()}</strong> total</span>
+              <span class="hero-chip hero-chip-total">of <strong>{agg().total.toString()}</strong></span>
             </div>
           </div>
           <div class="hero-spark-wrap">
