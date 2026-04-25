@@ -27,7 +27,7 @@ describe("<EventFeed>", () => {
       fr: MonitorState.Up,
       st: MonitorState.Down,
       ms: 250,
-      ns: { lastState: MonitorState.Down, lastUpdate: nowSec, availability: 0, averageResponseTimeMs: 250 },
+      ns: { lastState: MonitorState.Down, availability: 0 },
     });
 
     const { container } = render(() => <EventFeed />);
@@ -49,7 +49,7 @@ describe("<EventFeed>", () => {
         at: 1000 + i,
         fr: from,
         st: to,
-        ns: { lastState: to, lastUpdate: 1000 + i, availability: 100, averageResponseTimeMs: 0 },
+        ns: { lastState: to, availability: 100 },
       });
     }
     const { container } = render(() => <EventFeed />);
