@@ -14,6 +14,14 @@ export const sseStatus = status;
 
 let activeSource: EventSource | null = null;
 
+export const __resetSseForTests = (): void => {
+  if (activeSource !== null) {
+    activeSource.close();
+    activeSource = null;
+  }
+  setStatus("connecting");
+};
+
 export const connectSSE = (): (() => void) => {
   if (activeSource !== null) {
     return () => { /* no-op: already connected */ };

@@ -49,6 +49,31 @@ export const monitorsLoaded = (): boolean => state.loaded;
 
 export const monitorList = (): MonitorProps[] => state.order.map((name) => state.byName[name]);
 
+// Test-only: replace the in-memory monitor list with a fixed set.
+export const __seedMonitorsForTests = (list: MonitorProps[]): void => {
+  setState(
+    produce((s) => {
+      s.byName = {};
+      s.order = [];
+      for (const m of list) {
+        s.byName[m.name] = m;
+        s.order.push(m.name);
+      }
+      s.loaded = true;
+    }),
+  );
+};
+
+export const __resetMonitorsForTests = (): void => {
+  setState(
+    produce((s) => {
+      s.byName = {};
+      s.order = [];
+      s.loaded = false;
+    }),
+  );
+};
+
 export const mergeChecked = (event: MonitorCheckedDto): void => {
   setState(
     produce((s) => {

@@ -47,6 +47,12 @@ export const onMonitorChecked = (event: MonitorCheckedDto): void => {
   });
 };
 
+// Test-only: reset the feed buffer so individual cases start clean.
+export const __resetEventsForTests = (): void => {
+  setState(produce((s) => { s.items = []; }));
+  setTick(0);
+};
+
 // Also accept MonitorStateChanged. The checked event will already have produced
 // an entry, so de-dupe by id.
 export const onMonitorStateChanged = (event: MonitorStateChangedDto): void => {

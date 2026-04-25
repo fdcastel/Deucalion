@@ -136,3 +136,15 @@ createEffect(() => {
   applyFonts();
   persist();
 });
+
+// Test-only: reset signals to defaults and clear the storage key.
+export const __resetTweaksForTests = (): void => {
+  setTheme(DEFAULTS.theme);
+  setAccentHue(DEFAULTS.accentHue);
+  setAccentChroma(DEFAULTS.accentChroma);
+  setDisplayFont(DEFAULTS.displayFont);
+  setUiFont(DEFAULTS.uiFont);
+  setMonoFont(DEFAULTS.monoFont);
+  setPanelOpen(false);
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+};

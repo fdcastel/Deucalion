@@ -24,6 +24,11 @@ export const showToast = (t: Omit<Toast, "id">): void => {
   }, TOAST_TTL_MS);
 };
 
+export const __resetToastsForTests = (): void => {
+  setToasts([]);
+  nextId = 1;
+};
+
 export const showStateChangeToast = (event: MonitorStateChangedDto): void => {
   showToast({
     title: event.n,

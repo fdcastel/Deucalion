@@ -9,6 +9,7 @@ import viteCompression from "vite-plugin-compression";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isAnalyze = mode === "analyze";
+  const isTest = mode === "test" || process.env.VITEST === "true";
 
   return {
     build: {
@@ -16,7 +17,10 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       tailwindcss(),
-      solid(),
+      // Disable solid's HMR plugin under vitest — solid-refresh tries to
+      // resolve the JSX files via "file:///@solid-refresh" which jsdom
+      // can't open.
+      solid({ hot: !isTest }),
       viteCompression({
         algorithm: "brotliCompress",
         ext: ".br",
@@ -57,6 +61,20 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
       css: true,
+      globals: false,
+      // Make sure every Solid import resolves to the same runtime — the
+      // "multiple instances of Solid" warning leads to broken reactivity
+      // between test code and components.
+      server: {
+        deps: {
+          inline: [/solid-js/, /@solidjs\/testing-library/],
+        },
+      },
+      exclude: ["node_modules", "dist", "tests/e2e/**"],
+    },
+    resolve: {
+      conditions: isTest ? ["development", "browser"] : undefined,
+      dedupe: ["solid-js", "solid-js/web", "solid-js/store"],
     },
   };
 });

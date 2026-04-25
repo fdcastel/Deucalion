@@ -28,11 +28,17 @@ const FONT_PRESETS: FontPreset[] = [
 const fontOptions = (catalog: Record<string, { label: string }>): { value: string; label: string }[] =>
   Object.entries(catalog).map(([value, def]) => ({ value, label: def.label }));
 
-export const TweaksPanel: Component = () => {
-  let panelRef!: HTMLDivElement;
+// The panel body is its own component so that onMount + onCleanup
+// (and the ResizeObserver inside them) only run while the panel is
+// actually rendered. Putting the lifecycle in the parent caused
+// `panelRef.offsetWidth` to fire against an unbound ref on initial
+// load when the panel was closed.
+const PanelBody: Component = () => {
+  let panelRef: HTMLDivElement | undefined;
   const [pos, setPos] = createSignal({ x: PAD, y: PAD });
 
   const clampToViewport = (): void => {
+    if (!panelRef) return;
     const w = panelRef.offsetWidth, h = panelRef.offsetHeight;
     const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
     const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
@@ -55,6 +61,7 @@ export const TweaksPanel: Component = () => {
   });
 
   const onDragStart = (e: MouseEvent): void => {
+    if (!panelRef) return;
     const r = panelRef.getBoundingClientRect();
     const sx = e.clientX, sy = e.clientY;
     const startRight = window.innerWidth - r.right;
@@ -75,98 +82,103 @@ export const TweaksPanel: Component = () => {
   };
 
   return (
-    <Show when={tweaks.panelOpen()}>
-      <div
-        ref={panelRef}
-        class="twk-panel"
-        style={{ right: `${pos().x.toString()}px`, bottom: `${pos().y.toString()}px` }}
-      >
-        <div class="twk-hd" onMouseDown={onDragStart}>
-          <b>Tweaks</b>
-          <button
-            class="twk-x"
-            aria-label="Close tweaks"
-            onMouseDown={(e) => { e.stopPropagation(); }}
-            onClick={() => { tweaks.setPanelOpen(false); }}
-          >
-            <XIcon size={12} />
-          </button>
-        </div>
-        <div class="twk-body">
-          <TweakSection label="Theme">
-            <TweakRadio
-              label="Mode"
-              value={tweaks.theme()}
-              options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]}
-              onChange={(v) => { tweaks.setTheme(v as "dark" | "light"); }}
-            />
-          </TweakSection>
-          <TweakSection label="Accent">
-            <TweakSlider
-              label="Hue" min={0} max={360} step={1}
-              unit="°"
-              value={tweaks.accentHue()}
-              onChange={(v) => { tweaks.setAccentHue(v); }}
-            />
-            <TweakSlider
-              label="Saturation" min={0} max={0.25} step={0.005}
-              value={tweaks.accentChroma()}
-              onChange={(v) => { tweaks.setAccentChroma(v); }}
-            />
-            <div style={{ display: "flex", gap: "6px", "margin-top": "6px", "flex-wrap": "wrap" }}>
-              <For each={ACCENT_PRESETS}>
-                {(p) => (
-                  <button
-                    class="twk-swatch"
-                    title={p.name}
-                    style={{ background: `oklch(0.7 ${p.c.toString()} ${p.h.toString()})` }}
-                    onClick={() => {
-                      tweaks.setAccentHue(p.h);
-                      tweaks.setAccentChroma(p.c);
-                    }}
-                  />
-                )}
-              </For>
-            </div>
-          </TweakSection>
-          <TweakSection label="Typography">
-            <TweakSelect
-              label="Headlines"
-              value={tweaks.displayFont()}
-              options={fontOptions(DISPLAY_FONTS)}
-              onChange={(v) => { tweaks.setDisplayFont(v); }}
-            />
-            <TweakSelect
-              label="UI / body"
-              value={tweaks.uiFont()}
-              options={fontOptions(UI_FONTS)}
-              onChange={(v) => { tweaks.setUiFont(v); }}
-            />
-            <TweakSelect
-              label="Monospace"
-              value={tweaks.monoFont()}
-              options={fontOptions(MONO_FONTS)}
-              onChange={(v) => { tweaks.setMonoFont(v); }}
-            />
-            <div style={{ display: "flex", gap: "6px", "margin-top": "6px", "flex-wrap": "wrap" }}>
-              <For each={FONT_PRESETS}>
-                {(p) => (
-                  <button
-                    class="twk-btn secondary"
-                    onClick={() => {
-                      tweaks.setDisplayFont(p.display);
-                      tweaks.setUiFont(p.ui);
-                      tweaks.setMonoFont(p.mono);
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                )}
-              </For>
-            </div>
-          </TweakSection>
-        </div>
+    <div
+      ref={(el) => { panelRef = el; }}
+      class="twk-panel"
+      data-testid="tweaks-panel"
+      style={{ right: `${pos().x.toString()}px`, bottom: `${pos().y.toString()}px` }}
+    >
+      <div class="twk-hd" onMouseDown={onDragStart}>
+        <b>Tweaks</b>
+        <button
+          class="twk-x"
+          aria-label="Close tweaks"
+          onMouseDown={(e) => { e.stopPropagation(); }}
+          onClick={() => { tweaks.setPanelOpen(false); }}
+        >
+          <XIcon size={12} />
+        </button>
       </div>
-    </Show>
+      <div class="twk-body">
+        <TweakSection label="Theme">
+          <TweakRadio
+            label="Mode"
+            value={tweaks.theme()}
+            options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]}
+            onChange={(v) => { tweaks.setTheme(v as "dark" | "light"); }}
+          />
+        </TweakSection>
+        <TweakSection label="Accent">
+          <TweakSlider
+            label="Hue" min={0} max={360} step={1}
+            unit="°"
+            value={tweaks.accentHue()}
+            onChange={(v) => { tweaks.setAccentHue(v); }}
+          />
+          <TweakSlider
+            label="Saturation" min={0} max={0.25} step={0.005}
+            value={tweaks.accentChroma()}
+            onChange={(v) => { tweaks.setAccentChroma(v); }}
+          />
+          <div style={{ display: "flex", gap: "6px", "margin-top": "6px", "flex-wrap": "wrap" }}>
+            <For each={ACCENT_PRESETS}>
+              {(p) => (
+                <button
+                  class="twk-swatch"
+                  title={p.name}
+                  style={{ background: `oklch(0.7 ${p.c.toString()} ${p.h.toString()})` }}
+                  onClick={() => {
+                    tweaks.setAccentHue(p.h);
+                    tweaks.setAccentChroma(p.c);
+                  }}
+                />
+              )}
+            </For>
+          </div>
+        </TweakSection>
+        <TweakSection label="Typography">
+          <TweakSelect
+            label="Headlines"
+            value={tweaks.displayFont()}
+            options={fontOptions(DISPLAY_FONTS)}
+            onChange={(v) => { tweaks.setDisplayFont(v); }}
+          />
+          <TweakSelect
+            label="UI / body"
+            value={tweaks.uiFont()}
+            options={fontOptions(UI_FONTS)}
+            onChange={(v) => { tweaks.setUiFont(v); }}
+          />
+          <TweakSelect
+            label="Monospace"
+            value={tweaks.monoFont()}
+            options={fontOptions(MONO_FONTS)}
+            onChange={(v) => { tweaks.setMonoFont(v); }}
+          />
+          <div style={{ display: "flex", gap: "6px", "margin-top": "6px", "flex-wrap": "wrap" }}>
+            <For each={FONT_PRESETS}>
+              {(p) => (
+                <button
+                  class="twk-btn secondary"
+                  onClick={() => {
+                    tweaks.setDisplayFont(p.display);
+                    tweaks.setUiFont(p.ui);
+                    tweaks.setMonoFont(p.mono);
+                  }}
+                >
+                  {p.label}
+                </button>
+              )}
+            </For>
+          </div>
+        </TweakSection>
+      </div>
+    </div>
   );
 };
+
+export const TweaksPanel: Component = () => (
+  <Show when={tweaks.panelOpen()}>
+    <PanelBody />
+  </Show>
+);
