@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -12,7 +13,25 @@ import fs from "node:fs/promises";
 //   npx playwright test tests/e2e/visual-qa.spec.ts --reporter=list
 
 const QA_DIR = path.resolve(fileURLToPath(import.meta.url), "../../../../../../tmp/visual-qa");
-const PROTOTYPE_HTML = "http://localhost:5180/Deucalion%20Redesign.html";
+const PROTOTYPE_DIR = path.resolve(fileURLToPath(import.meta.url), "../../../../../../tmp/New-Deucalion");
+const PROTOTYPE_PORT = 5180;
+const PROTOTYPE_HTML = `http://localhost:${PROTOTYPE_PORT.toString()}/Deucalion%20Redesign.html`;
+
+let httpServer: ChildProcess | undefined;
+
+const waitForServer = async (url: string, timeoutMs = 30_000): Promise<void> => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return;
+    } catch {
+      /* server not up yet */
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`Timed out waiting for ${url}`);
+};
 
 const ensureDir = async (sub: string): Promise<string> => {
   const target = path.join(QA_DIR, sub);
@@ -92,6 +111,24 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("visual QA — V5 dashboard vs. prototype", () => {
   test.use({ viewport: { width: 1480, height: 1100 } });
+
+  // Boot a one-off http-server that serves the prototype HTML. Chromium
+  // refuses to fetch the .jsx files Babel needs over file://, so we need
+  // a real HTTP origin. Lazily-started here so the dashboard.spec.ts run
+  // (which doesn't need the prototype) doesn't pay the boot cost.
+  test.beforeAll(async () => {
+    httpServer = spawn(
+      "npx",
+      ["http-server", PROTOTYPE_DIR, "-p", PROTOTYPE_PORT.toString(), "-s", "--cors"],
+      { stdio: "ignore", shell: true },
+    );
+    await waitForServer(PROTOTYPE_HTML, 60_000);
+  });
+
+  test.afterAll(() => {
+    httpServer?.kill();
+    httpServer = undefined;
+  });
 
   test("V5 — dark + light", async ({ page }) => {
     const outDir = await ensureDir("v5");

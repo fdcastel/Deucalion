@@ -53,16 +53,9 @@ export default defineConfig({
       stdout: "pipe",
       stderr: "pipe",
     },
-    // Serves the design prototype HTML so the visual-QA harness can compare
-    // against it. Chromium blocks file:// CORS for the relative .jsx fetches
-    // Babel makes, so a minimal HTTP server is required.
-    {
-      command: "npx http-server ../../../tmp/New-Deucalion -p 5180 -s --cors",
-      url: "http://localhost:5180/Deucalion%20Redesign.html",
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-      stdout: "pipe",
-      stderr: "pipe",
-    },
+    // The design-prototype http-server (port 5180) is only needed by
+    // visual-qa.spec.ts. Starting it here would cost every CI run a 30 s
+    // boot of `npx http-server` even when the visual-QA spec isn't part of
+    // the run, so that spec spins one up on demand instead.
   ],
 });
