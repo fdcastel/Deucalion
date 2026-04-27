@@ -13,6 +13,7 @@ Simply create a configuration file, start the service, and you're done.
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
   - [Defaults Section](#defaults-section)
+  - [WARN timeout auto-baseline](#warn-timeout-auto-baseline)
   - [Monitors Section](#monitors-section)
   - [Monitor Name Interpolation](#monitor-name-interpolation)
 - [Monitor Types](#monitor-types)
@@ -123,6 +124,16 @@ You can set defaults for each monitor type as follows:
 - `expectedStatusCode`, `expectedResponseBodyPattern`, `ignoreCertificateErrors`, `method` (for http only)
 - `recordType`, `resolver` (for dns only)
 
+### WARN timeout auto-baseline
+
+`warnTimeout` is optional. When neither a monitor-level value nor a `defaults` value is set, Deucalion derives one continuously from the monitor's recent response-time history:
+
+- Auto-WARN = `P95 × 3`, with a 5 ms floor and a per-monitor-type ceiling (1 s base, 500 ms for `dns` and `ping`).
+- The rolling window is the last 60 successful probes; until at least 20 samples are collected, the per-type ceiling is used as a sane fallback.
+- An explicit `warnTimeout` (in the monitor or in the `defaults` block) always wins — auto only kicks in when both are unset.
+
+The same threshold drives the sparkline scale in the UI: the chart's Y-axis is anchored at `[0, WARN]`, so a steady probe reads as a flat line near the baseline and a slow one approaches the top.
+
 ### Monitors Section
 
 This section defines the individual monitors. Each monitor has a unique name (e.g., `ping-example`) and a type indicated by a YAML tag (e.g., `!ping`).
@@ -192,7 +203,7 @@ http-example:
   expectedStatusCode: 200          # (Optional) Expected HTTP status code. Defaults to 200-299.
   expectedResponseBodyPattern: .*  # (Optional) Regex pattern to match against the response body.
   ignoreCertificateErrors: true    # (Optional) Set to true to ignore SSL/TLS certificate errors. Defaults to false.
-  warnTimeout: 00:00:00.250        # (Optional) Time threshold after which the monitor shows a 'Warning' state. Format: HH:MM:SS.fff.
+  warnTimeout: 00:00:00.250        # (Optional) Time threshold after which the monitor shows a 'Warning' state. If omitted, derived from history. Format: HH:MM:SS.fff.
   timeout: 00:00:02                # (Optional) Time after which the request is considered failed. Format: HH:MM:SS or HH:MM:SS.fff. Defaults to 00:00:05.
 ```
 
