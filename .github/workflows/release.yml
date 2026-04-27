@@ -43,8 +43,6 @@ jobs:
 
       - id: gitversion
         uses: gittools/actions/gitversion/execute@v4
-        with:
-          useConfigFile: true
 
   docker:
     needs: [test, version]
