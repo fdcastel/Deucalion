@@ -11,6 +11,7 @@ interface SparkData {
   linePath: string;
   fillPath: string;
   last: { x: number; y: number };
+  warnY: number | null;
 }
 
 // Anything below this min-spread (in ms) is treated as "flat" when auto-scaling.
@@ -30,10 +31,14 @@ export const Sparkline: Component<SparklineProps> = (props) => {
 
     const maxProp = props.max;
     let yOf: (v: number) => number;
+    let warnY: number | null = null;
     if (typeof maxProp === "number" && maxProp > 0) {
       // Anchored at 0..max so a tight monitor reads as "near baseline"
       // and a slow probe reads as "near WARN".
       const top = Math.max(maxProp, NOISE_FLOOR_MS);
+      // Faint line at the WARN threshold. Coincides with chart top in the
+      // common case; sits inside the chart when the floor lifted the ceiling.
+      warnY = pad + innerH - (maxProp / top) * innerH;
       yOf = (v) => {
         const clamped = v < 0 ? 0 : v > top ? top : v;
         return pad + innerH - (clamped / top) * innerH;
@@ -54,7 +59,7 @@ export const Sparkline: Component<SparklineProps> = (props) => {
     }));
     const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
     const fillPath = `${linePath} L${(w - pad).toString()} ${(h - pad).toString()} L${pad.toString()} ${(h - pad).toString()} Z`;
-    return { linePath, fillPath, last: points[points.length - 1] };
+    return { linePath, fillPath, last: points[points.length - 1], warnY };
   });
 
   return (
@@ -62,6 +67,9 @@ export const Sparkline: Component<SparklineProps> = (props) => {
       <Show when={data()}>
         {(d) => (
           <>
+            <Show when={d().warnY}>
+              {(wy) => <line class="spark-warn" x1="0" x2="100" y1={wy()} y2={wy()} />}
+            </Show>
             <path class="spark-fill" d={d().fillPath} />
             <path class="spark-line" d={d().linePath} />
             <Show when={props.showDot !== false}>

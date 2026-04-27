@@ -675,6 +675,14 @@
   fill: var(--accent);
 }
 
+.spark-warn {
+  stroke: var(--warn);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.35;
+  vector-effect: non-scaling-stroke;
+}
+
 .lat-stats {
   display: flex;
   justify-content: space-between;

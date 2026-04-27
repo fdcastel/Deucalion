@@ -58,6 +58,29 @@ describe("<Sparkline>", () => {
     expect(Math.min(...ys)).toBe(TOP_Y);
   });
 
+  it("renders a faint WARN reference line at the chart top when max is set", () => {
+    const { container } = render(() => <Sparkline values={[1, 2, 1]} max={1000} />);
+    const warn = container.querySelector("line.spark-warn");
+    expect(warn).not.toBeNull();
+    expect(Number(warn!.getAttribute("y1"))).toBe(TOP_Y);
+    expect(Number(warn!.getAttribute("y2"))).toBe(TOP_Y);
+  });
+
+  it("places the WARN line below the chart top when max is below the noise floor", () => {
+    // max=2ms gets lifted to a 5ms ceiling; the WARN reference should still
+    // mark the actual 2ms threshold inside the chart, not the lifted ceiling.
+    const { container } = render(() => <Sparkline values={[0, 1, 0]} max={2} />);
+    const warn = container.querySelector("line.spark-warn")!;
+    const y = Number(warn.getAttribute("y1"));
+    expect(y).toBeGreaterThan(TOP_Y);
+    expect(y).toBeLessThan(BOTTOM_Y);
+  });
+
+  it("does not render a WARN line in the auto-scale fallback (no max)", () => {
+    const { container } = render(() => <Sparkline values={[1, 2, 3]} />);
+    expect(container.querySelector("line.spark-warn")).toBeNull();
+  });
+
   it("auto-scale fallback applies a noise floor for tight oscillations", () => {
     // 0/1ms jitter without a max should NOT fill the whole box.
     const { container } = render(() => <Sparkline values={[0, 1, 0, 1, 0, 1]} />);
