@@ -139,6 +139,58 @@ public class SqliteStorageStatsTests : SqliteStorageTestBase
     }
 
     [Fact]
+    public async Task GetStatsAsync_DownEventsWithTimings_ExcludedFromLatencyStats()
+    {
+        // PingMonitor records Down(elapsed=0ms) when the OS-level ping fails
+        // synchronously. Those zero timings must not pollute MIN/P50/P95/P99
+        // -- otherwise an all-Down monitor reports 0ms across the board.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var monitorName = "stats-down-with-timing";
+        var now = DateTimeOffset.UtcNow;
+
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(now.AddMinutes(-3), MonitorState.Down, TimeSpan.Zero, "TimedOut"), cancellationToken);
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(now.AddMinutes(-2), MonitorState.Down, TimeSpan.Zero, "TimedOut"), cancellationToken);
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(now.AddMinutes(-1), MonitorState.Up, TimeSpan.FromMilliseconds(80), null), cancellationToken);
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(now, MonitorState.Down, TimeSpan.Zero, "TimedOut"), cancellationToken);
+
+        var stats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
+
+        Assert.NotNull(stats);
+        // Only the single Up sample contributes to the percentiles.
+        Assert.Equal(TimeSpan.FromMilliseconds(80), stats.MinResponseTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(80), stats.Latency50);
+        Assert.Equal(TimeSpan.FromMilliseconds(80), stats.Latency95);
+        Assert.Equal(TimeSpan.FromMilliseconds(80), stats.Latency99);
+        Assert.Equal(1, stats.SampleCount);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_OnlyDownWithTimings_ProducesNullPercentiles()
+    {
+        // The user-reported scenario: a monitor that's all-Down (e.g. ping-ms
+        // blocked at the firewall) should show "—" for every latency stat,
+        // not zeros.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var monitorName = "stats-all-down-timed";
+        var now = DateTimeOffset.UtcNow;
+
+        for (var i = 0; i < 5; i++)
+        {
+            await Storage.SaveEventAsync(monitorName, new StoredEvent(now.AddSeconds(-i), MonitorState.Down, TimeSpan.Zero, "TimedOut"), cancellationToken);
+        }
+
+        var stats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
+
+        Assert.NotNull(stats);
+        Assert.Null(stats.MinResponseTime);
+        Assert.Null(stats.Latency50);
+        Assert.Null(stats.Latency95);
+        Assert.Null(stats.Latency99);
+        Assert.Equal(0, stats.SampleCount);
+        Assert.Equal(TimeSpan.Zero, stats.AverageResponseTime);
+    }
+
+    [Fact]
     public async Task GetStatsAsync_AfterPurge_RecalculatesCorrectly()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

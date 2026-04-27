@@ -21,12 +21,15 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
 
   const availability = (): number => props.monitor.stats?.availability ?? avail(props.monitor.events);
 
+  // Latency line only plots successful probes. Down events that carry a
+  // recorded timing (e.g. PingMonitor's 0ms OS-failures) would otherwise
+  // sink the line to the floor on all-Down monitors.
   const sparkValues = createMemo(() => {
     const evs = props.monitor.events;
     const out: number[] = [];
     for (let i = evs.length - 1; i >= 0; i--) {
-      const ms = evs[i].ms;
-      if (ms != null) out.push(ms);
+      const e = evs[i];
+      if (e.ms != null && (e.st === MonitorState.Up || e.st === MonitorState.Warn)) out.push(e.ms);
     }
     return out;
   });

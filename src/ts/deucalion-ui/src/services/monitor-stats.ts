@@ -5,6 +5,12 @@ import { MonitorState, type MonitorEventDto, type MonitorProps } from "./deucali
 
 const COUNTABLE_STATES = new Set([MonitorState.Up, MonitorState.Warn, MonitorState.Down, MonitorState.Degraded]);
 
+// Latency stats only consider successful probes — a Down probe's recorded
+// timing (e.g. PingMonitor reporting 0ms when the OS rejects synchronously,
+// or HTTP 5xx returned quickly) isn't a healthy-latency sample.
+const isHealthyLatency = (st: MonitorState): boolean =>
+  st === MonitorState.Up || st === MonitorState.Warn;
+
 export const avail = (events: MonitorEventDto[]): number => {
   let total = 0;
   let down = 0;
@@ -21,7 +27,7 @@ export const avgMs = (events: MonitorEventDto[]): number | undefined => {
   let sum = 0;
   let n = 0;
   for (const e of events) {
-    if (e.ms != null) {
+    if (e.ms != null && isHealthyLatency(e.st)) {
       sum += e.ms;
       n++;
     }
@@ -32,7 +38,7 @@ export const avgMs = (events: MonitorEventDto[]): number | undefined => {
 export const minMs = (events: MonitorEventDto[]): number | undefined => {
   let min: number | undefined;
   for (const e of events) {
-    if (e.ms != null && (min === undefined || e.ms < min)) min = e.ms;
+    if (e.ms != null && isHealthyLatency(e.st) && (min === undefined || e.ms < min)) min = e.ms;
   }
   return min;
 };
@@ -41,7 +47,7 @@ export const minMs = (events: MonitorEventDto[]): number | undefined => {
 export const percentile = (events: MonitorEventDto[], p: number): number | undefined => {
   const values: number[] = [];
   for (const e of events) {
-    if (e.ms != null) values.push(e.ms);
+    if (e.ms != null && isHealthyLatency(e.st)) values.push(e.ms);
   }
   if (values.length === 0) return undefined;
   values.sort((a, b) => a - b);

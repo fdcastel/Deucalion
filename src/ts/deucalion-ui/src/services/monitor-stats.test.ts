@@ -75,6 +75,18 @@ describe("avgMs() / minMs()", () => {
     expect(minMs(events)).toBe(30);
     expect(avgMs(events)).toBeCloseTo((120 + 30 + 80) / 3);
   });
+
+  it("excludes Down events that carry a timing (e.g. PingMonitor 0ms failures)", () => {
+    // The backend ships every event with its recorded timing; a synchronous
+    // ICMP failure lands as Down with ms=0. Those samples must not show up
+    // as the floor of MIN/P50/P95/P99 on the dashboard.
+    const events = buildEvents(
+      [MonitorState.Down, MonitorState.Down, MonitorState.Up, MonitorState.Down],
+      { ms: (_i, st) => (st === MonitorState.Down ? 0 : 50) },
+    );
+    expect(avgMs(events)).toBe(50);
+    expect(minMs(events)).toBe(50);
+  });
 });
 
 describe("percentile()", () => {
@@ -98,6 +110,22 @@ describe("percentile()", () => {
     });
     expect(percentile(events, 0)).toBe(10);
     expect(percentile(events, 1)).toBe(30);
+  });
+
+  it("ignores Down events even when they carry a timing", () => {
+    const events = buildEvents(
+      [MonitorState.Down, MonitorState.Up, MonitorState.Down],
+      { ms: (_i, st) => (st === MonitorState.Down ? 0 : 75) },
+    );
+    expect(percentile(events, 0.5)).toBe(75);
+    expect(percentile(events, 0.95)).toBe(75);
+  });
+
+  it("returns undefined for an all-Down window", () => {
+    const events = buildEvents([MonitorState.Down, MonitorState.Down], {
+      ms: () => 0,
+    });
+    expect(percentile(events, 0.5)).toBeUndefined();
   });
 });
 

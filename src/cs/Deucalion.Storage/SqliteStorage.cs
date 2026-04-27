@@ -115,13 +115,18 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         }
 
         // Pull the recent response times so we can compute average + percentiles in C#.
+        // Restricted to Up/Warn: a Down probe's recorded elapsed (e.g. PingMonitor's
+        // synchronous OS-level failure timing of 0 ms, or HTTP 5xx returned quickly)
+        // isn't a healthy-latency sample and would skew percentiles toward zero.
         var responseTimes = new List<long>();
         using (var command = connection.CreateCommand())
         {
             command.CommandText = $"""
                 SELECT ResponseTimeTicks
                 FROM {EventsTableName}
-                WHERE MonitorName = @MonitorName AND ResponseTimeTicks IS NOT NULL
+                WHERE MonitorName = @MonitorName
+                  AND ResponseTimeTicks IS NOT NULL
+                  AND State IN ({(int)MonitorState.Up}, {(int)MonitorState.Warn})
                 ORDER BY TimestampTicks DESC
                 LIMIT @HistoryCount;
             """;
