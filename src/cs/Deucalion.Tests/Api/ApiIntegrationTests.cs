@@ -13,6 +13,11 @@ namespace Deucalion.Tests.Api;
 
 public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 {
+    // Configuration file path is read during WebApplicationBuilder construction,
+    // before WebApplicationFactory's ConfigureWebHost callbacks land — so we
+    // override it via env var, which IConfiguration picks up first.
+    private const string ConfigurationFileEnvVar = "Deucalion__ConfigurationFile";
+
     private readonly string _tempPath;
     private readonly string _configurationPath;
     private readonly TestApiFactory _factory;
@@ -20,7 +25,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     public ApiIntegrationTests()
     {
         _tempPath = Path.Combine(Path.GetTempPath(), $"Deucalion.Tests.Api_{Guid.NewGuid()}");
-        _configurationPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "deucalion-sample.yaml"));
+        _configurationPath = Path.Combine(_tempPath, "deucalion.yaml");
 
         Directory.CreateDirectory(_tempPath);
 
@@ -40,6 +45,8 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
                 secret: test-secret
                 group: Main
             """);
+
+        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, _configurationPath);
 
         _factory = new TestApiFactory();
     }
@@ -172,9 +179,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 
     public void Dispose()
     {
-        const int maxAttempts = 5;
-        TryDeleteFile(_configurationPath);
+        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, null);
 
+        const int maxAttempts = 5;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
@@ -190,21 +197,6 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
             {
                 Thread.Sleep(50 * attempt);
             }
-        }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Ignore file deletion race during test cleanup.
         }
     }
 
