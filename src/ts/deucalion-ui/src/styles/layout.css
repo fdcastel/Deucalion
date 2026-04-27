@@ -677,24 +677,46 @@
 
 .spark-warn {
   stroke: var(--warn);
-  stroke-width: 1;
+  stroke-width: 0.5;
   stroke-dasharray: 2 2;
   opacity: 0.35;
   vector-effect: non-scaling-stroke;
 }
 
 .lat-stats {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  column-gap: 12px;
+  row-gap: 2px;
   font-family: var(--font-mono);
   font-size: 9.5px;
-  color: var(--fg-4);
   letter-spacing: 0.04em;
+}
+/* Slightly more breathing room between the two key/value pairs. */
+.lat-stats > :nth-child(4n + 3) {
+  margin-left: 8px;
+}
+.lat-stats .label {
+  color: var(--fg-4);
   text-transform: uppercase;
 }
-.lat-stats span strong {
+.lat-stats .val {
   color: var(--fg-2);
   font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lat-stats .label.warn,
+.lat-stats .val.warn {
+  color: var(--warn);
+}
+.lat-stats .label.down,
+.lat-stats .val.down {
+  color: var(--down);
+}
+/* Skip the empty bottom-left cells so TIMEOUT lives in the right pair. */
+.lat-stats .col-right-start {
+  grid-column-start: 3;
 }
 
 /* right column */

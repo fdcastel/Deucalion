@@ -12,10 +12,11 @@ public record MonitorStatsDto(
     int? Latency95Ms,
     int? Latency99Ms,
 
-    int? WarnTimeoutMs
+    int? WarnTimeoutMs,
+    int? TimeoutMs
 )
 {
-    internal static MonitorStatsDto? From(MonitorStats? stats, TimeSpan? effectiveWarnTimeout) =>
+    internal static MonitorStatsDto? From(MonitorStats? stats, TimeSpan? effectiveWarnTimeout, TimeSpan? timeout) =>
         stats is null
             ? null
             : new(
@@ -25,6 +26,7 @@ public record MonitorStatsDto(
                 Latency50Ms: stats.Latency50 is { } p50 ? (int)p50.TotalMilliseconds : null,
                 Latency95Ms: stats.Latency95 is { } p95 ? (int)p95.TotalMilliseconds : null,
                 Latency99Ms: stats.Latency99 is { } p99 ? (int)p99.TotalMilliseconds : null,
-                WarnTimeoutMs: effectiveWarnTimeout is { } w ? (int)w.TotalMilliseconds : null
+                WarnTimeoutMs: effectiveWarnTimeout is { } w ? (int)w.TotalMilliseconds : null,
+                TimeoutMs: timeout is { } t ? (int)t.TotalMilliseconds : null
             );
 }

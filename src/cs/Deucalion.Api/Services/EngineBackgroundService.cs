@@ -96,6 +96,7 @@ internal class EngineBackgroundService(
         if (newStats != null)
         {
             TimeSpan? effectiveWarn = null;
+            TimeSpan? timeout = null;
             if (_monitors.Monitors.TryGetValue(mc.Name, out var monitor))
             {
                 monitor.AutoWarnTimeout = WarnThresholdPolicy.ComputeAuto(
@@ -103,9 +104,10 @@ internal class EngineBackgroundService(
                     newStats.SampleCount,
                     monitor.TypeDefaultWarnTimeout);
                 effectiveWarn = monitor.EffectiveWarnTimeout;
+                timeout = monitor.Timeout;
             }
 
-            var dto = MonitorCheckedDto.FromEvent(mc, newStats, effectiveWarn);
+            var dto = MonitorCheckedDto.FromEvent(mc, newStats, effectiveWarn, timeout);
             var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorCheckedDto);
             _broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
         }

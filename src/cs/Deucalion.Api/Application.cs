@@ -191,6 +191,7 @@ public static class Application
         var stats = await storage.GetStatsAsync(mn, historyCount: EventHistoryCount, cancellationToken: cancellationToken);
 
         TimeSpan? effectiveWarn = null;
+        TimeSpan? timeout = null;
         if (applicationMonitors.Monitors.TryGetValue(mn, out var monitor))
         {
             // Refresh auto-WARN baseline from the current rolling history. Persists in-process
@@ -200,12 +201,13 @@ public static class Application
                 stats?.SampleCount ?? 0,
                 monitor.TypeDefaultWarnTimeout);
             effectiveWarn = monitor.EffectiveWarnTimeout;
+            timeout = monitor.Timeout;
         }
 
         return new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
-            Stats: MonitorStatsDto.From(stats, effectiveWarn),
+            Stats: MonitorStatsDto.From(stats, effectiveWarn, timeout),
             Events: from e in await storage.GetLastEventsAsync(mn, count: EventHistoryCount, cancellationToken: cancellationToken)
                     select MonitorEventDto.From(e)
         );
