@@ -72,4 +72,28 @@ describe("<MonitorRow>", () => {
     expect(stats).toContain("33ms");
     expect(stats).toContain("44ms");
   });
+
+  it("hides the latency line for all-Down monitors but keeps the WARN reference", () => {
+    // Reproduces the ping-ms case: PingMonitor records 0ms timings on
+    // synchronous failures. Those events must not feed the latency line.
+    // The WARN threshold marker still draws so users keep the context.
+    const monitor = buildMonitor({
+      stats: buildStats({
+        lastState: MonitorState.Down,
+        minResponseTimeMs: undefined,
+        latency50Ms: undefined,
+        latency95Ms: undefined,
+        latency99Ms: undefined,
+        warnTimeoutMs: 500,
+      }),
+      events: buildEvents(
+        [MonitorState.Down, MonitorState.Down, MonitorState.Down, MonitorState.Down],
+        { ms: () => 0 },
+      ),
+    });
+    const { container } = render(() => <MonitorRow monitor={monitor} />);
+    expect(container.querySelector("path.spark-line")).toBeNull();
+    expect(container.querySelector("circle.spark-dot")).toBeNull();
+    expect(container.querySelector("line.spark-warn")).not.toBeNull();
+  });
 });

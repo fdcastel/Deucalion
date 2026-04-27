@@ -18,12 +18,24 @@ function pathYs(d: string): number[] {
 }
 
 describe("<Sparkline>", () => {
-  it("renders nothing visible when there are fewer than two points", () => {
+  it("renders nothing visible when there are fewer than two points and no max", () => {
     const { container } = render(() => <Sparkline values={[]} />);
     const svg = container.querySelector("svg.spark");
     expect(svg).not.toBeNull();
-    // No path elements when there's no data to draw.
+    // No path or warn line when there's neither data nor a configured ceiling.
     expect(svg!.querySelector("path")).toBeNull();
+    expect(svg!.querySelector("line.spark-warn")).toBeNull();
+  });
+
+  it("still draws the WARN reference line when there is no data but a max is set", () => {
+    // All-Down monitors filter to zero healthy samples but the threshold
+    // context (faint yellow line) is still informative.
+    const { container } = render(() => <Sparkline values={[]} max={1000} />);
+    const svg = container.querySelector("svg.spark")!;
+    expect(svg.querySelector("path")).toBeNull();
+    const warn = svg.querySelector("line.spark-warn");
+    expect(warn).not.toBeNull();
+    expect(Number(warn!.getAttribute("y1"))).toBe(TOP_Y);
   });
 
   it("renders the line and fill paths plus a trailing dot for >=2 points", () => {
