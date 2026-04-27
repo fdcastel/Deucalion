@@ -12,6 +12,8 @@ public record MonitorStats(
     TimeSpan? Latency95 = null,
     TimeSpan? Latency99 = null,
 
+    int SampleCount = 0,
+
     DateTimeOffset? LastSeenDown = null,
     DateTimeOffset? LastSeenUp = null
 );

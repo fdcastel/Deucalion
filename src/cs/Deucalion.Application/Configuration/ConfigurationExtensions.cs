@@ -59,7 +59,7 @@ public static class ConfigurationExtensions
         monitor.IntervalWhenUp = configuration.IntervalWhenUp ?? monitor.IntervalWhenUp;
         monitor.IntervalWhenDown = configuration.IntervalWhenDown ?? monitor.IntervalWhenDown;
         monitor.Timeout = configuration.Timeout ?? monitor.Timeout;
-        monitor.WarnTimeout = configuration.WarnTimeout ?? monitor.WarnTimeout;
+        monitor.WarnTimeout = configuration.WarnTimeout;
         monitor.Name = configuration.Name ?? monitor.Name;
         monitor.IgnoreFailCount = configuration.IgnoreFailCount ?? monitor.IgnoreFailCount;
         monitor.UpsideDown = configuration.UpsideDown ?? monitor.UpsideDown;

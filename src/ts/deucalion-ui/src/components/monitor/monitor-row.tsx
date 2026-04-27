@@ -87,7 +87,7 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
         aria-expanded={statsOpen()}
         onClick={() => { setStatsOpen((v) => !v); }}
       >
-        <Sparkline values={sparkValues()} />
+        <Sparkline values={sparkValues()} max={props.monitor.stats?.warnTimeoutMs} />
         <div class="lat-stats-pop" role="tooltip">
           <LatStats monitor={props.monitor} />
         </div>

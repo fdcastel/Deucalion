@@ -95,7 +95,17 @@ internal class EngineBackgroundService(
         var newStats = await _storage.GetStatsAsync(mc.Name, cancellationToken: cancellationToken);
         if (newStats != null)
         {
-            var dto = MonitorCheckedDto.FromEvent(mc, newStats);
+            TimeSpan? effectiveWarn = null;
+            if (_monitors.Monitors.TryGetValue(mc.Name, out var monitor))
+            {
+                monitor.AutoWarnTimeout = WarnThresholdPolicy.ComputeAuto(
+                    newStats.Latency95,
+                    newStats.SampleCount,
+                    monitor.TypeDefaultWarnTimeout);
+                effectiveWarn = monitor.EffectiveWarnTimeout;
+            }
+
+            var dto = MonitorCheckedDto.FromEvent(mc, newStats, effectiveWarn);
             var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorCheckedDto);
             _broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
         }

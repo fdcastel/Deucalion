@@ -23,6 +23,8 @@ export interface MonitorStatsDto {
   latency50Ms?: number;
   latency95Ms?: number;
   latency99Ms?: number;
+
+  warnTimeoutMs?: number;
 }
 
 export interface MonitorEventDto {

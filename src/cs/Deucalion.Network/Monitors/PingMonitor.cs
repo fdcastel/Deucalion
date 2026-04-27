@@ -14,8 +14,9 @@ public class PingMonitor : PullMonitor
     {
         // Ping has stricter defaults than PullMonitor
         Timeout = DefaultPingTimeout;
-        WarnTimeout = DefaultPingWarnTimeout;
     }
+
+    public override TimeSpan TypeDefaultWarnTimeout => DefaultPingWarnTimeout;
 
     public override async Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
@@ -26,7 +27,7 @@ public class PingMonitor : PullMonitor
             var elapsed = TimeSpan.FromMilliseconds(reply.RoundtripTime);
 
             return reply.Status == IPStatus.Success
-                ? MonitorResponse.Up(elapsed, warnElapsed: WarnTimeout)
+                ? MonitorResponse.Up(elapsed, warnElapsed: EffectiveWarnTimeout)
                 : MonitorResponse.Down(elapsed, text: reply.Status.ToString());
         }
         catch (PingException e)

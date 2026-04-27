@@ -4,6 +4,7 @@ using Deucalion.Api.Http;
 using Deucalion.Api.Models;
 using Deucalion.Api.Options;
 using Deucalion.Api.Services;
+using Deucalion.Application;
 using Deucalion.Application.Configuration;
 using Deucalion.Configuration;
 using Deucalion.Network.Monitors;
@@ -97,7 +98,7 @@ public static class Application
             if (monitorName is null)
             {
                 var tasks = applicationConfiguration.Monitors
-                                  .Select(kvp => BuildMonitorDtoAsync(storage, kvp.Value, kvp.Key, cancellationToken));
+                                  .Select(kvp => BuildMonitorDtoAsync(storage, applicationMonitors, kvp.Value, kvp.Key, cancellationToken));
                 var results = await Task.WhenAll(tasks);
                 return Results.Ok(results);
             }
@@ -107,7 +108,7 @@ public static class Application
                 return DeucalionResults.MonitorNotFound(monitorName);
             }
 
-            return Results.Ok(await BuildMonitorDtoAsync(storage, monitor, monitorName, cancellationToken));
+            return Results.Ok(await BuildMonitorDtoAsync(storage, applicationMonitors, monitor, monitorName, cancellationToken));
         });
 
         app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, HttpRequest request) =>
@@ -185,12 +186,28 @@ public static class Application
     // gets full history and narrower viewports clip from the left.
     private const int EventHistoryCount = 120;
 
-    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken) =>
-        new(
+    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, ApplicationMonitors applicationMonitors, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken)
+    {
+        var stats = await storage.GetStatsAsync(mn, historyCount: EventHistoryCount, cancellationToken: cancellationToken);
+
+        TimeSpan? effectiveWarn = null;
+        if (applicationMonitors.Monitors.TryGetValue(mn, out var monitor))
+        {
+            // Refresh auto-WARN baseline from the current rolling history. Persists in-process
+            // until the next probe so subsequent checks pick up the new threshold immediately.
+            monitor.AutoWarnTimeout = WarnThresholdPolicy.ComputeAuto(
+                stats?.Latency95,
+                stats?.SampleCount ?? 0,
+                monitor.TypeDefaultWarnTimeout);
+            effectiveWarn = monitor.EffectiveWarnTimeout;
+        }
+
+        return new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
-            Stats: MonitorStatsDto.From(await storage.GetStatsAsync(mn, historyCount: EventHistoryCount, cancellationToken: cancellationToken)),
+            Stats: MonitorStatsDto.From(stats, effectiveWarn),
             Events: from e in await storage.GetLastEventsAsync(mn, count: EventHistoryCount, cancellationToken: cancellationToken)
                     select MonitorEventDto.From(e)
         );
+    }
 }

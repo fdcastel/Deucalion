@@ -21,7 +21,7 @@ public class TcpMonitor : PullMonitor
         {
             await tcpClient.ConnectAsync(Host, Port, timeoutCts.Token);
 
-            return MonitorResponse.Up(stopwatch.Elapsed, warnElapsed: WarnTimeout);
+            return MonitorResponse.Up(stopwatch.Elapsed, warnElapsed: EffectiveWarnTimeout);
         }
         catch (SocketException e)
         {

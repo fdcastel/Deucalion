@@ -31,8 +31,9 @@ public class DnsMonitor : PullMonitor
     {
         // Dns has stricter defaults than PullMonitor
         Timeout = DefaultDnsTimeout;
-        WarnTimeout = DefaultDnsWarnTimeout;
     }
+
+    public override TimeSpan TypeDefaultWarnTimeout => DefaultDnsWarnTimeout;
 
     public override async Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
@@ -56,7 +57,7 @@ public class DnsMonitor : PullMonitor
                 ? MonitorResponse.Down(stopwatch.Elapsed, result.ErrorMessage)
                 : MonitorResponse.Up(elapsed: stopwatch.Elapsed,
                                      text: result.Answers.Count > 0 ? result.Answers[0].ToString() : null,
-                                     warnElapsed: WarnTimeout);
+                                     warnElapsed: EffectiveWarnTimeout);
         }
         catch (DnsResponseException e)
         {

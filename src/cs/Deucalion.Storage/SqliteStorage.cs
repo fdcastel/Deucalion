@@ -177,6 +177,7 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             Latency50: p50,
             Latency95: p95,
             Latency99: p99,
+            SampleCount: responseTimes.Count,
             LastSeenDown: lastSeenDown,
             LastSeenUp: lastSeenUp
         );
