@@ -24,8 +24,7 @@ task Version {
 
 # synopsis: Remove build artifacts.
 task Clear {
-    remove */dist,
-        $publishFolder,
+    remove $publishFolder,
         ./src/cs/*/bin,
         ./src/cs/*/obj,
         ./src/ts/deucalion-ui/bin,
@@ -80,10 +79,13 @@ task Prod {
     exec { ./Deucalion.Service.exe --Deucalion:ConfigurationFile=../deucalion-sample.yaml }
 }
 
-# synopsis: Run test suite.
+# synopsis: Run the unit test suites and the frontend linter.
+# End-to-end tests are separate -- they boot both servers and take ~30s:
+#   npm --prefix ./src/ts/deucalion-ui run test:e2e
 task Test {
     exec { dotnet test }
     exec { npm --prefix './src/ts/deucalion-ui' run test }
+    exec { npm --prefix './src/ts/deucalion-ui' run lint }
 }
 
 task . Build
