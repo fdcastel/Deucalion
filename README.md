@@ -10,7 +10,9 @@ Simply create a configuration file, start the service, and you're done.
 
 # Table of Contents
 
-- [Quick start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Usage](#usage)
+  - [Quick start](#quick-start)
 - [Configuration](#configuration)
   - [Defaults Section](#defaults-section)
   - [WARN timeout auto-baseline](#warn-timeout-auto-baseline)
@@ -26,11 +28,12 @@ Simply create a configuration file, start the service, and you're done.
   - [How to debug](#how-to-debug)
   - [Logging](#logging)
   - [How to build](#how-to-build)
+- [License](#license)
 
 # Prerequisites
 
 - Docker (for containerized usage)
-- .NET 9 SDK (for development and building)
+- .NET 10 SDK (for development and building)
 - PowerShell (for build scripts)
 - [Invoke-Build](https://github.com/nightroman/Invoke-Build) (for build automation)
 - [GitVersion](https://gitversion.net/)
@@ -162,7 +165,7 @@ This will set the URL to `https://google.com`.
 | tcp      | `host`, `port`                   | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href` |
 | dns      | `host`, `recordType`, `resolver` | `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href` |
 | http     | `url`                            | `expectedStatusCode`, `expectedResponseBodyPattern`, `ignoreCertificateErrors`, `timeout`, `warnTimeout`, `intervalWhenUp`, `intervalWhenDown`, `group`, `href`, `method` |
-| checkin  | `secret`                         | `intervalWhenUp`, `group`, `href`                                              |
+| checkin  | *(none)*                         | `secret`, `intervalToDown`, `group`, `href`                                    |
 
 ### `ping` Monitor
 
@@ -210,18 +213,28 @@ http-example:
 
 ### `checkin` Monitor
 
-A passive monitor that waits for an external system to report ("check in") via a specific URL.
+A passive monitor that waits for an external system to report ("check in") over HTTP.
 
 ```yaml
 checkin-example:
   !checkin
-  secret: your-secret-key          # Required: A secret key that must be provided in the check-in request.
+  secret: your-secret-key          # (Optional) If set, must be sent in the `deucalion-checkin-secret` header.
+  intervalToDown: 00:05:00         # (Optional) Time without a check-in before the monitor goes DOWN. Defaults to 00:01:00.
 ```
 
-- The check-in URL is `/api/checkin/{monitorName}/{secret}`.
-  - For the example above, it would be `/api/checkin/checkin-example/your-secret-key`.
-- A `GET` or `POST` request to this URL marks the monitor as UP.
-- If a check-in is not received within the expected interval, the monitor is marked as DOWN.
+Check in with a `POST` to `/api/monitors/{monitorName}/checkin`:
+
+```bash
+curl -X POST \
+     -H 'deucalion-checkin-secret: your-secret-key' \
+     http://localhost:5000/api/monitors/checkin-example/checkin
+```
+
+- Only `POST` is accepted -- there is no `GET` form.
+- The secret travels in the `deucalion-checkin-secret` **header**, never in the URL.
+- `secret` is **optional**. If you omit it no authentication is performed: anyone who can reach
+  the endpoint can mark the monitor UP.
+- Each check-in marks the monitor UP. If none arrives within `intervalToDown`, it goes DOWN.
 
 # Development notes
 
@@ -240,8 +253,7 @@ checkin-example:
   - `Deucalion.Api`: Server-side ASP.NET Web API application.
   - `Deucalion.Service`: Service Host for `Deucalion.Api`. Can run as a Windows Service.
   - `Deucalion.Tests`: xUnit tests.
-  - `Deucalion.Cli`: Sample command-line SignalR client.
-  - `deucalion-ui`: Client-side React application.
+  - `deucalion-ui`: Client-side SolidJS single-page application.
 
 ## How to debug
 
@@ -263,6 +275,14 @@ Invoke-Build Dev
 
 This will start both `Deucalion.Api` and `deucalion-ui` projects in development mode. Any changes to source files will be detected and reloaded automatically.
 
+### Watching the event stream
+
+The server publishes every monitor event over Server-Sent Events. To tail it from a terminal:
+
+```bash
+curl -N http://localhost:5000/api/monitors/events
+```
+
 ## Logging
 
 In the **Development** environment, the log level for the `Deucalion.Api` namespace is set to `Debug`. This generates a log entry for each message received from `EngineBackgroundService`.
@@ -279,4 +299,14 @@ Install [`Invoke-Build`](https://github.com/nightroman/Invoke-Build).
 
 `Invoke-Build` or `Invoke-Build build` will put all artifacts in the `./publish` folder.
 
-`Invoke-Build test` will run the unit tests using `dotnet test`.
+`Invoke-Build test` runs the .NET unit tests (`dotnet test`) and the frontend unit tests (Vitest).
+
+End-to-end tests are separate -- they boot both servers themselves:
+
+```powershell
+npm --prefix ./src/ts/deucalion-ui run test:e2e
+```
+
+# License
+
+[MIT](LICENSE).
