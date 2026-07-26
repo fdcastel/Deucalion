@@ -105,7 +105,6 @@ internal class EngineBackgroundService(
     private async Task HandleMonitorStateChangedAsync(MonitorStateChanged msc, CancellationToken cancellationToken)
     {
         logger.LogDebug("MonitorStateChanged: {@event}", msc);
-        await storage.SaveLastStateChangeAsync(msc.Name, msc.At, msc.NewState, cancellationToken);
         var dto = MonitorStateChangedDto.FromEvent(msc);
         var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorStateChangedDto);
         broadcaster.Broadcast(new SseItem<string>(json, "MonitorStateChanged"));

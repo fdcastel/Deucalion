@@ -24,11 +24,9 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         // Verify stats directly, and implicitly test DB state via GetLastEvents/GetStats
         Assert.NotNull(stats);
         Assert.Equal(MonitorState.Up, stats.LastState);
-        Assert.Equal(timestamp.ToUniversalTime(), stats.LastUpdate.ToUniversalTime()); // Compare UTC
-        Assert.Null(stats.LastSeenUp); // SaveEvent doesn't update LastSeenUp/Down
-        Assert.Null(stats.LastSeenDown);
         Assert.Equal(100.0, stats.Availability); // Only one event, which is Up
-        Assert.Equal(responseTime, stats.AverageResponseTime);
+        Assert.Equal(responseTime, stats.MinResponseTime);
+        Assert.Equal(1, stats.SampleCount);
 
         // Explicitly check GetLastEventsAsync
         var events = (await Storage.GetLastEventsAsync(monitorName, cancellationToken: cancellationToken)).ToList();
@@ -105,27 +103,18 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         var stats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
 
         // Assert
-        // Check stats returned by the last SaveEvent
         Assert.NotNull(stats);
         Assert.Equal(MonitorState.Up, stats.LastState);
-        Assert.Equal(time3.ToUniversalTime(), stats.LastUpdate.ToUniversalTime());
-        // LastSeenUp/Down are not set by SaveEvent, need SaveLastStateChange
-        Assert.Null(stats.LastSeenUp);
-        Assert.Null(stats.LastSeenDown);
         // Availability: 2 Up, 1 Down -> (3 - 1) / 3 = 66.66...%
         Assert.InRange(stats.Availability, 66.6, 66.7);
-        // Avg Response Time: (100 + 150) / 2 = 125ms
-        Assert.Equal(TimeSpan.FromMilliseconds(125), stats.AverageResponseTime);
+        // Only the two Up probes carry timings.
+        Assert.Equal(2, stats.SampleCount);
+        Assert.Equal(TimeSpan.FromMilliseconds(100), stats.MinResponseTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(150), stats.Latency99);
 
-        // Verify GetStatsAsync reflects the latest state
+        // Repeated reads are stable.
         var finalStats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
-        Assert.NotNull(finalStats);
-        Assert.Equal(stats.LastState, finalStats.LastState);
-        Assert.Equal(stats.LastUpdate, finalStats.LastUpdate);
-        Assert.Equal(stats.Availability, finalStats.Availability);
-        Assert.Equal(stats.AverageResponseTime, finalStats.AverageResponseTime);
-        Assert.Null(finalStats.LastSeenUp); // Still null
-        Assert.Null(finalStats.LastSeenDown); // Still null
+        Assert.Equal(stats, finalStats);
     }
 
     [Fact]

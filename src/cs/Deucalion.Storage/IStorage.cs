@@ -10,7 +10,5 @@ public interface IStorage
 
     Task SaveEventAsync(string monitorName, StoredEvent storedEvent, CancellationToken cancellationToken = default);
 
-    Task SaveLastStateChangeAsync(string monitorName, DateTimeOffset at, MonitorState state, CancellationToken cancellationToken = default);
-
     Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, CancellationToken cancellationToken = default);
 }
