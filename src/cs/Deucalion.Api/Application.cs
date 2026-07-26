@@ -12,6 +12,7 @@ using Deucalion.Network.Monitors;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Deucalion.Api;
 
@@ -68,6 +69,7 @@ public static class Application
             return new SqliteStorage(options.StoragePath);
         });
         builder.Services.AddSingleton<IStorage>(sp => sp.GetRequiredService<SqliteStorage>());
+        builder.Services.TryAddSingleton(TimeProvider.System);
         builder.Services.AddHostedService<EngineBackgroundService>();
         builder.Services.AddHostedService<PurgeBackgroundService>();
         builder.Services.AddSingleton<MonitorEventBroadcaster>();

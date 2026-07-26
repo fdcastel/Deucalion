@@ -1,0 +1,41 @@
+version: 2
+
+# Keeps dependency updates arriving as reviewable PRs instead of manual sweeps.
+# Grouped so a routine week is one PR per ecosystem rather than a dozen; majors
+# stay separate because they need a decision (peer-dependency fallout, ABI
+# changes) rather than a rubber stamp.
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dotnet-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /src/ts/deucalion-ui
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"

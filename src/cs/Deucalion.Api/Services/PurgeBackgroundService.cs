@@ -6,6 +6,7 @@ namespace Deucalion.Api.Services;
 internal class PurgeBackgroundService(
     IStorage storage,
     DeucalionOptions options,
+    TimeProvider timeProvider,
     ILogger<PurgeBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -13,7 +14,8 @@ internal class PurgeBackgroundService(
         // Run initial purge immediately at startup
         await PurgeDatabaseAsync(stoppingToken);
 
-        using var purgeTimer = new PeriodicTimer(options.PurgeInterval);
+        // Clock is injected so tests can drive the interval without waiting on it.
+        using var purgeTimer = new PeriodicTimer(options.PurgeInterval, timeProvider);
         try
         {
             while (await purgeTimer.WaitForNextTickAsync(stoppingToken))

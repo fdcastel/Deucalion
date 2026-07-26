@@ -326,6 +326,61 @@ public class ConfigurationTests
         Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
     }
 
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    [InlineData("HEAD")]
+    [InlineData("PUT")]
+    [InlineData("DELETE")]
+    public void HttpMonitor_MethodIsDeserializedByHttpMethodConverter(string method)
+    {
+        var configurationContent = $@"
+            monitors:
+              mhttp:
+                !http
+                url: http://github.com/api
+                method: {method}
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(configurationContent);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitor);
+        Assert.Equal(method, httpMonitor.Method?.Method);
+    }
+
+    [Fact]
+    public void HttpMonitor_MethodOmitted_StaysNullSoTheMonitorDefaultsToGet()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mhttp:
+                !http
+                url: http://github.com/api
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitor);
+        Assert.Null(httpMonitor.Method);
+    }
+
+    [Fact]
+    public void HttpMonitor_MethodCanComeFromTheDefaultsBlock()
+    {
+        const string ConfigurationContent = @"
+            defaults:
+              http:
+                method: HEAD
+
+            monitors:
+              mhttp:
+                !http
+                url: http://github.com/api
+        ";
+
+        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
+        var httpMonitor = Assert.IsType<HttpMonitorConfiguration>(monitor);
+        Assert.Equal("HEAD", httpMonitor.Method?.Method);
+    }
+
     private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>
         Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
 

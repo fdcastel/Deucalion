@@ -118,6 +118,36 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task GetSingleMonitor_ReturnsThatMonitorOnly()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/monitors/web-main", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+
+        // An object, not the array the collection route returns.
+        Assert.Equal(JsonValueKind.Object, payload.ValueKind);
+        Assert.Equal("web-main", payload.GetProperty("name").GetString());
+        Assert.Equal("http", payload.GetProperty("config").GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task GetSingleMonitor_UnknownName_Returns404ProblemDetails()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/monitors/does-not-exist", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("/api/errors/monitor-not-found", problem.GetProperty("type").GetString());
+        Assert.Contains("does-not-exist", problem.GetProperty("detail").GetString()!, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task CheckInEndpoint_ValidatesSecretAndReturnsExpectedStatusCodes()
     {
         using var client = _factory.CreateClient();
@@ -176,8 +206,12 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         using var client = _factory.CreateClient();
         var checkedEventReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        // The endpoint writes ": connected\n\n" and flushes as soon as the subscription is
+        // registered, so waiting for that byte is an exact signal -- no sleeping and guessing.
+        var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        timeout.CancelAfter(TimeSpan.FromSeconds(15));
 
         var sseTask = Task.Run(async () =>
         {
@@ -185,6 +219,14 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
             response.EnsureSuccessStatusCode();
 
             using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+
+            // Read the preamble byte-wise; SseParser skips comment lines, so it cannot
+            // surface the ": connected" frame itself.
+            var buffer = new byte[64];
+            var read = await stream.ReadAsync(buffer, timeout.Token);
+            Assert.Contains("connected", Encoding.UTF8.GetString(buffer, 0, read), StringComparison.Ordinal);
+            subscribed.TrySetResult();
+
             var parser = SseParser.Create(stream, (_, data) => Encoding.UTF8.GetString(data));
 
             await foreach (var item in parser.EnumerateAsync(timeout.Token))
@@ -202,8 +244,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
             }
         }, timeout.Token);
 
-        // Wait briefly to ensure SSE connection is established before triggering checkin
-        await Task.Delay(200, timeout.Token);
+        await subscribed.Task.WaitAsync(timeout.Token);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
         request.Headers.Add("deucalion-checkin-secret", "test-secret");

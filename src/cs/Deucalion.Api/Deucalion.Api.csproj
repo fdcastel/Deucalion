@@ -11,4 +11,10 @@
     <ProjectReference Include="..\Deucalion.Storage\Deucalion.Storage.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The hosted services and the broadcaster are internal on purpose; the test project
+         needs to reach them without widening the public surface. -->
+    <InternalsVisibleTo Include="Deucalion.Tests" />
+  </ItemGroup>
+
 </Project>
