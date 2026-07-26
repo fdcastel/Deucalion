@@ -131,9 +131,17 @@ public static class MonitorExtensions
             {
                 if (monitor is CheckInMonitor checkInMonitor)
                 {
-                    // Support short-circuit for CheckInMonitor
-                    checkInMonitor.DelayCts = new CancellationTokenSource();
-                    await Task.Delay(delayInterval, monitor.TimeProvider, CancellationTokenSource.CreateLinkedTokenSource(stopToken, checkInMonitor.DelayCts.Token).Token);
+                    // Support short-circuit for CheckInMonitor.
+                    //
+                    // Both sources must be disposed: the linked source registers a callback on
+                    // the application-lifetime stopToken, and that registration is only released
+                    // on Dispose(). Leaking one per poll grew stopToken's callback list forever
+                    // (~1440/day per check-in monitor at the 60s default) and made every
+                    // subsequent CreateLinkedTokenSource lock a longer list.
+                    using var delayCts = new CancellationTokenSource();
+                    checkInMonitor.DelayCts = delayCts;
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stopToken, delayCts.Token);
+                    await Task.Delay(delayInterval, monitor.TimeProvider, linkedCts.Token);
                 }
                 else
                 {

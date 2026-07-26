@@ -8,7 +8,6 @@ public sealed class CheckInMonitor : PullMonitor
 
     private DateTimeOffset? _lastCheckInTime;
     private MonitorResponse? _lastResponse;
-    private CancellationTokenSource? _delayCts;
 
     // null means "no authentication" -- see the check-in endpoint in Deucalion.Api.
     public string? Secret { get; set; }
@@ -18,7 +17,16 @@ public sealed class CheckInMonitor : PullMonitor
     {
         _lastCheckInTime = TimeProvider.GetUtcNow();
         _lastResponse = response ?? MonitorResponse.Up();
-        _delayCts?.Cancel(); // Short-circuit the polling delay
+
+        try
+        {
+            DelayCts?.Cancel(); // Short-circuit the polling delay
+        }
+        catch (ObjectDisposedException)
+        {
+            // The polling loop already moved past this delay and disposed the source.
+            // The check-in is still recorded above; the next probe picks it up.
+        }
     }
 
     public override Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
@@ -32,9 +40,9 @@ public sealed class CheckInMonitor : PullMonitor
         return Task.FromResult(_lastResponse ?? MonitorResponse.Up());
     }
 
-    public CancellationTokenSource? DelayCts
-    {
-        get => _delayCts;
-        set => _delayCts = value;
-    }
+    /// <summary>
+    /// Set by the polling loop each iteration so <see cref="CheckIn"/> can cut the delay short.
+    /// Engine implementation detail -- the loop owns its lifetime and disposes it.
+    /// </summary>
+    public CancellationTokenSource? DelayCts { get; set; }
 }
