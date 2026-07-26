@@ -22,7 +22,7 @@
     "@playwright/test": "^1.55.0",
     "@solidjs/testing-library": "^0.8.10",
     "@testing-library/jest-dom": "^6.9.1",
-    "eslint": "^9.39.2",
+    "eslint": "^10.8.0",
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^17.1.0",
     "jiti": "^2.7.0",
