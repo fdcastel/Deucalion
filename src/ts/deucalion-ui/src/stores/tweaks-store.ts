@@ -116,10 +116,9 @@ const applyFonts = (): void => {
   }
   tag.textContent = `
     html, body, .ui-font { font-family: ${ui.stack} !important; }
-    .mono, .feed-time, .feed-name, .feed-arrow, .feed-state, .feed-detail,
-    .group-meta, .row-name, .type-badge, .lat-stats, .avail, .last-incident,
+    .mono, .group-meta, .row-name, .type-badge, .lat-stats, .avail, .last-incident,
     .subgroup, .footer, [data-tip]:hover::after, .hero-chip strong,
-    .hero-meta em, .feed-live, .tnum, .col-stats .lat-stats span strong
+    .hero-meta em, .tnum, .col-stats .lat-stats span strong
       { font-family: ${mono.stack} !important; }
     .serif, .brand-name, .hero-availability, .group-title, .footer em
       { font-family: ${disp.stack} !important; }

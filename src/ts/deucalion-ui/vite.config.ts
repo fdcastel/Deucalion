@@ -1,7 +1,6 @@
 /// <reference types="vitest/config" />
 
 import solid from "vite-plugin-solid";
-import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
@@ -16,7 +15,6 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 200,
     },
     plugins: [
-      tailwindcss(),
       // Disable solid's HMR plugin under vitest — solid-refresh tries to
       // resolve the JSX files via "file:///@solid-refresh" which jsdom
       // can't open.

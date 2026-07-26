@@ -62,8 +62,24 @@
   --flash: oklch(0.7 0.14 var(--accent-h) / 0.18);
 }
 
+/* ============= RESET =============
+   Deliberately minimal. This project has no utility-class framework, so it does
+   not carry a framework preflight either -- these are the only user-agent
+   defaults the layout actually depends on being reset. */
+
 * {
   box-sizing: border-box;
+}
+
+/* SVGs are icons here, never inline text. Blockifying them keeps them off the
+   text baseline so they centre inside their button/flex parents. */
+svg {
+  display: block;
+}
+
+/* The error boundary renders a <pre>; the UA `margin: 1em 0` would push it. */
+pre {
+  margin: 0;
 }
 
 html,

@@ -4,7 +4,6 @@ import { API_EVENTS_URL } from "../configuration";
 import type { MonitorCheckedDto, MonitorStateChangedDto } from "../services/deucalion-types";
 import * as logger from "../services/logger";
 import { mergeChecked } from "./monitors-store";
-import { onMonitorChecked, onMonitorStateChanged } from "./events-store";
 import { showStateChangeToast } from "./toast-store";
 
 export type SseStatus = "connecting" | "open" | "error";
@@ -34,12 +33,10 @@ export const connectSSE = (): (() => void) => {
   const handleChecked = (e: MessageEvent<string>): void => {
     const event = JSON.parse(e.data) as MonitorCheckedDto;
     mergeChecked(event);
-    onMonitorChecked(event);
   };
 
   const handleStateChanged = (e: MessageEvent<string>): void => {
     const event = JSON.parse(e.data) as MonitorStateChangedDto;
-    onMonitorStateChanged(event);
     showStateChangeToast(event);
   };
 
