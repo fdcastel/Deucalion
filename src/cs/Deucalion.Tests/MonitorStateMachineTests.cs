@@ -117,6 +117,48 @@ public class MonitorStateMachineTests
         Assert.Equal([MonitorState.Warn], StatesOf(events));
     }
 
+    // ---- Warn is an up-ish state ------------------------------------------
+
+    [Fact]
+    public async Task Warn_DoesNotCountAsAFailure()
+    {
+        // Warn means "up but slow". It must not accumulate toward IgnoreFailCount,
+        // which would report a merely-slow monitor as Degraded ("May be down").
+        var monitor = new ScriptedMonitor(MonitorState.Warn) { Name = "m", IgnoreFailCount = 3 };
+
+        var events = await ProbeAsync(monitor, 3, TestContext.Current.CancellationToken);
+
+        Assert.Equal([MonitorState.Warn, MonitorState.Warn, MonitorState.Warn], StatesOf(events));
+    }
+
+    [Fact]
+    public async Task Warn_DoesNotAdvanceTheFailCounterForLaterFailures()
+    {
+        // Two Warns then a Down: with IgnoreFailCount 2 the Down is the *first* failure,
+        // so it is suppressed to Degraded rather than counted as the second.
+        var monitor = new ScriptedMonitor(MonitorState.Warn, MonitorState.Warn, MonitorState.Down, MonitorState.Down)
+        { Name = "m", IgnoreFailCount = 2 };
+
+        var events = await ProbeAsync(monitor, 4, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [MonitorState.Warn, MonitorState.Warn, MonitorState.Degraded, MonitorState.Down],
+            StatesOf(events));
+    }
+
+    [Fact]
+    public void DelayFor_Warn_UsesIntervalWhenUp()
+    {
+        // A slow endpoint must not be polled 4x harder than a healthy one.
+        var monitor = new ScriptedMonitor(MonitorState.Warn)
+        {
+            IntervalWhenUp = TimeSpan.FromMinutes(1),
+            IntervalWhenDown = TimeSpan.FromSeconds(15),
+        };
+
+        Assert.Equal(monitor.IntervalWhenUp, MonitorExtensions.DelayFor(monitor, MonitorState.Warn));
+    }
+
     // ---- Response time ----------------------------------------------------
 
     [Fact]

@@ -137,6 +137,8 @@ You can set defaults for each monitor type as follows:
 
 The same threshold drives the sparkline scale in the UI: the chart's Y-axis is anchored at `[0, WARN]`, so a steady probe reads as a flat line near the baseline and a slow one approaches the top.
 
+A `WARN` probe means "up, but slow". It counts as available: it does not advance `ignoreFailCount`, and the monitor keeps polling at `intervalWhenUp` rather than dropping to `intervalWhenDown`.
+
 ### Monitors Section
 
 This section defines the individual monitors. Each monitor has a unique name (e.g., `ping-example`) and a type indicated by a YAML tag (e.g., `!ping`).

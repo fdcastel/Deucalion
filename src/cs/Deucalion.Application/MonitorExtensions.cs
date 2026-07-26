@@ -46,7 +46,7 @@ public static class MonitorExtensions
     /// use the relaxed interval; failing states are re-probed sooner.
     /// </summary>
     public static TimeSpan DelayFor(PullMonitor monitor, MonitorState state) =>
-        state is MonitorState.Up or MonitorState.Unknown
+        state is MonitorState.Up or MonitorState.Warn or MonitorState.Unknown
             ? monitor.IntervalWhenUp
             : monitor.IntervalWhenDown;
 
@@ -85,11 +85,13 @@ public static class MonitorExtensions
             var initialState = response.State;
             var effectiveState = initialState;
 
-            if (initialState == MonitorState.Up)
+            // Warn is "up but slow", not a failure: counting it would let IgnoreFailCount
+            // report a merely-slow monitor as Degraded ("May be down") in the UI.
+            if (initialState is MonitorState.Up or MonitorState.Warn)
             {
                 consecutiveFailCount = 0;
             }
-            else if (initialState == MonitorState.Down || initialState == MonitorState.Warn)
+            else if (initialState == MonitorState.Down)
             {
                 consecutiveFailCount++;
                 if (monitor.IgnoreFailCount > 0 && consecutiveFailCount < monitor.IgnoreFailCount)
