@@ -1,0 +1,6 @@
+{
+  "//": "Deucalion.Tests uses xunit.v3, which builds on Microsoft.Testing.Platform (OutputType=Exe, no Microsoft.NET.Test.Sdk / xunit.runner.visualstudio). Without this opt-in, `dotnet test` falls back to VSTest, finds no VSTest-compatible project, prints 'Nothing to do' and exits 0 -- silently running zero tests in CI and in `Invoke-Build Test`.",
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
+  }
+}
