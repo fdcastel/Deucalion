@@ -14,7 +14,9 @@ const BASE_URL = `http://localhost:${PORT.toString()}`;
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
-  retries: process.env.CI ? 2 : 0,
+  // One retry hedges against a runner hiccup. More than that mostly hides
+  // real regressions, and every assertion already carries a generous timeout.
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: [["list"]],
 
@@ -33,8 +35,11 @@ export default defineConfig({
       // The project's appsettings.Development.json already points at the
       // repo's deucalion-sample.yaml; we just override the storage path
       // so e2e runs don't share state with manual dev sessions.
+      // -c Release --no-build reuses the build CI already produced. Without it
+      // `dotnet run` defaults to Debug and recompiles the whole solution
+      // mid-run. Locally, `Invoke-Build` produces the Release build first.
       command:
-        "dotnet run --project ../../cs/Deucalion.Api --no-launch-profile --urls http://localhost:5000",
+        "dotnet run --project ../../cs/Deucalion.Api -c Release --no-build --no-launch-profile --urls http://localhost:5000",
       env: {
         ASPNETCORE_ENVIRONMENT: "Development",
         DEUCALION__STORAGEPATH: "./.e2e-storage",
@@ -53,9 +58,5 @@ export default defineConfig({
       stdout: "pipe",
       stderr: "pipe",
     },
-    // The design-prototype http-server (port 5180) is only needed by
-    // visual-qa.spec.ts. Starting it here would cost every CI run a 30 s
-    // boot of `npx http-server` even when the visual-QA spec isn't part of
-    // the run, so that spec spins one up on demand instead.
   ],
 });
