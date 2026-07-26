@@ -36,10 +36,19 @@ public static class MonitorExtensions
         }
         catch (Exception)
         {
-            // Prevent a single monitor failure from crashing the entire engine.
-            // The failure is observable through the monitor's state going stale.
+            // Backstop only. RunAsync already turns a failing probe into a Down result, so
+            // reaching here means the loop itself failed -- keep it from taking down Task.WhenAll.
         }
     }
+
+    /// <summary>
+    /// Poll interval for the given state. Up-ish states (including Warn -- "up but slow")
+    /// use the relaxed interval; failing states are re-probed sooner.
+    /// </summary>
+    public static TimeSpan DelayFor(PullMonitor monitor, MonitorState state) =>
+        state is MonitorState.Up or MonitorState.Warn or MonitorState.Unknown
+            ? monitor.IntervalWhenUp
+            : monitor.IntervalWhenDown;
 
     public static async Task RunAsync(this PullMonitor monitor, ChannelWriter<IMonitorEvent> writer, CancellationToken stopToken)
     {
@@ -49,7 +58,23 @@ public static class MonitorExtensions
         {
             var queryStartTime = monitor.TimeProvider.GetUtcNow();
             var startTimestamp = monitor.TimeProvider.GetTimestamp();
-            var response = await monitor.QueryAsync(stopToken);
+
+            MonitorResponse response;
+            try
+            {
+                response = await monitor.QueryAsync(stopToken);
+            }
+            catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                // A probe that throws is a failed probe, not a dead monitor. Previously this
+                // escaped the loop and silently stopped polling for the process lifetime --
+                // reachable today via an invalid expectedResponseBodyPattern.
+                response = MonitorResponse.Down(monitor.TimeProvider.GetElapsedTime(startTimestamp), ex.Message);
+            }
 
             if (response.ResponseTime is null)
             {
@@ -57,14 +82,16 @@ public static class MonitorExtensions
             }
 
             var name = monitor.Name;
-            var initialState = response?.State ?? MonitorState.Down;
+            var initialState = response.State;
             var effectiveState = initialState;
 
-            if (initialState == MonitorState.Up)
+            // Warn is "up but slow", not a failure: counting it would let IgnoreFailCount
+            // report a merely-slow monitor as Degraded ("May be down") in the UI.
+            if (initialState is MonitorState.Up or MonitorState.Warn)
             {
                 consecutiveFailCount = 0;
             }
-            else if (initialState == MonitorState.Down || initialState == MonitorState.Warn)
+            else if (initialState == MonitorState.Down)
             {
                 consecutiveFailCount++;
                 if (monitor.IgnoreFailCount > 0 && consecutiveFailCount < monitor.IgnoreFailCount)
@@ -85,7 +112,7 @@ public static class MonitorExtensions
                 }
             }
 
-            var effectiveResponse = response is null ? null : response with { State = effectiveState };
+            var effectiveResponse = response with { State = effectiveState };
             writer.TryWrite(new MonitorChecked(name, queryStartTime, lastKnownState, effectiveResponse));
 
             var actualStateHasChanged = lastKnownState != effectiveState;
@@ -98,17 +125,23 @@ public static class MonitorExtensions
 
             if (stopToken.IsCancellationRequested) break;
 
-            var delayInterval = (lastKnownState == MonitorState.Up || lastKnownState == MonitorState.Unknown)
-                ? monitor.IntervalWhenUp
-                : monitor.IntervalWhenDown;
+            var delayInterval = DelayFor(monitor, lastKnownState);
 
             try
             {
                 if (monitor is CheckInMonitor checkInMonitor)
                 {
-                    // Support short-circuit for CheckInMonitor
-                    checkInMonitor.DelayCts = new CancellationTokenSource();
-                    await Task.Delay(delayInterval, monitor.TimeProvider, CancellationTokenSource.CreateLinkedTokenSource(stopToken, checkInMonitor.DelayCts.Token).Token);
+                    // Support short-circuit for CheckInMonitor.
+                    //
+                    // Both sources must be disposed: the linked source registers a callback on
+                    // the application-lifetime stopToken, and that registration is only released
+                    // on Dispose(). Leaking one per poll grew stopToken's callback list forever
+                    // (~1440/day per check-in monitor at the 60s default) and made every
+                    // subsequent CreateLinkedTokenSource lock a longer list.
+                    using var delayCts = new CancellationTokenSource();
+                    checkInMonitor.DelayCts = delayCts;
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stopToken, delayCts.Token);
+                    await Task.Delay(delayInterval, monitor.TimeProvider, linkedCts.Token);
                 }
                 else
                 {

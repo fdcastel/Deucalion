@@ -76,8 +76,6 @@ jobs:
           build-args: |
             VERSION=${{ needs.version.outputs.semVer }}
             INFORMATIONAL_VERSION=${{ needs.version.outputs.informationalVersion }}
-          secrets: |
-            github_token=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,scope=${{ matrix.platform }},mode=max
 

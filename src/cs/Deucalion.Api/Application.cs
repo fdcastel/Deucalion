@@ -7,6 +7,7 @@ using Deucalion.Api.Services;
 using Deucalion.Application;
 using Deucalion.Application.Configuration;
 using Deucalion.Configuration;
+using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Diagnostics;
@@ -18,11 +19,21 @@ public static class Application
 {
     public static WebApplicationBuilder ConfigureApplicationBuilder(this WebApplicationBuilder builder)
     {
-        // Json
+        // Json.
+        //
+        // The ignore condition must be set here as well as on DeucalionJsonContext: inserting the
+        // context's *resolver* into ASP.NET's JsonSerializerOptions does not carry over the
+        // context's own JsonSourceGenerationOptions, so the two paths would disagree. Covered by
+        // the href-omission assertion in ApiIntegrationTests.
+        //
+        // WhenWritingNull, not WhenWritingDefault: the latter would also drop `lastState: 0`
+        // (Unknown), `availability: 0` and `fr: 0`, all of which the UI reads. (Note that
+        // JsonIgnoreCondition is not a [Flags] enum -- the old
+        // `WhenWritingDefault | WhenWritingNull` silently evaluated to 2|3 == 3 == WhenWritingNull.)
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
         {
             options.SerializerOptions.TypeInfoResolverChain.Insert(0, DeucalionJsonContext.Default);
-            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
+            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         });
 
         // CORS
@@ -123,7 +134,11 @@ public static class Application
                     return DeucalionResults.NotCheckInMonitor(monitorName, $"/api/monitors/{monitorName}");
                 }
 
-                if (cim.Secret is not null && cim.Secret != request.Headers["deucalion-checkin-secret"])
+                // No configured secret means no authentication. Compare as strings: the
+                // StringValues overload of '!=' compares counts first, so an empty secret
+                // never matches an absent header.
+                if (!string.IsNullOrEmpty(cim.Secret) &&
+                    !string.Equals(cim.Secret, request.Headers["deucalion-checkin-secret"].ToString(), StringComparison.Ordinal))
                 {
                     return DeucalionResults.InvalidCheckInSecret(monitorName, $"/api/monitors/{monitorName}");
                 }
@@ -188,21 +203,12 @@ public static class Application
 
     private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, ApplicationMonitors applicationMonitors, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken)
     {
-        var stats = await storage.GetStatsAsync(mn, historyCount: EventHistoryCount, cancellationToken: cancellationToken);
+        // Stats use the rolling stats window; the event list uses the longer strip history.
+        // These are deliberately different numbers -- see EventHistoryCount above.
+        var stats = await storage.GetStatsAsync(mn, historyCount: PullMonitor.StatsWindow, cancellationToken: cancellationToken);
 
-        TimeSpan? effectiveWarn = null;
-        TimeSpan? timeout = null;
-        if (applicationMonitors.Monitors.TryGetValue(mn, out var monitor))
-        {
-            // Refresh auto-WARN baseline from the current rolling history. Persists in-process
-            // until the next probe so subsequent checks pick up the new threshold immediately.
-            monitor.AutoWarnTimeout = WarnThresholdPolicy.ComputeAuto(
-                stats?.Latency95,
-                stats?.SampleCount ?? 0,
-                monitor.TypeDefaultWarnTimeout);
-            effectiveWarn = monitor.EffectiveWarnTimeout;
-            timeout = monitor.Timeout;
-        }
+        applicationMonitors.Monitors.TryGetValue(mn, out var monitor);
+        var (effectiveWarn, timeout) = WarnThresholdPolicy.Refresh(monitor, stats?.Latency95, stats?.SampleCount ?? 0);
 
         return new(
             Name: mn,

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildMonitor } from "../test/fixtures";
 import { MonitorState } from "../services/deucalion-types";
 
-import { __resetEventsForTests, feedEvents } from "./events-store";
 import { __resetMonitorsForTests, __seedMonitorsForTests, monitors } from "./monitors-store";
 import { __resetToastsForTests, toastList } from "./toast-store";
 import { __resetSseForTests, connectSSE, sseStatus } from "./sse";
@@ -65,7 +64,6 @@ describe("connectSSE()", () => {
     FakeEventSource.instances = [];
     vi.stubGlobal("EventSource", FakeEventSource);
     __resetMonitorsForTests();
-    __resetEventsForTests();
     __resetToastsForTests();
     __resetSseForTests();
   });
@@ -87,7 +85,7 @@ describe("connectSSE()", () => {
     expect(sseStatus()).toBe("open");
   });
 
-  it("merges MonitorChecked into the monitors store and the event feed", () => {
+  it("merges MonitorChecked into the monitors store", () => {
     __seedMonitorsForTests([buildMonitor({ name: "m1", events: [] })]);
     connectSSE();
     lastSource().emit("MonitorChecked", {
@@ -100,8 +98,7 @@ describe("connectSSE()", () => {
     });
 
     expect(monitors.byName.m1.events[0]).toMatchObject({ at: 100, st: MonitorState.Down, ms: 250 });
-    expect(feedEvents.items).toHaveLength(1);
-    expect(feedEvents.items[0]).toMatchObject({ name: "m1", from: MonitorState.Up, to: MonitorState.Down });
+    expect(monitors.byName.m1.stats).toMatchObject({ lastState: MonitorState.Down });
   });
 
   it("fires a toast on MonitorStateChanged", () => {

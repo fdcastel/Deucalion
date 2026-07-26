@@ -93,6 +93,9 @@
 }
 
 .theme-btn {
+  /* `font: inherit` first -- the shorthand resets font-size, so it must precede it.
+     Buttons do not inherit the page font by default. */
+  font: inherit;
   background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -244,145 +247,11 @@
 }
 .hero-spark-wrap .spark { height: 48px; display: block; width: 100%; }
 
-/* event feed */
-.feed {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-2);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  /* The feed and the hero-availability frame share the same grid row, so
-     `align-items: stretch` (the grid default) makes them match heights.
-     `overflow: hidden` clips the list to the row height. */
-  overflow: hidden;
-}
-
-.feed-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.feed-title {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--fg-3);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.feed-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--accent);
-  text-transform: none;
-  letter-spacing: 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-}
-.feed-live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 25%, transparent);
-  animation: blip 1.6s ease-in-out infinite;
-}
-
-.feed-body {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-.feed-list {
-  list-style: none;
-  margin: 0;
-  padding: 6px 0;
-}
-
-.feed-item {
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 20px;
-  font-size: 12px;
-  color: var(--fg-2);
-  animation: feed-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-@keyframes feed-in {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.feed-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-4);
-  font-variant-numeric: tabular-nums;
-}
-
-.feed-msg {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.feed-name {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--fg);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.feed-arrow {
-  color: var(--fg-4);
-  font-family: var(--font-mono);
-}
-
-.feed-state {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.feed-state.up { color: var(--up); }
-.feed-state.warn { color: var(--warn); }
-.feed-state.down { color: var(--down); }
-.feed-state.degraded { color: var(--degraded); }
-
-.feed-detail {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-4);
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* Mobile trim: drop the live-event feed and the trend sparkline so the
+/* Mobile trim: drop the hero meta line and the trend sparkline so the
    hero counters can collapse onto one line, and hide the verbose
    "disconnected" label in the topbar — the dot already encodes status.
-   Placed after the hero/feed/topbar rules so equal-specificity
-   selectors don't lose to a later default. */
+   Placed after the hero/topbar rules so equal-specificity selectors
+   don't lose to a later default. */
 @media (max-width: 720px) {
   .hero-meta, .hero-spark-wrap {
     display: none;
@@ -828,6 +697,17 @@
   pointer-events: none;
 }
 
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .toast {
   background: var(--bg-3);
   border: 1px solid var(--line-2);
@@ -840,7 +720,7 @@
   pointer-events: auto;
   min-width: 220px;
   max-width: 360px;
-  animation: feed-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: toast-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .toast.up { border-left: 3px solid var(--up); }
 .toast.warn { border-left: 3px solid var(--warn); }

@@ -29,6 +29,7 @@ public record ApplicationConfiguration
 
         public const string ConfigurationMonitorCannotBeEmpty = "Monitor '{0}' cannot be empty.";
         public const string ConfigurationInvalidTimeSpan = "Monitor '{0}': '{1}' must be a positive value, but was '{2}'.";
+        public const string ConfigurationUnknownMonitorType = "Monitor '{0}': missing or unknown type tag. Expected one of: !ping, !tcp, !dns, !http, !checkin.";
     }
 
     public ConfigurationDefaults? Defaults { get; set; }
@@ -47,24 +48,37 @@ public record ApplicationConfiguration
         {
             return ReadFromString(content);
         }
-        catch (ConfigurationErrorException)
+        catch (ConfigurationErrorException ex) when (ex.InnerException is YamlException)
         {
-            throw;
-        }
-        catch (YamlException ex)
-        {
-            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileParseError, configurationFile, ex.Message), ex);
+            // Re-wrap so the message names the offending file.
+            throw new ConfigurationErrorException(
+                string.Format(Messages.ConfigurationFileParseError, configurationFile, ex.InnerException.Message), ex.InnerException);
         }
     }
 
     public static ApplicationConfiguration ReadFromString(string content)
+    {
+        try
+        {
+            return Parse(content);
+        }
+        catch (YamlException ex)
+        {
+            // SharpYaml validates 'required' members at deserialization time. Surface those --
+            // and any other malformed-document error -- as a configuration error, so both entry
+            // points report the same exception type.
+            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileParseError, "<string>", ex.Message), ex);
+        }
+    }
+
+    private static ApplicationConfiguration Parse(string content)
     {
         var options = new YamlSerializerOptions
         {
             TypeInfoResolver = DeucalionYamlContext.Default,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
-            Converters = [new UriConverter(), new IPEndPointConverter(), new HttpMethodConverter()],
+            Converters = [new IPEndPointConverter(), new HttpMethodConverter()],
         };
 
         var result = YamlSerializer.Deserialize<ApplicationConfiguration>(content, options)
@@ -81,6 +95,14 @@ public record ApplicationConfiguration
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, monitor.Key));
             }
 
+            // PullMonitorConfiguration is declared with UnknownDerivedTypeHandling.FallBackToBase,
+            // so a typo'd or missing tag silently deserializes to the base type. Left alone it
+            // passes validation and blows up later as a NotImplementedException in BuildFrom.
+            if (monitor.Value.GetType() == typeof(PullMonitorConfiguration))
+            {
+                throw new ConfigurationErrorException(string.Format(Messages.ConfigurationUnknownMonitorType, monitor.Key));
+            }
+
             // Interpolate ${MONITOR_NAME} placeholders
             InterpolateMonitorName(monitor.Key, monitor.Value);
 
@@ -90,7 +112,7 @@ public record ApplicationConfiguration
             // Apply user-configured defaults
             if (result.Defaults is not null)
             {
-                ApplyDefaults(result.Defaults, monitor);
+                ApplyDefaults(result.Defaults, monitor.Value);
             }
 
             // Validate TimeSpan fields are positive when set
@@ -111,9 +133,17 @@ public record ApplicationConfiguration
         return result;
     }
 
-    private static void ApplyDefaults(ConfigurationDefaults defaults, KeyValuePair<string, PullMonitorConfiguration> monitorConfiguration)
+    /// <summary>
+    /// Fills unset fields from the 'defaults' block.
+    /// </summary>
+    /// <remarks>
+    /// Order is load-bearing. The per-type blocks run first, so 'defaults.http.timeout' wins;
+    /// the global block's '??=' then fills only what is still null. The repeated Timeout /
+    /// WarnTimeout lines below look like duplication but are what encodes that precedence.
+    /// </remarks>
+    private static void ApplyDefaults(ConfigurationDefaults defaults, PullMonitorConfiguration monitorConfiguration)
     {
-        if (defaults.Dns is not null && monitorConfiguration.Value is DnsMonitorConfiguration dnsMonitorConfiguration)
+        if (defaults.Dns is not null && monitorConfiguration is DnsMonitorConfiguration dnsMonitorConfiguration)
         {
             dnsMonitorConfiguration.Timeout ??= defaults.Dns.Timeout;
             dnsMonitorConfiguration.WarnTimeout ??= defaults.Dns.WarnTimeout;
@@ -122,7 +152,7 @@ public record ApplicationConfiguration
             dnsMonitorConfiguration.Resolver ??= defaults.Dns.Resolver;
         }
 
-        if (defaults.Http is not null && monitorConfiguration.Value is HttpMonitorConfiguration httpMonitorConfiguration)
+        if (defaults.Http is not null && monitorConfiguration is HttpMonitorConfiguration httpMonitorConfiguration)
         {
             httpMonitorConfiguration.Timeout ??= defaults.Http.Timeout;
             httpMonitorConfiguration.WarnTimeout ??= defaults.Http.WarnTimeout;
@@ -133,28 +163,25 @@ public record ApplicationConfiguration
             httpMonitorConfiguration.Method ??= defaults.Http.Method;
         }
 
-        if (defaults.Ping is not null && monitorConfiguration.Value is PingMonitorConfiguration pingMonitorConfiguration)
+        if (defaults.Ping is not null && monitorConfiguration is PingMonitorConfiguration pingMonitorConfiguration)
         {
             pingMonitorConfiguration.Timeout ??= defaults.Ping.Timeout;
             pingMonitorConfiguration.WarnTimeout ??= defaults.Ping.WarnTimeout;
         }
 
-        if (defaults.Tcp is not null && monitorConfiguration.Value is TcpMonitorConfiguration tcpMonitorConfiguration)
+        if (defaults.Tcp is not null && monitorConfiguration is TcpMonitorConfiguration tcpMonitorConfiguration)
         {
             tcpMonitorConfiguration.Timeout ??= defaults.Tcp.Timeout;
             tcpMonitorConfiguration.WarnTimeout ??= defaults.Tcp.WarnTimeout;
         }
 
-        if (monitorConfiguration.Value is PullMonitorConfiguration pullMonitorConfiguration)
-        {
-            pullMonitorConfiguration.Timeout ??= defaults.Timeout;
-            pullMonitorConfiguration.WarnTimeout ??= defaults.WarnTimeout;
+        // Global defaults, applied to every monitor type.
+        monitorConfiguration.Timeout ??= defaults.Timeout;
+        monitorConfiguration.WarnTimeout ??= defaults.WarnTimeout;
+        monitorConfiguration.IntervalWhenDown ??= defaults.IntervalWhenDown;
+        monitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
 
-            pullMonitorConfiguration.IntervalWhenDown ??= defaults.IntervalWhenDown;
-            pullMonitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
-        }
-
-        if (monitorConfiguration.Value is CheckInMonitorConfiguration checkInMonitorConfiguration)
+        if (monitorConfiguration is CheckInMonitorConfiguration checkInMonitorConfiguration)
         {
             checkInMonitorConfiguration.IntervalToDown ??= defaults.IntervalToDown;
         }

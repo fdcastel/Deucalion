@@ -8,16 +8,12 @@ internal class PurgeBackgroundService(
     DeucalionOptions options,
     ILogger<PurgeBackgroundService> logger) : BackgroundService
 {
-    private readonly IStorage _storage = storage;
-    private readonly DeucalionOptions _options = options;
-    private readonly ILogger<PurgeBackgroundService> _logger = logger;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Run initial purge immediately at startup
         await PurgeDatabaseAsync(stoppingToken);
 
-        using var purgeTimer = new PeriodicTimer(_options.PurgeInterval);
+        using var purgeTimer = new PeriodicTimer(options.PurgeInterval);
         try
         {
             while (await purgeTimer.WaitForNextTickAsync(stoppingToken))
@@ -35,19 +31,19 @@ internal class PurgeBackgroundService(
     {
         try
         {
-            _logger.LogInformation("Starting periodic database purge (Retention: {RetentionPeriod})...", _options.EventRetentionPeriod);
-            var deletedCount = await _storage.PurgeOldEventsAsync(_options.EventRetentionPeriod, cancellationToken);
-            _logger.LogInformation("Database purge completed. Deleted {DeletedCount} old events.", deletedCount);
+            logger.LogInformation("Starting periodic database purge (Retention: {RetentionPeriod})...", options.EventRetentionPeriod);
+            var deletedCount = await storage.PurgeOldEventsAsync(options.EventRetentionPeriod, cancellationToken);
+            logger.LogInformation("Database purge completed. Deleted {DeletedCount} old events.", deletedCount);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Database purge operation was cancelled.");
+            logger.LogInformation("Database purge operation was cancelled.");
         }
         catch (Exception ex)
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(ex, "Error occurred during periodic database purge.");
+                logger.LogError(ex, "Error occurred during periodic database purge.");
             }
         }
     }

@@ -2,10 +2,10 @@
 using System.Text.Json;
 using System.Threading.Channels;
 using Deucalion.Api.Models;
-using Deucalion.Api.Options;
 using Deucalion.Application;
 using Deucalion.Application.Configuration;
 using Deucalion.Events;
+using Deucalion.Monitors;
 using Deucalion.Storage;
 
 namespace Deucalion.Api.Services;
@@ -14,14 +14,8 @@ internal class EngineBackgroundService(
     ApplicationMonitors monitors,
     IStorage storage,
     MonitorEventBroadcaster broadcaster,
-    DeucalionOptions options,
     ILogger<EngineBackgroundService> logger) : BackgroundService
 {
-    private readonly ApplicationMonitors _monitors = monitors;
-    private readonly IStorage _storage = storage;
-    private readonly MonitorEventBroadcaster _broadcaster = broadcaster;
-    private readonly DeucalionOptions _options = options;
-    private readonly ILogger<EngineBackgroundService> _logger = logger;
     private CancellationTokenSource? _internalCts;
     private Task? _engineTask;
 
@@ -37,7 +31,7 @@ internal class EngineBackgroundService(
         {
             try
             {
-                await _monitors.Monitors.Values.RunAllAsync(channel.Writer, internalToken);
+                await monitors.Monitors.Values.RunAllAsync(channel.Writer, internalToken);
             }
             catch (OperationCanceledException)
             {
@@ -65,17 +59,17 @@ internal class EngineBackgroundService(
                             await HandleMonitorStateChangedAsync(msc, stoppingToken);
                             break;
                         default:
-                            _logger.LogWarning("Unknown event: {event}.", evt);
+                            logger.LogWarning("Unknown event: {event}.", evt);
                             break;
                     }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogDebug("Event handling canceled during shutdown for {EventType}.", evt.GetType().Name);
+                    logger.LogDebug("Event handling canceled during shutdown for {EventType}.", evt.GetType().Name);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error handling event of type {EventType}.", evt.GetType().Name);
+                    logger.LogError(ex, "Error handling event of type {EventType}.", evt.GetType().Name);
                 }
             }
         }
@@ -89,46 +83,36 @@ internal class EngineBackgroundService(
 
     private async Task HandleMonitorCheckedAsync(MonitorChecked mc, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("MonitorChecked: {@event}", mc);
-        await _storage.SaveEventAsync(mc.Name, StoredEvent.From(mc), cancellationToken);
+        logger.LogDebug("MonitorChecked: {@event}", mc);
+        await storage.SaveEventAsync(mc.Name, StoredEvent.From(mc), cancellationToken);
 
-        var newStats = await _storage.GetStatsAsync(mc.Name, cancellationToken: cancellationToken);
+        var newStats = await storage.GetStatsAsync(mc.Name, historyCount: PullMonitor.StatsWindow, cancellationToken: cancellationToken);
         if (newStats != null)
         {
-            TimeSpan? effectiveWarn = null;
-            TimeSpan? timeout = null;
-            if (_monitors.Monitors.TryGetValue(mc.Name, out var monitor))
-            {
-                monitor.AutoWarnTimeout = WarnThresholdPolicy.ComputeAuto(
-                    newStats.Latency95,
-                    newStats.SampleCount,
-                    monitor.TypeDefaultWarnTimeout);
-                effectiveWarn = monitor.EffectiveWarnTimeout;
-                timeout = monitor.Timeout;
-            }
+            monitors.Monitors.TryGetValue(mc.Name, out var monitor);
+            var (effectiveWarn, timeout) = WarnThresholdPolicy.Refresh(monitor, newStats.Latency95, newStats.SampleCount);
 
             var dto = MonitorCheckedDto.FromEvent(mc, newStats, effectiveWarn, timeout);
             var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorCheckedDto);
-            _broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
+            broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
         }
         else
         {
-            _logger.LogWarning("Could not calculate stats after saving event for monitor {MonitorName}", mc.Name);
+            logger.LogWarning("Could not calculate stats after saving event for monitor {MonitorName}", mc.Name);
         }
     }
 
     private async Task HandleMonitorStateChangedAsync(MonitorStateChanged msc, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("MonitorStateChanged: {@event}", msc);
-        await _storage.SaveLastStateChangeAsync(msc.Name, msc.At, msc.NewState, cancellationToken);
+        logger.LogDebug("MonitorStateChanged: {@event}", msc);
         var dto = MonitorStateChangedDto.FromEvent(msc);
         var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorStateChangedDto);
-        _broadcaster.Broadcast(new SseItem<string>(json, "MonitorStateChanged"));
+        broadcaster.Broadcast(new SseItem<string>(json, "MonitorStateChanged"));
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Stopping EngineBackgroundService.");
+        logger.LogInformation("Stopping EngineBackgroundService.");
 
         // Signal cancellation to internal operations
         _internalCts?.Cancel();

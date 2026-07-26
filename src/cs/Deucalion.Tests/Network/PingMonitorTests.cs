@@ -3,10 +3,12 @@ using Xunit;
 
 namespace Deucalion.Tests.Network;
 
-[Trait("Category", "Integration")]
+/// <summary>
+/// Real ICMP echo, which most containers block. Skipped unless DEUCALION_TESTS_NETWORK=1.
+/// </summary>
 public class PingMonitorTests
 {
-    [Fact]
+    [Fact(Skip = "Requires public internet access. Set DEUCALION_TESTS_NETWORK=1 to run.", SkipUnless = nameof(TestEnvironment.NetworkTestsEnabled), SkipType = typeof(TestEnvironment))]
     public async Task PingMonitor_ReturnsUp_WhenReachable()
     {
         PingMonitor pingMonitor = new() { Host = "1.1.1.1" };
@@ -15,7 +17,7 @@ public class PingMonitorTests
         Assert.Null(result.ResponseText);
     }
 
-    [Fact]
+    [Fact(Skip = "Requires public internet access. Set DEUCALION_TESTS_NETWORK=1 to run.", SkipUnless = nameof(TestEnvironment.NetworkTestsEnabled), SkipType = typeof(TestEnvironment))]
     public async Task PingMonitor_ReturnsDown_WhenUnreachable()
     {
         PingMonitor pingMonitor = new() { Host = "8.8.8.7", Timeout = TimeSpan.FromMilliseconds(200) };

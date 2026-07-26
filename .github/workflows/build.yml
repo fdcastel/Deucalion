@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -15,8 +14,6 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v6
 
@@ -74,10 +71,9 @@ jobs:
 
       - name: Test frontend (e2e)
         working-directory: src/ts/deucalion-ui
-        # Skip the visual-QA spec in CI — it pulls Babel + Google Fonts from
-        # CDNs to render the prototype HTML and the runner's outbound network
-        # is sometimes flaky for those.
-        run: npx playwright test tests/e2e/dashboard.spec.ts --reporter=list
+        # The suite reuses the Release build produced above (see the webServer
+        # command in playwright.config.ts) instead of recompiling in Debug.
+        run: npx playwright test --reporter=list
 
       - name: Upload Playwright artifacts on failure
         if: failure()

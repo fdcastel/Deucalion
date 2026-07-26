@@ -15,25 +15,19 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.18",
-    "dayjs": "^1.11.19",
     "solid-js": "^1.9.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.55.0",
     "@solidjs/testing-library": "^0.8.10",
-    "@testing-library/jest-dom": "^6.9.1",
-    "autoprefixer": "^10.4.23",
+    "@testing-library/jest-dom": "^7.0.0",
     "eslint": "^9.39.2",
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^17.1.0",
-    "http-server": "^14.1.1",
+    "jiti": "^2.7.0",
     "jsdom": "^29.0.1",
-    "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
     "rollup-plugin-visualizer": "^7.0.0",
-    "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.53.1",
     "vite": "^8.0.2",

@@ -64,6 +64,11 @@
   cursor: pointer;
   font-size: 13px;
   line-height: 1;
+  /* Centres the inline <svg> child. Without this the icon sits on the text
+     baseline and picks up descender space. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 [data-theme="dark"] .twk-x { color: rgba(244, 243, 238, 0.55); }
 .twk-x:hover { background: rgba(0, 0, 0, 0.06); color: inherit; }

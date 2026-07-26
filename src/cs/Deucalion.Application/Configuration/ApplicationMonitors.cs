@@ -12,9 +12,28 @@ public record ApplicationMonitors
         {
             Monitors = new Dictionary<string, Monitors.PullMonitor>(
                 from kvp in configuration.Monitors
-                select KeyValuePair.Create(kvp.Key, MonitorFromConfiguration(kvp.Value))
+                select KeyValuePair.Create(kvp.Key, BuildMonitor(kvp.Key, kvp.Value))
             )
         };
+
+    private static Monitors.PullMonitor BuildMonitor(string monitorName, PullMonitorConfiguration configuration)
+    {
+        try
+        {
+            return MonitorFromConfiguration(configuration);
+        }
+        catch (ConfigurationErrorException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Anything that only fails while constructing the live monitor -- a malformed
+            // 'url:' (UriFormatException), an invalid 'expectedResponseBodyPattern'
+            // (RegexParseException) -- is a configuration error, not a crash.
+            throw new ConfigurationErrorException($"Monitor '{monitorName}': {ex.Message}", ex);
+        }
+    }
 
     private static Monitors.PullMonitor MonitorFromConfiguration(PullMonitorConfiguration monitorConfiguration) =>
         monitorConfiguration switch
@@ -26,6 +45,7 @@ public record ApplicationMonitors
             PingMonitorConfiguration pingMonitorConfiguration => pingMonitorConfiguration.Build(),
             TcpMonitorConfiguration tcpMonitorConfiguration => tcpMonitorConfiguration.Build(),
 
-            _ => throw new NotImplementedException("Unknown MonitorConfiguration."),
+            _ => throw new ConfigurationErrorException(
+                string.Format(ApplicationConfiguration.Messages.ConfigurationUnknownMonitorType, monitorConfiguration.Name)),
         };
 }

@@ -24,16 +24,62 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         // Verify stats directly, and implicitly test DB state via GetLastEvents/GetStats
         Assert.NotNull(stats);
         Assert.Equal(MonitorState.Up, stats.LastState);
-        Assert.Equal(timestamp.ToUniversalTime(), stats.LastUpdate.ToUniversalTime()); // Compare UTC
-        Assert.Null(stats.LastSeenUp); // SaveEvent doesn't update LastSeenUp/Down
-        Assert.Null(stats.LastSeenDown);
         Assert.Equal(100.0, stats.Availability); // Only one event, which is Up
-        Assert.Equal(responseTime, stats.AverageResponseTime);
+        Assert.Equal(responseTime, stats.MinResponseTime);
+        Assert.Equal(1, stats.SampleCount);
 
         // Explicitly check GetLastEventsAsync
         var events = (await Storage.GetLastEventsAsync(monitorName, cancellationToken: cancellationToken)).ToList();
         Assert.Single(events);
         Assert.Equal(storedEvent with { At = storedEvent.At.ToUniversalTime() }, events[0]);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_HistoryCount_BoundsTheAvailabilityWindow()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // 60 older Down events followed by 60 newer Up events. The window size therefore
+        // changes the reported availability -- which is exactly why every caller has to use
+        // PullMonitor.StatsWindow. Without that, the number visibly jumps when the first
+        // live SSE update replaces the initial snapshot.
+        var monitorName = "test-monitor-window";
+        var start = DateTimeOffset.UtcNow.AddMinutes(-200);
+        for (var i = 0; i < 120; i++)
+        {
+            var state = i < 60 ? MonitorState.Down : MonitorState.Up;
+            await Storage.SaveEventAsync(monitorName, new StoredEvent(start.AddMinutes(i), state, TimeSpan.FromMilliseconds(10), null), cancellationToken);
+        }
+
+        var narrow = await Storage.GetStatsAsync(monitorName, historyCount: 60, cancellationToken: cancellationToken);
+        var wide = await Storage.GetStatsAsync(monitorName, historyCount: 120, cancellationToken: cancellationToken);
+
+        Assert.NotNull(narrow);
+        Assert.NotNull(wide);
+        Assert.Equal(100.0, narrow.Availability);
+        Assert.Equal(50.0, wide.Availability);
+    }
+
+    [Fact]
+    public async Task SaveEventAsync_SameTimestampTwice_OverwritesInsteadOfThrowing()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // (MonitorName, TimestampTicks) is the primary key. DateTimeOffset.UtcNow has ~15.6ms
+        // granularity on Windows and CheckIn() short-circuits the poll delay, so two rapid
+        // check-ins really can collide -- that must not throw and drop the event.
+        var monitorName = "test-monitor-duplicate";
+        var timestamp = DateTimeOffset.UtcNow;
+
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(timestamp, MonitorState.Down, TimeSpan.FromMilliseconds(10), "first"), cancellationToken);
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(timestamp, MonitorState.Up, TimeSpan.FromMilliseconds(20), "second"), cancellationToken);
+
+        var events = (await Storage.GetLastEventsAsync(monitorName, cancellationToken: cancellationToken)).ToList();
+
+        var single = Assert.Single(events);
+        Assert.Equal(MonitorState.Up, single.State);
+        Assert.Equal(TimeSpan.FromMilliseconds(20), single.ResponseTime);
+        Assert.Equal("second", single.ResponseText);
     }
 
     [Fact]
@@ -57,27 +103,18 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
         var stats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
 
         // Assert
-        // Check stats returned by the last SaveEvent
         Assert.NotNull(stats);
         Assert.Equal(MonitorState.Up, stats.LastState);
-        Assert.Equal(time3.ToUniversalTime(), stats.LastUpdate.ToUniversalTime());
-        // LastSeenUp/Down are not set by SaveEvent, need SaveLastStateChange
-        Assert.Null(stats.LastSeenUp);
-        Assert.Null(stats.LastSeenDown);
         // Availability: 2 Up, 1 Down -> (3 - 1) / 3 = 66.66...%
         Assert.InRange(stats.Availability, 66.6, 66.7);
-        // Avg Response Time: (100 + 150) / 2 = 125ms
-        Assert.Equal(TimeSpan.FromMilliseconds(125), stats.AverageResponseTime);
+        // Only the two Up probes carry timings.
+        Assert.Equal(2, stats.SampleCount);
+        Assert.Equal(TimeSpan.FromMilliseconds(100), stats.MinResponseTime);
+        Assert.Equal(TimeSpan.FromMilliseconds(150), stats.Latency99);
 
-        // Verify GetStatsAsync reflects the latest state
+        // Repeated reads are stable.
         var finalStats = await Storage.GetStatsAsync(monitorName, cancellationToken: cancellationToken);
-        Assert.NotNull(finalStats);
-        Assert.Equal(stats.LastState, finalStats.LastState);
-        Assert.Equal(stats.LastUpdate, finalStats.LastUpdate);
-        Assert.Equal(stats.Availability, finalStats.Availability);
-        Assert.Equal(stats.AverageResponseTime, finalStats.AverageResponseTime);
-        Assert.Null(finalStats.LastSeenUp); // Still null
-        Assert.Null(finalStats.LastSeenDown); // Still null
+        Assert.Equal(stats, finalStats);
     }
 
     [Fact]

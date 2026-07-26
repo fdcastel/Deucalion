@@ -1,12 +1,10 @@
-using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 
 namespace Deucalion.Storage;
 
-public class SqliteStorage : IStorage, IDisposable // Add IDisposable
+public sealed class SqliteStorage : IStorage, IDisposable
 {
     private const string EventsTableName = "Events";
-    private const string MonitorStateChangesTableName = "MonitorStateChanges";
 
     private readonly string _connectionString;
     private readonly string _dbFile;
@@ -44,24 +42,19 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             CREATE INDEX IF NOT EXISTS IX_{EventsTableName}_MonitorName_TimestampTicks
             ON {EventsTableName} (MonitorName, TimestampTicks DESC);
 
-            CREATE TABLE IF NOT EXISTS {MonitorStateChangesTableName} (
-                MonitorName TEXT PRIMARY KEY,
-                LastSeenUpTicks INTEGER NULL,
-                LastSeenDownTicks INTEGER NULL
-            );
+            -- Was written on every state change but never read by any client; the UI derives
+            -- incident runs from the event window it already has. Dropped so existing databases
+            -- do not keep an orphan table around.
+            DROP TABLE IF EXISTS MonitorStateChanges;
         """;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<MonitorStats?> GetStatsAsync(string monitorName, int historyCount = 60, CancellationToken cancellationToken = default)
     {
-        DateTimeOffset? lastSeenUp = null;
-        DateTimeOffset? lastSeenDown = null;
-
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        long? lastEventTimestampTicks = null;
         MonitorState? lastEventState = null;
         long relevantEventCount = 0;
         long downEventCount = 0;
@@ -69,13 +62,8 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         using (var command = connection.CreateCommand())
         {
             command.CommandText = $"""
-                WITH LastSeen AS (
-                    SELECT LastSeenUpTicks, LastSeenDownTicks
-                    FROM {MonitorStateChangesTableName}
-                    WHERE MonitorName = @MonitorName
-                ),
-                LastEvent AS (
-                    SELECT TimestampTicks, State
+                WITH LastEvent AS (
+                    SELECT State
                     FROM {EventsTableName}
                     WHERE MonitorName = @MonitorName
                     ORDER BY TimestampTicks DESC
@@ -89,9 +77,6 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
                     LIMIT @HistoryCount
                 )
                 SELECT
-                    (SELECT LastSeenUpTicks FROM LastSeen) AS LastSeenUpTicks,
-                    (SELECT LastSeenDownTicks FROM LastSeen) AS LastSeenDownTicks,
-                    (SELECT TimestampTicks FROM LastEvent) AS LastEventTimestampTicks,
                     (SELECT State FROM LastEvent) AS LastEventState,
                     (SELECT COALESCE(SUM(CASE WHEN State IN ({(int)MonitorState.Down}, {(int)MonitorState.Up}, {(int)MonitorState.Warn}, {(int)MonitorState.Degraded}) THEN 1 ELSE 0 END), 0) FROM RecentEvents) AS RelevantEventCount,
                     (SELECT COALESCE(SUM(CASE WHEN State = {(int)MonitorState.Down} THEN 1 ELSE 0 END), 0) FROM RecentEvents) AS DownEventCount;
@@ -102,15 +87,9 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             using var reader = await command.ExecuteReaderAsync(cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
-                var lastSeenUpTicks = reader.IsDBNull(0) ? (long?)null : reader.GetInt64(0);
-                var lastSeenDownTicks = reader.IsDBNull(1) ? (long?)null : reader.GetInt64(1);
-                if (lastSeenUpTicks.HasValue) lastSeenUp = new DateTimeOffset(lastSeenUpTicks.Value, TimeSpan.Zero);
-                if (lastSeenDownTicks.HasValue) lastSeenDown = new DateTimeOffset(lastSeenDownTicks.Value, TimeSpan.Zero);
-
-                lastEventTimestampTicks = reader.IsDBNull(2) ? (long?)null : reader.GetInt64(2);
-                lastEventState = reader.IsDBNull(3) ? (MonitorState?)null : (MonitorState)reader.GetInt64(3);
-                relevantEventCount = reader.IsDBNull(4) ? 0 : reader.GetInt64(4);
-                downEventCount = reader.IsDBNull(5) ? 0 : reader.GetInt64(5);
+                lastEventState = reader.IsDBNull(0) ? (MonitorState?)null : (MonitorState)reader.GetInt64(0);
+                relevantEventCount = reader.IsDBNull(1) ? 0 : reader.GetInt64(1);
+                downEventCount = reader.IsDBNull(2) ? 0 : reader.GetInt64(2);
             }
         }
 
@@ -140,12 +119,10 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             }
         }
 
-        if (!lastEventTimestampTicks.HasValue || !lastEventState.HasValue)
+        if (!lastEventState.HasValue)
         {
-            // There are no events at all. Return based on LastSeenUp/Down or null
-            return (lastSeenUp.HasValue || lastSeenDown.HasValue)
-                ? new MonitorStats(MonitorState.Unknown, DateTimeOffset.MinValue, 0, TimeSpan.Zero, LastSeenDown: lastSeenDown, LastSeenUp: lastSeenUp)
-                : null;
+            // No events at all for this monitor.
+            return null;
         }
 
         // Calculate final stats
@@ -156,7 +133,6 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
             availability = 100.0 * availableCount / relevantEventCount;
         }
 
-        var averageResponseTime = TimeSpan.Zero;
         TimeSpan? minResponseTime = null;
         TimeSpan? p50 = null;
         TimeSpan? p95 = null;
@@ -164,7 +140,6 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
 
         if (responseTimes.Count > 0)
         {
-            averageResponseTime = TimeSpan.FromTicks((long)responseTimes.Average());
             var sorted = responseTimes.ToArray();
             Array.Sort(sorted);
             minResponseTime = TimeSpan.FromTicks(sorted[0]);
@@ -175,16 +150,12 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
 
         return new MonitorStats(
             LastState: lastEventState.Value,
-            LastUpdate: new DateTimeOffset(lastEventTimestampTicks.Value, TimeSpan.Zero),
             Availability: availability,
-            AverageResponseTime: averageResponseTime,
             MinResponseTime: minResponseTime,
             Latency50: p50,
             Latency95: p95,
             Latency99: p99,
-            SampleCount: responseTimes.Count,
-            LastSeenDown: lastSeenDown,
-            LastSeenUp: lastSeenUp
+            SampleCount: responseTimes.Count
         );
     }
 
@@ -237,48 +208,23 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
+        // Upsert: (MonitorName, TimestampTicks) is the primary key, and DateTimeOffset.UtcNow's
+        // ~15.6ms granularity on Windows means two rapid probes -- e.g. back-to-back check-ins,
+        // which short-circuit the poll delay -- can share a timestamp. A plain INSERT threw
+        // SqliteException there, and the event was logged as an error and dropped.
         command.CommandText = $"""
             INSERT INTO {EventsTableName} (MonitorName, TimestampTicks, State, ResponseTimeTicks, ResponseText)
-            VALUES (@MonitorName, @TimestampTicks, @State, @ResponseTimeTicks, @ResponseText);
+            VALUES (@MonitorName, @TimestampTicks, @State, @ResponseTimeTicks, @ResponseText)
+            ON CONFLICT(MonitorName, TimestampTicks) DO UPDATE SET
+                State = excluded.State,
+                ResponseTimeTicks = excluded.ResponseTimeTicks,
+                ResponseText = excluded.ResponseText;
         """;
         command.Parameters.AddWithValue("@MonitorName", monitorName);
         command.Parameters.AddWithValue("@TimestampTicks", storedEvent.At.UtcTicks);
         command.Parameters.AddWithValue("@State", (int)storedEvent.State);
         command.Parameters.AddWithValue("@ResponseTimeTicks", storedEvent.ResponseTime?.Ticks ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@ResponseText", storedEvent.ResponseText ?? (object)DBNull.Value);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    public async Task SaveLastStateChangeAsync(string monitorName, DateTimeOffset at, MonitorState state, CancellationToken cancellationToken = default)
-    {
-        if (state != MonitorState.Up && state != MonitorState.Down)
-        {
-            return;
-        }
-
-        // Create connection per operation
-        using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        using var command = connection.CreateCommand();
-        command.CommandText = $"""
-            INSERT INTO {MonitorStateChangesTableName} (MonitorName, LastSeenUpTicks, LastSeenDownTicks)
-            VALUES (@MonitorName,
-                    CASE WHEN @State = {(int)MonitorState.Up} THEN @TimestampTicks ELSE NULL END,
-                    CASE WHEN @State = {(int)MonitorState.Down} THEN @TimestampTicks ELSE NULL END)
-            ON CONFLICT(MonitorName) DO
-                UPDATE SET
-                    LastSeenUpTicks = CASE WHEN @State = {(int)MonitorState.Up} THEN @TimestampTicks
-                                        ELSE LastSeenUpTicks -- Use existing value
-                                    END,
-                    LastSeenDownTicks = CASE WHEN @State = {(int)MonitorState.Down} THEN @TimestampTicks
-                                            ELSE LastSeenDownTicks -- Use existing value
-                                        END
-                WHERE @State = {(int)MonitorState.Up} OR @State = {(int)MonitorState.Down};
-        """;
-        command.Parameters.AddWithValue("@MonitorName", monitorName);
-        command.Parameters.AddWithValue("@TimestampTicks", at.UtcTicks);
-        command.Parameters.AddWithValue("@State", (int)state);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -310,42 +256,17 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         """;
         command.Parameters.AddWithValue("@CutoffTicks", cutoffTicks);
 
-        var stopwatch = Stopwatch.StartNew();
-        var deletedRows = await command.ExecuteNonQueryAsync(cancellationToken);
-        stopwatch.Stop();
-
-        // Optional: Log the operation details
-        // Consider injecting ILogger if logging is desired here
-        Debug.WriteLine($"Purged {deletedRows} events older than {cutoffTimestamp:O} ({retentionPeriod}) in {stopwatch.ElapsedMilliseconds}ms.");
-
-        return deletedRows;
+        // The caller (PurgeBackgroundService) logs the outcome with a real logger.
+        return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    #region IDisposable
-    private bool _disposed = false;
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
-        {
-            if (disposing)
-            {
-                using var connection = new SqliteConnection(_connectionString);
-                SqliteConnection.ClearPool(connection);
-            }
-
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // No unmanaged resources currently, but good practice to have the structure.
-
-            _disposed = true;
-        }
-    }
-
+    /// <summary>
+    /// Releases the pooled connections, and with them the database file handle. There are no
+    /// unmanaged resources, so no finalizer or disposal flag is needed.
+    /// </summary>
     public void Dispose()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+        using var connection = new SqliteConnection(_connectionString);
+        SqliteConnection.ClearPool(connection);
     }
-    #endregion
 }
