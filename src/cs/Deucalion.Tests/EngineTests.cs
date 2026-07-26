@@ -1,4 +1,4 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
 using Deucalion.Application;
 using Deucalion.Events;
 using Deucalion.Monitors;
@@ -9,171 +9,220 @@ using Xunit;
 
 namespace Deucalion.Tests;
 
+/// <summary>
+/// Covers <see cref="MonitorExtensions.RunAllAsync"/>: several monitors polling concurrently and
+/// multiplexing into one channel. The per-monitor state machine is covered by
+/// <see cref="MonitorStateMachineTests"/>.
+/// </summary>
 public class EngineTests
 {
-    [Fact]
-    public async Task Engine_ReceiveEventsFromPushMonitors()
+    /// <summary>
+    /// Drives a set of monitors on a fake clock and lets tests wait for specific events rather
+    /// than for a duration.
+    /// </summary>
+    private sealed class EngineHarness : IAsyncDisposable
     {
-        var cancellationToken = TestContext.Current.CancellationToken;
-        var fakeTime = new FakeTimeProvider();
-        var pulse = TimeSpan.FromSeconds(1);
-        CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.1, TimeProvider = fakeTime };
-        CheckInMonitor m2 = new() { Name = "m2", IntervalToDown = pulse * 1.1, TimeProvider = fakeTime };
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        IEnumerable<PullMonitor> monitors = [m1, m2];
-        var engineTask = RunMonitorsAsync(monitors, channel.Writer, cts);
+        private readonly Channel<IMonitorEvent> _channel = Channel.CreateUnbounded<IMonitorEvent>();
+        private readonly CancellationTokenSource _cts;
+        private readonly Task _engineTask;
+        private readonly List<IMonitorEvent> _observed = [];
 
-        // Reproduce the check-in sequence with virtual time
-        await SettleAsync();
-        fakeTime.Advance(pulse / 2);
-        m1.CheckIn();
-        m2.CheckIn();
-        await SettleAsync();
-        fakeTime.Advance(pulse);
-        m1.CheckIn();
-        await SettleAsync();
-        fakeTime.Advance(pulse);
-        m2.CheckIn();
-        await SettleAsync();
-        fakeTime.Advance(pulse);
-        m1.CheckIn();
-        m2.CheckIn();
-        await SettleAsync();
+        public FakeTimeProvider Time { get; } = new();
 
-        cts.Cancel();
-        try { await engineTask; } catch (OperationCanceledException) { }
-        var events = CollectEvents(channel.Reader);
-
-        // Instead of strict event counts, just assert that each monitor eventually goes Down
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m1" && sc.NewState == MonitorState.Down);
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m2" && sc.NewState == MonitorState.Down);
-    }
-
-    [Fact]
-    public async Task Engine_QueryPullMonitors()
-    {
-        var cancellationToken = TestContext.Current.CancellationToken;
-        var fakeTime = new FakeTimeProvider();
-        var pulse = TimeSpan.FromSeconds(1);
-        PullMonitorMock m1 = new(
-            (MonitorState.Unknown, pulse / 2),
-            (MonitorState.Up, pulse),
-            (MonitorState.Down, pulse),
-            (MonitorState.Up, pulse)
-            )
-        { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse, TimeProvider = fakeTime };
-        PullMonitorMock m2 = new(
-            (MonitorState.Unknown, pulse / 2),
-            (MonitorState.Down, pulse),
-            (MonitorState.Up, pulse),
-            (MonitorState.Up, pulse)
-            )
-        { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse, TimeProvider = fakeTime };
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        IEnumerable<PullMonitor> monitors = [m1, m2];
-        var engineTask = RunMonitorsAsync(monitors, channel.Writer, cts);
-
-        // First iteration runs immediately; advance through 3 more
-        await SettleAsync();
-        for (var i = 0; i < 3; i++)
+        public EngineHarness(CancellationToken cancellationToken, params PullMonitor[] monitors)
         {
-            fakeTime.Advance(pulse);
-            await SettleAsync();
+            foreach (var monitor in monitors)
+            {
+                monitor.TimeProvider = Time;
+            }
+
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cts.CancelAfter(TimeSpan.FromSeconds(20));
+            _engineTask = monitors.RunAllAsync(_channel.Writer, _cts.Token);
         }
 
-        cts.Cancel();
-        try { await engineTask; } catch (OperationCanceledException) { }
-        var events = CollectEvents(channel.Reader);
+        /// <summary>
+        /// Collects events until <paramref name="done"/> holds, advancing virtual time by
+        /// <paramref name="step"/> whenever the reader has nothing left.
+        /// </summary>
+        /// <remarks>
+        /// The advance is retried rather than issued once, because a monitor may not have reached
+        /// its Task.Delay when the first advance lands -- a real race that a fixed sleep only
+        /// papers over. Waiting on the events themselves is what makes this deterministic; the
+        /// cost is that virtual time moves by an unknown number of steps, so tests assert on
+        /// ordered state sequences rather than on raw event counts.
+        /// </remarks>
+        public async Task<IReadOnlyList<IMonitorEvent>> CollectUntilAsync(
+            TimeSpan step, Func<IReadOnlyList<IMonitorEvent>, bool> done)
+        {
+            while (true)
+            {
+                while (_channel.Reader.TryRead(out var evt))
+                {
+                    _observed.Add(evt);
+                }
 
-        // Assert that each monitor transitions through Up and Down at least once
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m1" && sc.NewState == MonitorState.Up);
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m1" && sc.NewState == MonitorState.Down);
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m2" && sc.NewState == MonitorState.Up);
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m2" && sc.NewState == MonitorState.Down);
+                if (done(_observed))
+                {
+                    return _observed;
+                }
+
+                _cts.Token.ThrowIfCancellationRequested();
+                Time.Advance(step);
+
+                for (var i = 0; i < 20 && _channel.Reader.Count == 0; i++)
+                {
+                    await Task.Yield();
+                }
+            }
+        }
+
+        /// <summary>Waits until <paramref name="name"/> has produced <paramref name="count"/> state changes.</summary>
+        public async Task<MonitorState[]> StateChangesAsync(string name, int count, TimeSpan step)
+        {
+            var events = await CollectUntilAsync(step, all => StatesOf(all, name).Length >= count);
+            return [.. StatesOf(events, name).Take(count)];
+        }
+
+        private static MonitorState[] StatesOf(IReadOnlyList<IMonitorEvent> events, string name) =>
+            [.. events.OfType<MonitorStateChanged>().Where(e => e.Name == name).Select(e => e.NewState)];
+
+        public async ValueTask DisposeAsync()
+        {
+            await _cts.CancelAsync();
+            try { await _engineTask; } catch (OperationCanceledException) { }
+            _cts.Dispose();
+        }
     }
 
     [Fact]
-    public async Task Engine_QueryPullMonitors_WithDifferentIntervalWhenDown()
+    public async Task RunAllAsync_PollsEveryMonitorConcurrently()
     {
-        var cancellationToken = TestContext.Current.CancellationToken;
-        var fakeTime = new FakeTimeProvider();
+        var pulse = TimeSpan.FromSeconds(1);
+        PullMonitorMock m1 = new((MonitorState.Up, pulse))
+        { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
+        PullMonitorMock m2 = new((MonitorState.Down, pulse))
+        { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
+        PullMonitorMock m3 = new((MonitorState.Warn, pulse))
+        { Name = "m3", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
+
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, m1, m2, m3);
+
+        var events = await harness.CollectUntilAsync(pulse, all =>
+            all.OfType<MonitorChecked>().Select(e => e.Name).Distinct().Count() == 3);
+
+        // One channel carries all three monitors' events.
+        Assert.Equal(["m1", "m2", "m3"], events.OfType<MonitorChecked>().Select(e => e.Name).Distinct().Order());
+    }
+
+    [Fact]
+    public async Task RunAllAsync_ReportsEachMonitorsTransitionsInOrder()
+    {
         var pulse = TimeSpan.FromSeconds(1);
         PullMonitorMock m1 = new(
-            (MonitorState.Unknown, pulse / 2),
-            (MonitorState.Up, pulse * 2),
-            (MonitorState.Down, pulse * 2),
-            (MonitorState.Up, pulse)
-            )
-        { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse / 5, TimeProvider = fakeTime };
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        IEnumerable<PullMonitor> monitors = [m1];
-        var engineTask = RunMonitorsAsync(monitors, channel.Writer, cts);
+            (MonitorState.Up, pulse), (MonitorState.Down, pulse), (MonitorState.Up, pulse))
+        { Name = "m1", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
+        PullMonitorMock m2 = new(
+            (MonitorState.Down, pulse), (MonitorState.Up, pulse), (MonitorState.Down, pulse))
+        { Name = "m2", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
 
-        // Iter 1 (immediate): Unknown → delay = IntervalWhenUp = pulse
-        await SettleAsync();
-        // Iter 2: Up → delay = IntervalWhenUp = pulse
-        fakeTime.Advance(pulse);
-        await SettleAsync();
-        // Iter 3: Down → delay = IntervalWhenDown = pulse/5
-        fakeTime.Advance(pulse);
-        await SettleAsync();
-        // Iter 4: Up
-        fakeTime.Advance(pulse / 5);
-        await SettleAsync();
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, m1, m2);
 
-        cts.Cancel();
-        try { await engineTask; } catch (OperationCanceledException) { }
-        var events = CollectEvents(channel.Reader);
-
-        // Assert that the monitor transitions through Up and Down at least once
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m1" && sc.NewState == MonitorState.Up);
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m1" && sc.NewState == MonitorState.Down);
+        // Exact ordered sequences, not "contains a Down somewhere".
+        Assert.Equal(
+            [MonitorState.Up, MonitorState.Down, MonitorState.Up],
+            await harness.StateChangesAsync("m1", 3, pulse));
+        Assert.Equal(
+            [MonitorState.Down, MonitorState.Up, MonitorState.Down],
+            await harness.StateChangesAsync("m2", 3, pulse));
     }
 
     [Fact]
-    public async Task Engine_PushMonitor_RepeatedDownState_GeneratesEvent()
+    public async Task RunAllAsync_OneFailingMonitorDoesNotStopTheOthers()
     {
-        var cancellationToken = TestContext.Current.CancellationToken;
-        var fakeTime = new FakeTimeProvider();
         var pulse = TimeSpan.FromSeconds(1);
-        CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse * 1.5, TimeProvider = fakeTime };
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        IEnumerable<PullMonitor> monitors = [m1];
-        var engineTask = RunMonitorsAsync(monitors, channel.Writer, cts);
+        var boom = new ScriptedMonitor(_ => throw new InvalidOperationException("boom"))
+        { Name = "boom", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
+        PullMonitorMock healthy = new((MonitorState.Up, pulse))
+        { Name = "healthy", IntervalWhenUp = pulse, IntervalWhenDown = pulse };
 
-        // First iteration runs immediately → Down (no check-in)
-        // CheckInMonitor uses default IntervalWhenDown = 15s
-        await SettleAsync();
-        // Advance past the delay to trigger a second iteration (still Down)
-        fakeTime.Advance(PullMonitor.DefaultIntervalWhenDown);
-        await SettleAsync();
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, boom, healthy);
 
-        cts.Cancel();
-        try { await engineTask; } catch (OperationCanceledException) { }
-        var events = CollectEvents(channel.Reader);
-
-        // Assert that the monitor goes Down at least once
-        Assert.Contains(events, e => e is MonitorStateChanged sc && sc.Name == "m1" && sc.NewState == MonitorState.Down);
-        Assert.Contains(events, e => e is MonitorChecked mc && mc.Name == "m1" && mc.Response is { State: MonitorState.Down });
+        Assert.Equal([MonitorState.Up], await harness.StateChangesAsync("healthy", 1, pulse));
+        // The throwing monitor keeps reporting rather than dropping out of the engine.
+        Assert.Equal([MonitorState.Down], await harness.StateChangesAsync("boom", 1, pulse));
     }
 
-    private static Task RunMonitorsAsync(IEnumerable<PullMonitor> monitors, ChannelWriter<IMonitorEvent> writer, CancellationTokenSource cts)
-        => monitors.RunAllAsync(writer, cts.Token);
-
-    private static List<IMonitorEvent> CollectEvents(ChannelReader<IMonitorEvent> reader)
+    [Fact]
+    public async Task CheckInMonitor_GoesDownWithoutACheckIn()
     {
-        var events = new List<IMonitorEvent>();
-        while (reader.TryRead(out var evt))
-            events.Add(evt);
-        return events;
+        var pulse = TimeSpan.FromSeconds(1);
+        CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse };
+
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, m1);
+
+        Assert.Equal([MonitorState.Down], await harness.StateChangesAsync("m1", 1, pulse));
     }
 
-    /// <summary>
-    /// Allows async continuations (triggered by FakeTimeProvider.Advance) to settle on the thread pool.
-    /// </summary>
-    private static Task SettleAsync() => Task.Delay(10);
+    [Fact]
+    public async Task CheckInMonitor_GoesUpAfterACheckIn_AndBackDownWhenItStops()
+    {
+        var pulse = TimeSpan.FromSeconds(1);
+        CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse };
+
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, m1);
+
+        // First probe: nothing has checked in yet.
+        Assert.Equal([MonitorState.Down], await harness.StateChangesAsync("m1", 1, pulse));
+
+        // Check in, then let the engine observe it.
+        m1.CheckIn();
+        Assert.Equal(
+            [MonitorState.Down, MonitorState.Up],
+            await harness.StateChangesAsync("m1", 2, pulse));
+
+        // Stop checking in: once IntervalToDown lapses it drops back to Down.
+        Assert.Equal(
+            [MonitorState.Down, MonitorState.Up, MonitorState.Down],
+            await harness.StateChangesAsync("m1", 3, pulse));
+    }
+
+    [Fact]
+    public async Task CheckInMonitor_RepeatedDownProbesKeepEmittingCheckedEvents()
+    {
+        var pulse = TimeSpan.FromSeconds(1);
+        CheckInMonitor m1 = new() { Name = "m1", IntervalToDown = pulse };
+
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, m1);
+
+        // A monitor that stays Down still reports every probe -- only the state
+        // *change* is emitted once.
+        var events = await harness.CollectUntilAsync(pulse, all =>
+            all.OfType<MonitorChecked>().Count(e => e.Name == "m1") >= 3);
+
+        Assert.All(
+            events.OfType<MonitorChecked>().Where(e => e.Name == "m1").Take(3),
+            e => Assert.Equal(MonitorState.Down, e.Response?.State));
+        Assert.Single(events.OfType<MonitorStateChanged>(), e => e.Name == "m1");
+    }
+
+    [Fact]
+    public async Task IntervalWhenDown_IsUsedWhileAMonitorIsFailing()
+    {
+        // A short down-interval and a long up-interval: advancing by the short one is
+        // enough to produce further probes only because the monitor is Down.
+        var shortInterval = TimeSpan.FromSeconds(1);
+        var longInterval = TimeSpan.FromMinutes(10);
+        PullMonitorMock m1 = new((MonitorState.Down, shortInterval))
+        { Name = "m1", IntervalWhenUp = longInterval, IntervalWhenDown = shortInterval };
+
+        await using var harness = new EngineHarness(TestContext.Current.CancellationToken, m1);
+
+        var events = await harness.CollectUntilAsync(shortInterval, all =>
+            all.OfType<MonitorChecked>().Count(e => e.Name == "m1") >= 3);
+
+        Assert.True(events.OfType<MonitorChecked>().Count(e => e.Name == "m1") >= 3);
+        Assert.Equal(shortInterval, MonitorExtensions.DelayFor(m1, MonitorState.Down));
+        Assert.Equal(longInterval, MonitorExtensions.DelayFor(m1, MonitorState.Up));
+    }
 }
