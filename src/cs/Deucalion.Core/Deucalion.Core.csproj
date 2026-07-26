@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SharpYaml" Version="3.7.0" />
+    <PackageReference Include="SharpYaml" Version="3.13.0" />
   </ItemGroup>
 
 </Project>
