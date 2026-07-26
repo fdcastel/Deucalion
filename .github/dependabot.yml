@@ -30,6 +30,28 @@ updates:
         update-types:
           - minor
           - patch
+    # These three majors cannot resolve today -- each was opened, failed CI with
+    # ERESOLVE, and was closed (#3, #4, #6, #7). Ignored so they do not reappear
+    # weekly as red noise. Remove the entry once its blocker clears; minor and
+    # patch updates still flow.
+    ignore:
+      # eslint-plugin-solid@0.14.5 (latest) peers eslint "^6 || ^7 || ^8 || ^9".
+      # ESLint 10 is also what closes the brace-expansion advisory, since it moves
+      # minimatch 3.x -> 10.x. Revisit as soon as the plugin supports v10.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: "@eslint/js"
+        update-types: [version-update:semver-major]
+      # typescript-eslint@8.65.0 (latest) peers typescript ">=4.8.4 <6.1.0".
+      # TypeScript 7 is the native port; there is no stable stepping stone either,
+      # as 6.0 is still only published under the `beta` tag.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # vite-plugin-solid@2.11.13 peerOptionals jest-dom "^5.16.6 || ^5.17.0 || ^6.*".
+      # Tried in a previous commit and reverted: it breaks `npm install`, and
+      # therefore `dotnet build`, since deucalion-ui.esproj shells out to npm install.
+      - dependency-name: "@testing-library/jest-dom"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
