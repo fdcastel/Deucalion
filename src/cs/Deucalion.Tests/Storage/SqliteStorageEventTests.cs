@@ -37,6 +37,32 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     }
 
     [Fact]
+    public async Task GetStatsAsync_HistoryCount_BoundsTheAvailabilityWindow()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // 60 older Down events followed by 60 newer Up events. The window size therefore
+        // changes the reported availability -- which is exactly why every caller has to use
+        // PullMonitor.StatsWindow. Without that, the number visibly jumps when the first
+        // live SSE update replaces the initial snapshot.
+        var monitorName = "test-monitor-window";
+        var start = DateTimeOffset.UtcNow.AddMinutes(-200);
+        for (var i = 0; i < 120; i++)
+        {
+            var state = i < 60 ? MonitorState.Down : MonitorState.Up;
+            await Storage.SaveEventAsync(monitorName, new StoredEvent(start.AddMinutes(i), state, TimeSpan.FromMilliseconds(10), null), cancellationToken);
+        }
+
+        var narrow = await Storage.GetStatsAsync(monitorName, historyCount: 60, cancellationToken: cancellationToken);
+        var wide = await Storage.GetStatsAsync(monitorName, historyCount: 120, cancellationToken: cancellationToken);
+
+        Assert.NotNull(narrow);
+        Assert.NotNull(wide);
+        Assert.Equal(100.0, narrow.Availability);
+        Assert.Equal(50.0, wide.Availability);
+    }
+
+    [Fact]
     public async Task SaveEventAsync_SameTimestampTwice_OverwritesInsteadOfThrowing()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

@@ -18,6 +18,11 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     // override it via env var, which IConfiguration picks up first.
     private const string ConfigurationFileEnvVar = "Deucalion__ConfigurationFile";
 
+    // Without this the storage path falls back to Path.Combine(Path.GetTempPath(), "Deucalion")
+    // -- a machine-global database shared with any locally running dev instance, written to by
+    // every test class instance, and never cleaned up.
+    private const string StoragePathEnvVar = "Deucalion__StoragePath";
+
     private readonly string _tempPath;
     private readonly string _configurationPath;
     private readonly TestApiFactory _factory;
@@ -29,12 +34,15 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 
         Directory.CreateDirectory(_tempPath);
 
+        // Long intervals on purpose: the engine probes each monitor exactly once at host start
+        // and never again during the test, so it cannot race assertions about stored events.
+        // Check-in monitors short-circuit their delay, so the SSE test still works.
         File.WriteAllText(_configurationPath,
             """
             defaults:
-              intervalWhenUp: 00:00:00.250
-              intervalWhenDown: 00:00:00.250
-              intervalToDown: 00:00:02
+              intervalWhenUp: 00:05:00
+              intervalWhenDown: 00:05:00
+              intervalToDown: 00:05:00
 
             monitors:
               web-main: !http
@@ -50,6 +58,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
             """);
 
         Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, _configurationPath);
+        Environment.SetEnvironmentVariable(StoragePathEnvVar, Path.Combine(_tempPath, "storage"));
 
         _factory = new TestApiFactory();
     }
@@ -76,7 +85,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     {
         using var scope = _factory.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
-        var now = DateTimeOffset.UtcNow;
+        // Ahead of now: DateTimeOffset.UtcNow has ~15.6ms granularity on Windows, so this
+        // guarantees the test's event sorts after the engine's single start-up probe.
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
 
         await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(123), null), TestContext.Current.CancellationToken);
 
@@ -209,24 +220,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     public void Dispose()
     {
         Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, null);
+        Environment.SetEnvironmentVariable(StoragePathEnvVar, null);
 
-        const int maxAttempts = 5;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                if (Directory.Exists(_tempPath))
-                {
-                    Directory.Delete(_tempPath, true);
-                }
-
-                break;
-            }
-            catch (IOException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(50 * attempt);
-            }
-        }
+        TestPaths.DeleteWithRetry(_tempPath);
     }
 
     private sealed class TestApiFactory : WebApplicationFactory<Program>

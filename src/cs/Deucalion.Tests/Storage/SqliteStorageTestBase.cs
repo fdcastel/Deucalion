@@ -58,32 +58,11 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
     {
         if (disposing)
         {
-            // Explicitly close and dispose the storage to release the file lock
-            (Storage as IDisposable)?.Dispose();
+            // Explicitly dispose the storage first -- it clears the connection pool, which
+            // releases the database file handle before we try to delete the directory.
+            Storage.Dispose();
 
-            const int maxAttempts = 5;
-            for (var attempt = 1; attempt <= maxAttempts; attempt++)
-            {
-                try
-                {
-                    if (Directory.Exists(StoragePath))
-                    {
-                        Directory.Delete(StoragePath, true);
-                    }
-
-                    break;
-                }
-                catch (IOException ex) when (attempt < maxAttempts)
-                {
-                    Console.WriteLine($"Retrying test directory cleanup for {StoragePath} (attempt {attempt}/{maxAttempts}): {ex.Message}");
-                    Thread.Sleep(50 * attempt);
-                }
-                catch (IOException ex)
-                {
-                    Console.WriteLine($"Warning: Could not delete test directory {StoragePath}. {ex.Message}");
-                    break;
-                }
-            }
+            TestPaths.DeleteWithRetry(StoragePath);
         }
     }
 }
