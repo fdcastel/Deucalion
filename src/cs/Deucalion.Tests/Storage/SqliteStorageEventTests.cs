@@ -37,6 +37,28 @@ public class SqliteStorageEventTests : SqliteStorageTestBase
     }
 
     [Fact]
+    public async Task SaveEventAsync_SameTimestampTwice_OverwritesInsteadOfThrowing()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // (MonitorName, TimestampTicks) is the primary key. DateTimeOffset.UtcNow has ~15.6ms
+        // granularity on Windows and CheckIn() short-circuits the poll delay, so two rapid
+        // check-ins really can collide -- that must not throw and drop the event.
+        var monitorName = "test-monitor-duplicate";
+        var timestamp = DateTimeOffset.UtcNow;
+
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(timestamp, MonitorState.Down, TimeSpan.FromMilliseconds(10), "first"), cancellationToken);
+        await Storage.SaveEventAsync(monitorName, new StoredEvent(timestamp, MonitorState.Up, TimeSpan.FromMilliseconds(20), "second"), cancellationToken);
+
+        var events = (await Storage.GetLastEventsAsync(monitorName, cancellationToken: cancellationToken)).ToList();
+
+        var single = Assert.Single(events);
+        Assert.Equal(MonitorState.Up, single.State);
+        Assert.Equal(TimeSpan.FromMilliseconds(20), single.ResponseTime);
+        Assert.Equal("second", single.ResponseText);
+    }
+
+    [Fact]
     public async Task SaveEventAsync_UpdatesStatsCorrectly()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

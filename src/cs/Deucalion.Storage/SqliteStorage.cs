@@ -237,9 +237,17 @@ public class SqliteStorage : IStorage, IDisposable // Add IDisposable
         await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
+        // Upsert: (MonitorName, TimestampTicks) is the primary key, and DateTimeOffset.UtcNow's
+        // ~15.6ms granularity on Windows means two rapid probes -- e.g. back-to-back check-ins,
+        // which short-circuit the poll delay -- can share a timestamp. A plain INSERT threw
+        // SqliteException there, and the event was logged as an error and dropped.
         command.CommandText = $"""
             INSERT INTO {EventsTableName} (MonitorName, TimestampTicks, State, ResponseTimeTicks, ResponseText)
-            VALUES (@MonitorName, @TimestampTicks, @State, @ResponseTimeTicks, @ResponseText);
+            VALUES (@MonitorName, @TimestampTicks, @State, @ResponseTimeTicks, @ResponseText)
+            ON CONFLICT(MonitorName, TimestampTicks) DO UPDATE SET
+                State = excluded.State,
+                ResponseTimeTicks = excluded.ResponseTimeTicks,
+                ResponseText = excluded.ResponseText;
         """;
         command.Parameters.AddWithValue("@MonitorName", monitorName);
         command.Parameters.AddWithValue("@TimestampTicks", storedEvent.At.UtcTicks);
