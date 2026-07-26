@@ -29,6 +29,7 @@ public record ApplicationConfiguration
 
         public const string ConfigurationMonitorCannotBeEmpty = "Monitor '{0}' cannot be empty.";
         public const string ConfigurationInvalidTimeSpan = "Monitor '{0}': '{1}' must be a positive value, but was '{2}'.";
+        public const string ConfigurationUnknownMonitorType = "Monitor '{0}': missing or unknown type tag. Expected one of: !ping, !tcp, !dns, !http, !checkin.";
     }
 
     public ConfigurationDefaults? Defaults { get; set; }
@@ -47,17 +48,30 @@ public record ApplicationConfiguration
         {
             return ReadFromString(content);
         }
-        catch (ConfigurationErrorException)
+        catch (ConfigurationErrorException ex) when (ex.InnerException is YamlException)
         {
-            throw;
-        }
-        catch (YamlException ex)
-        {
-            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileParseError, configurationFile, ex.Message), ex);
+            // Re-wrap so the message names the offending file.
+            throw new ConfigurationErrorException(
+                string.Format(Messages.ConfigurationFileParseError, configurationFile, ex.InnerException.Message), ex.InnerException);
         }
     }
 
     public static ApplicationConfiguration ReadFromString(string content)
+    {
+        try
+        {
+            return Parse(content);
+        }
+        catch (YamlException ex)
+        {
+            // SharpYaml validates 'required' members at deserialization time. Surface those --
+            // and any other malformed-document error -- as a configuration error, so both entry
+            // points report the same exception type.
+            throw new ConfigurationErrorException(string.Format(Messages.ConfigurationFileParseError, "<string>", ex.Message), ex);
+        }
+    }
+
+    private static ApplicationConfiguration Parse(string content)
     {
         var options = new YamlSerializerOptions
         {
@@ -79,6 +93,14 @@ public record ApplicationConfiguration
             if (monitor.Value is null)
             {
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, monitor.Key));
+            }
+
+            // PullMonitorConfiguration is declared with UnknownDerivedTypeHandling.FallBackToBase,
+            // so a typo'd or missing tag silently deserializes to the base type. Left alone it
+            // passes validation and blows up later as a NotImplementedException in BuildFrom.
+            if (monitor.Value.GetType() == typeof(PullMonitorConfiguration))
+            {
+                throw new ConfigurationErrorException(string.Format(Messages.ConfigurationUnknownMonitorType, monitor.Key));
             }
 
             // Interpolate ${MONITOR_NAME} placeholders

@@ -329,47 +329,25 @@ public class ConfigurationTests
     private static ConfigurationErrorException CatchConfigurationException(string configurationContent) =>
         Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
 
-    [Fact]
-    public void HttpMonitor_MissingUrl_Throws()
+    [Theory]
+    [InlineData("mhttp", "!http", "expectedStatusCode: 200")]      // missing url
+    [InlineData("mping", "!ping", "timeout: 00:00:05")]            // missing host
+    [InlineData("mtcp", "!tcp", "port: 8080")]                     // missing host
+    [InlineData("mdns", "!dns", "recordType: A")]                  // missing host
+    public void Monitor_MissingRequiredField_Throws(string monitorName, string tag, string fieldLine)
     {
-        const string ConfigurationContent = @"
+        var configurationContent = $@"
             monitors:
-              mhttp:
-                !http
-                expectedStatusCode: 200
+              {monitorName}:
+                {tag}
+                {fieldLine}
         ";
 
-        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+        CatchConfigurationException(configurationContent);
     }
 
     [Fact]
-    public void PingMonitor_MissingHost_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mping:
-                !ping
-                timeout: 00:00:05
-        ";
-
-        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
-    }
-
-    [Fact]
-    public void TcpMonitor_MissingHost_Throws()
-    {
-        const string ConfigurationContent = @"
-            monitors:
-              mtcp:
-                !tcp
-                port: 8080
-        ";
-
-        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
-    }
-
-    [Fact]
-    public void InvalidTypeTag_DeserializesAsBaseConfiguration()
+    public void InvalidTypeTag_Throws()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -378,13 +356,15 @@ public class ConfigurationTests
                 host: example.com
         ";
 
-        // SharpYaml: unknown tags in tag-based polymorphism silently fall back to base type
-        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        Assert.IsType<PullMonitorConfiguration>(monitor);
+        // SharpYaml falls back to the base type for unknown tags; we must reject that
+        // up front rather than let it fail later while building the live monitor.
+        var exception = CatchConfigurationException(ConfigurationContent);
+        Assert.Contains("mfoo", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("!ping", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void MonitorWithoutTypeTag_DeserializesAsBaseConfiguration()
+    public void MonitorWithoutTypeTag_Throws()
     {
         const string ConfigurationContent = @"
             monitors:
@@ -392,8 +372,24 @@ public class ConfigurationTests
                 intervalWhenUp: 00:00:10
         ";
 
-        var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
-        Assert.IsType<PullMonitorConfiguration>(monitor);
+        var exception = CatchConfigurationException(ConfigurationContent);
+        Assert.Contains("mbase", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HttpMonitor_MalformedUrl_ThrowsWhenBuildingMonitors()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mhttp:
+                !http
+                url: 'not a url'
+        ";
+
+        var configuration = ApplicationConfiguration.ReadFromString(ConfigurationContent);
+
+        var exception = Assert.Throws<ConfigurationErrorException>(() => ApplicationMonitors.BuildFrom(configuration));
+        Assert.Contains("mhttp", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -404,9 +400,7 @@ public class ConfigurationTests
               intervalWhenUp: 00:00:10
         ";
 
-        // SharpYaml 3.7.0 validates 'required' at deserialization time, throwing YamlException
-        // with location info before the application-level null check can fire.
-        Assert.ThrowsAny<Exception>(() => ApplicationConfiguration.ReadFromString(ConfigurationContent));
+        CatchConfigurationException(ConfigurationContent);
     }
 
     private static ApplicationConfiguration ReadConfiguration(string configurationContent)
