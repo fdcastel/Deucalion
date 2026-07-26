@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -18,10 +19,32 @@ public class HttpMonitor : PullMonitor
 
     private const int MaxResponseBodySize = 1024 * 1024; // 1 MB
 
+    // A config-supplied pattern is effectively untrusted input: without a bound, catastrophic
+    // backtracking would wedge this monitor's polling loop indefinitely.
+    private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(1);
+
     public required Uri Url { get; set; }
 
     public HttpStatusCode? ExpectedStatusCode { get; set; }
-    public string? ExpectedResponseBodyPattern { get; set; }
+
+    private string? _expectedResponseBodyPattern;
+    private Regex? _bodyPattern;
+
+    /// <summary>
+    /// Compiled once on assignment rather than per probe, so an invalid pattern fails while
+    /// building monitors from configuration (reported as a ConfigurationErrorException) instead
+    /// of throwing from inside the first probe.
+    /// </summary>
+    public string? ExpectedResponseBodyPattern
+    {
+        get => _expectedResponseBodyPattern;
+        set
+        {
+            _bodyPattern = value is null ? null : new Regex(value, RegexOptions.None, RegexMatchTimeout);
+            _expectedResponseBodyPattern = value;
+        }
+    }
+
     public bool? IgnoreCertificateErrors { get; set; }
     public HttpMethod? Method { get; set; }
 
@@ -66,15 +89,36 @@ public class HttpMonitor : PullMonitor
                 return MonitorResponse.Down(stopwatch.Elapsed, response.ReasonPhrase ?? response.StatusCode.ToString());
             }
 
-            if (ExpectedResponseBodyPattern is not null)
+            if (_bodyPattern is not null)
             {
                 using var stream = await response.Content.ReadAsStreamAsync(timeoutCts.Token);
                 using var reader = new StreamReader(stream, Encoding.UTF8);
-                var buffer = new char[MaxResponseBodySize];
-                var charsRead = await reader.ReadBlockAsync(buffer.AsMemory(0, MaxResponseBodySize), timeoutCts.Token);
-                var responseBody = new string(buffer, 0, charsRead);
 
-                if (!Regex.IsMatch(responseBody, ExpectedResponseBodyPattern))
+                // Rented, not allocated: a 1 MB char[] is 2 MB on the large object heap, and this
+                // runs on every probe of every monitor that has a body pattern.
+                var buffer = ArrayPool<char>.Shared.Rent(MaxResponseBodySize);
+                string responseBody;
+                try
+                {
+                    var charsRead = await reader.ReadBlockAsync(buffer.AsMemory(0, MaxResponseBodySize), timeoutCts.Token);
+                    responseBody = new string(buffer, 0, charsRead);
+                }
+                finally
+                {
+                    ArrayPool<char>.Shared.Return(buffer);
+                }
+
+                bool matched;
+                try
+                {
+                    matched = _bodyPattern.IsMatch(responseBody);
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    return MonitorResponse.Down(stopwatch.Elapsed, "Response body pattern timed out");
+                }
+
+                if (!matched)
                 {
                     var truncatedBody = responseBody.Length <= 60
                         ? responseBody
