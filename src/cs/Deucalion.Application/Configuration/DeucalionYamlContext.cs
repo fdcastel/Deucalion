@@ -14,7 +14,7 @@ namespace Deucalion.Application.Configuration;
 [YamlSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
-    Converters = [typeof(UriConverter), typeof(IPEndPointConverter), typeof(HttpMethodConverter)])]
+    Converters = [typeof(IPEndPointConverter), typeof(HttpMethodConverter)])]
 [YamlSerializable(typeof(ApplicationConfiguration))]
 [YamlSerializable(typeof(ApplicationConfiguration.ConfigurationDefaults))]
 [YamlSerializable(typeof(PullMonitorConfiguration))]

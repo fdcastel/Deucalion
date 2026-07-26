@@ -78,7 +78,7 @@ public record ApplicationConfiguration
             TypeInfoResolver = DeucalionYamlContext.Default,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
-            Converters = [new UriConverter(), new IPEndPointConverter(), new HttpMethodConverter()],
+            Converters = [new IPEndPointConverter(), new HttpMethodConverter()],
         };
 
         var result = YamlSerializer.Deserialize<ApplicationConfiguration>(content, options)
@@ -112,7 +112,7 @@ public record ApplicationConfiguration
             // Apply user-configured defaults
             if (result.Defaults is not null)
             {
-                ApplyDefaults(result.Defaults, monitor);
+                ApplyDefaults(result.Defaults, monitor.Value);
             }
 
             // Validate TimeSpan fields are positive when set
@@ -133,9 +133,17 @@ public record ApplicationConfiguration
         return result;
     }
 
-    private static void ApplyDefaults(ConfigurationDefaults defaults, KeyValuePair<string, PullMonitorConfiguration> monitorConfiguration)
+    /// <summary>
+    /// Fills unset fields from the 'defaults' block.
+    /// </summary>
+    /// <remarks>
+    /// Order is load-bearing. The per-type blocks run first, so 'defaults.http.timeout' wins;
+    /// the global block's '??=' then fills only what is still null. The repeated Timeout /
+    /// WarnTimeout lines below look like duplication but are what encodes that precedence.
+    /// </remarks>
+    private static void ApplyDefaults(ConfigurationDefaults defaults, PullMonitorConfiguration monitorConfiguration)
     {
-        if (defaults.Dns is not null && monitorConfiguration.Value is DnsMonitorConfiguration dnsMonitorConfiguration)
+        if (defaults.Dns is not null && monitorConfiguration is DnsMonitorConfiguration dnsMonitorConfiguration)
         {
             dnsMonitorConfiguration.Timeout ??= defaults.Dns.Timeout;
             dnsMonitorConfiguration.WarnTimeout ??= defaults.Dns.WarnTimeout;
@@ -144,7 +152,7 @@ public record ApplicationConfiguration
             dnsMonitorConfiguration.Resolver ??= defaults.Dns.Resolver;
         }
 
-        if (defaults.Http is not null && monitorConfiguration.Value is HttpMonitorConfiguration httpMonitorConfiguration)
+        if (defaults.Http is not null && monitorConfiguration is HttpMonitorConfiguration httpMonitorConfiguration)
         {
             httpMonitorConfiguration.Timeout ??= defaults.Http.Timeout;
             httpMonitorConfiguration.WarnTimeout ??= defaults.Http.WarnTimeout;
@@ -155,28 +163,25 @@ public record ApplicationConfiguration
             httpMonitorConfiguration.Method ??= defaults.Http.Method;
         }
 
-        if (defaults.Ping is not null && monitorConfiguration.Value is PingMonitorConfiguration pingMonitorConfiguration)
+        if (defaults.Ping is not null && monitorConfiguration is PingMonitorConfiguration pingMonitorConfiguration)
         {
             pingMonitorConfiguration.Timeout ??= defaults.Ping.Timeout;
             pingMonitorConfiguration.WarnTimeout ??= defaults.Ping.WarnTimeout;
         }
 
-        if (defaults.Tcp is not null && monitorConfiguration.Value is TcpMonitorConfiguration tcpMonitorConfiguration)
+        if (defaults.Tcp is not null && monitorConfiguration is TcpMonitorConfiguration tcpMonitorConfiguration)
         {
             tcpMonitorConfiguration.Timeout ??= defaults.Tcp.Timeout;
             tcpMonitorConfiguration.WarnTimeout ??= defaults.Tcp.WarnTimeout;
         }
 
-        if (monitorConfiguration.Value is PullMonitorConfiguration pullMonitorConfiguration)
-        {
-            pullMonitorConfiguration.Timeout ??= defaults.Timeout;
-            pullMonitorConfiguration.WarnTimeout ??= defaults.WarnTimeout;
+        // Global defaults, applied to every monitor type.
+        monitorConfiguration.Timeout ??= defaults.Timeout;
+        monitorConfiguration.WarnTimeout ??= defaults.WarnTimeout;
+        monitorConfiguration.IntervalWhenDown ??= defaults.IntervalWhenDown;
+        monitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
 
-            pullMonitorConfiguration.IntervalWhenDown ??= defaults.IntervalWhenDown;
-            pullMonitorConfiguration.IntervalWhenUp ??= defaults.IntervalWhenUp;
-        }
-
-        if (monitorConfiguration.Value is CheckInMonitorConfiguration checkInMonitorConfiguration)
+        if (monitorConfiguration is CheckInMonitorConfiguration checkInMonitorConfiguration)
         {
             checkInMonitorConfiguration.IntervalToDown ??= defaults.IntervalToDown;
         }

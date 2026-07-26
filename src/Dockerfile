@@ -17,12 +17,7 @@ COPY cs/Deucalion.Network/*.csproj ./Deucalion.Network/
 COPY cs/Deucalion.Storage/*.csproj ./Deucalion.Storage/
 COPY cs/Deucalion.Service/*.csproj ./Deucalion.Service/
 
-RUN --mount=type=secret,id=github_token \
-    dotnet nuget add source https://nuget.pkg.github.com/fdcastel/index.json \
-        --name github-fdcastel --username fdcastel \
-        --password "$(cat /run/secrets/github_token)" \
-        --store-password-in-clear-text && \
-    dotnet restore Deucalion.Service -a $TARGETARCH
+RUN dotnet restore Deucalion.Service -a $TARGETARCH
 
 COPY cs/ .
 WORKDIR /source/Deucalion.Service
