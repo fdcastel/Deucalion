@@ -44,6 +44,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
               checkin-main: !checkin
                 secret: test-secret
                 group: Main
+
+              checkin-open: !checkin
+                group: Main
             """);
 
         Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, _configurationPath);
@@ -128,6 +131,32 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 
         using var okResponse = await client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, okResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task CheckInEndpoint_WithoutConfiguredSecret_AcceptsUnauthenticatedCheckIn()
+    {
+        // 'secret' is optional. A check-in monitor configured without one performs no
+        // authentication -- a bare POST must be accepted.
+        using var client = _factory.CreateClient();
+
+        using var response = await client.PostAsync("/api/monitors/checkin-open/checkin", content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CheckInEndpoint_WithoutConfiguredSecret_IgnoresSuppliedSecret()
+    {
+        // No secret configured means no secret is checked -- an unexpected header is not an error.
+        using var client = _factory.CreateClient();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-open/checkin");
+        request.Headers.Add("deucalion-checkin-secret", "whatever");
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]

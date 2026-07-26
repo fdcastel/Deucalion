@@ -10,7 +10,8 @@ public sealed class CheckInMonitor : PullMonitor
     private MonitorResponse? _lastResponse;
     private CancellationTokenSource? _delayCts;
 
-    public string Secret { get; set; } = string.Empty;
+    // null means "no authentication" -- see the check-in endpoint in Deucalion.Api.
+    public string? Secret { get; set; }
     public TimeSpan IntervalToDown { get; set; } = DefaultIntervalToDown;
 
     public void CheckIn(MonitorResponse? response = null)

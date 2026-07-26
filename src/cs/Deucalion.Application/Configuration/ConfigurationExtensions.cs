@@ -10,7 +10,7 @@ public static class ConfigurationExtensions
     internal static CheckInMonitor Build(this CheckInMonitorConfiguration configuration)
     {
         var monitor = new CheckInMonitor();
-        monitor.Secret = configuration.Secret ?? monitor.Secret;
+        monitor.Secret = configuration.Secret;
         monitor.IntervalToDown = configuration.IntervalToDown ?? monitor.IntervalToDown;
         monitor.IntervalWhenUp = monitor.IntervalToDown;
         monitor.IntervalWhenDown = monitor.IntervalToDown;

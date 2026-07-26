@@ -123,7 +123,11 @@ public static class Application
                     return DeucalionResults.NotCheckInMonitor(monitorName, $"/api/monitors/{monitorName}");
                 }
 
-                if (cim.Secret is not null && cim.Secret != request.Headers["deucalion-checkin-secret"])
+                // No configured secret means no authentication. Compare as strings: the
+                // StringValues overload of '!=' compares counts first, so an empty secret
+                // never matches an absent header.
+                if (!string.IsNullOrEmpty(cim.Secret) &&
+                    !string.Equals(cim.Secret, request.Headers["deucalion-checkin-secret"].ToString(), StringComparison.Ordinal))
                 {
                     return DeucalionResults.InvalidCheckInSecret(monitorName, $"/api/monitors/{monitorName}");
                 }
