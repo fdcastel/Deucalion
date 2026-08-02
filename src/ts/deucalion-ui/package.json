@@ -26,7 +26,7 @@
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^17.1.0",
     "jiti": "^2.7.0",
-    "jsdom": "^29.0.1",
+    "jsdom": "^30.0.1",
     "rollup-plugin-visualizer": "^7.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.53.1",
