@@ -22,6 +22,7 @@ namespace Deucalion.Api;
 [JsonSerializable(typeof(MonitorDto[]))]
 [JsonSerializable(typeof(PageConfigurationDto))]
 [JsonSerializable(typeof(StatusDto))]
+[JsonSerializable(typeof(MonitorStatusDto))]
 [JsonSerializable(typeof(VersionDto))]
 // ProblemDetails backs every Results.Problem(...) -- the 404 for unknown monitors, the check-in
 // errors and the exception handler. Under native AOT there is no reflection fallback resolver,
