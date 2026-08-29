@@ -155,29 +155,49 @@ public static class Application
         // SSE event stream
         app.MapGet("/api/monitors/events", async (MonitorEventBroadcaster broadcaster, HttpContext httpContext) =>
         {
+            // Reconnect delay hinted to EventSource. Browsers default to a few seconds
+            // but the value is implementation-defined; pin it.
+            const int SseRetryMilliseconds = 3000;
+
             var response = httpContext.Response;
             var ct = httpContext.RequestAborted;
 
             response.ContentType = "text/event-stream";
             response.Headers.CacheControl = "no-cache";
-
-            // Write an initial SSE comment to flush the response headers immediately.
-            // TypedResults.ServerSentEvents only flushes on first data event; with a
-            // long check interval this causes EventSource to stay in CONNECTING
-            // state until the first monitor event arrives.
-            await response.WriteAsync(": connected\n\n", ct);
-            await response.Body.FlushAsync(ct);
+            // nginx buffers proxied responses by default, which turns a live stream into
+            // a stall until the buffer fills. This header opts the response out.
+            response.Headers["X-Accel-Buffering"] = "no";
 
             var (reader, writer) = broadcaster.Subscribe();
-            ct.Register(() => broadcaster.Unsubscribe(writer));
-
-            await foreach (var item in reader.ReadAllAsync(ct))
+            try
             {
-                var payload = item.EventType is not null
-                    ? $"event: {item.EventType}\ndata: {item.Data}\n\n"
-                    : $"data: {item.Data}\n\n";
-                await response.WriteAsync(payload, ct);
+                // Write an initial SSE comment to flush the response headers immediately.
+                // TypedResults.ServerSentEvents only flushes on first data event; with a
+                // long check interval this causes EventSource to stay in CONNECTING
+                // state until the first monitor event arrives. The `retry:` field pins
+                // the browser's reconnect delay instead of leaving it to its default.
+                await response.WriteAsync($": connected\nretry: {SseRetryMilliseconds}\n\n", ct);
                 await response.Body.FlushAsync(ct);
+
+                // Frames arrive pre-rendered; keep-alive comments come through the same
+                // channel so an idle stream still carries traffic.
+                await foreach (var frame in reader.ReadAllAsync(ct))
+                {
+                    await response.WriteAsync(frame, ct);
+                    await response.Body.FlushAsync(ct);
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Client went away. Not an error, and the response has already started,
+                // so there is nothing for the exception handler to do with it anyway.
+            }
+            finally
+            {
+                // The only unsubscribe path. A Register(RequestAborted) callback alone would
+                // leak the writer whenever the loop exits any other way (IOException on a
+                // half-open socket, channel completion at shutdown).
+                broadcaster.Unsubscribe(writer);
             }
         });
 
