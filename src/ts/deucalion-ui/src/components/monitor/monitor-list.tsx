@@ -1,19 +1,19 @@
 import { For, type Component, createMemo, Show } from "solid-js";
 
 import { monitorList } from "../../stores/monitors-store";
-import type { MonitorProps } from "../../services/deucalion-types";
+import type { MonitorDto } from "../../services/deucalion-types";
 
 import { MonitorRow } from "./monitor-row";
 
 interface SubGroup {
   name: string;
-  monitors: MonitorProps[];
+  monitors: MonitorDto[];
 }
 
 const NO_GROUP_LABEL = "Monitors";
 
-const buildSubgroups = (monitors: MonitorProps[]): SubGroup[] => {
-  const map = new Map<string, MonitorProps[]>();
+const buildSubgroups = (monitors: MonitorDto[]): SubGroup[] => {
+  const map = new Map<string, MonitorDto[]>();
   for (const m of monitors) {
     const key = m.config.group ?? NO_GROUP_LABEL;
     const list = map.get(key);

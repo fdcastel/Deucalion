@@ -5,12 +5,12 @@ import { API_MONITORS_URL, MAX_EVENT_HISTORY } from "../configuration";
 import type {
   MonitorCheckedDto,
   MonitorEventDto,
-  MonitorProps,
+  MonitorDto,
 } from "../services/deucalion-types";
 import { fetchWithRetry } from "../services/fetch-with-retry";
 
 interface MonitorsStoreState {
-  byName: Record<string, MonitorProps>;
+  byName: Record<string, MonitorDto>;
   order: string[];
   loaded: boolean;
 }
@@ -21,9 +21,9 @@ const [state, setState] = createStore<MonitorsStoreState>({
   loaded: false,
 });
 
-const fetchMonitors = async (): Promise<MonitorProps[]> => {
+const fetchMonitors = async (): Promise<MonitorDto[]> => {
   const response = await fetchWithRetry(API_MONITORS_URL);
-  return await response.json() as MonitorProps[];
+  return await response.json() as MonitorDto[];
 };
 
 const [monitorsResource] = createResource(async () => {
@@ -47,10 +47,10 @@ export const monitors = state;
 export { monitorsResource };
 export const monitorsLoaded = (): boolean => state.loaded;
 
-export const monitorList = (): MonitorProps[] => state.order.map((name) => state.byName[name]);
+export const monitorList = (): MonitorDto[] => state.order.map((name) => state.byName[name]);
 
 // Test-only: replace the in-memory monitor list with a fixed set.
-export const __seedMonitorsForTests = (list: MonitorProps[]): void => {
+export const __seedMonitorsForTests = (list: MonitorDto[]): void => {
   setState(
     produce((s) => {
       s.byName = {};
