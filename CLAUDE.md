@@ -28,8 +28,16 @@ other:
 Change both or neither. The `Wire contract` tests in
 `src/ts/deucalion-ui/tests/e2e/dashboard.spec.ts` fail if they drift.
 
-`MonitorState` is likewise declared in both `Deucalion.Core/MonitorState.cs` and
-`deucalion-types.ts` — the numeric values must match.
+`MonitorState` is likewise declared in both `src/cs/Deucalion.Core/MonitorState.cs`
+and `deucalion-types.ts` — the numeric values must match.
+
+## Project layout
+
+`Deucalion.Core` is the domain and has no package references; keep it that
+way (the YAML polymorphism settings live in `Deucalion.Application`'s
+`DeucalionYamlContext`, not on the base record). The dependency graph and the
+list of places a new monitor type touches are in the README under *Projects
+overview*; update that list when you add or remove one.
 
 The discovery payloads (`/api/status`, `/api/version`; `Models/StatusDto.cs`,
 `Models/VersionDto.cs`, served from `Endpoints/DiscoveryEndpoints.cs`) are the
