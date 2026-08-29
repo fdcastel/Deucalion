@@ -41,3 +41,11 @@ copy the same six files, and update this table.
 
 IBM Plex is licensed under the SIL Open Font License 1.1 -- see [LICENSE](LICENSE).
 Copyright 2017-2019 IBM Corp.
+
+## The other families in the tweaks panel
+
+Newsreader, Inter, JetBrains Mono, Space Grotesk and Space Mono are **not**
+vendored. They are fetched from Google Fonts on demand, only after a user picks
+them in the (console-summoned) tweaks panel -- see `google` in
+`src/components/tweaks/fonts.ts`. The default page never contacts a third
+party; on an air-gapped network those faces simply fall back to their stacks.

@@ -1,6 +1,6 @@
 import { createEffect, createSignal } from "solid-js";
 
-import { DISPLAY_FONTS, MONO_FONTS, UI_FONTS } from "../components/tweaks/fonts";
+import { DISPLAY_FONTS, type FontDef, MONO_FONTS, REMOTE_FONTS_LINK_ID, UI_FONTS, remoteFontsHref } from "../components/tweaks/fonts";
 
 export type ThemeMode = "dark" | "light";
 
@@ -115,6 +115,29 @@ const applyFonts = (): void => {
   root.style.setProperty("--font-ui", ui.stack);
   root.style.setProperty("--font-mono", mono.stack);
   root.style.setProperty("--display-italic", disp.italicize ? "italic" : "normal");
+  loadRemoteFonts([disp, ui, mono]);
+};
+
+// Faces outside the self-hosted IBM Plex pair are fetched from Google Fonts
+// only once a user actually selects them (issue #28): the default page makes
+// no third-party request. One <link> carries every selected remote family;
+// it is removed again when the selection returns to self-hosted faces.
+const loadRemoteFonts = (faces: readonly FontDef[]): void => {
+  const href = remoteFontsHref(faces);
+  const existing = document.getElementById(REMOTE_FONTS_LINK_ID);
+  if (href === null) {
+    existing?.remove();
+    return;
+  }
+  if (existing instanceof HTMLLinkElement) {
+    if (existing.href !== href) existing.href = href;
+    return;
+  }
+  const link = document.createElement("link");
+  link.id = REMOTE_FONTS_LINK_ID;
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
 };
 
 // A single effect: `persist()` reads every signal anyway, so splitting the

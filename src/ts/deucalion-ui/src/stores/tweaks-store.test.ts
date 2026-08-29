@@ -90,3 +90,42 @@ describe("tweaks-store", () => {
     expect(tweaks.monoFont()).toBe("ibmmono");
   });
 });
+
+describe("tweaks-store remote fonts (issue #28)", () => {
+  beforeEach(() => {
+    __resetTweaksForTests();
+  });
+
+  const link = (): HTMLLinkElement | null =>
+    document.getElementById("dynamic-google-fonts") as HTMLLinkElement | null;
+
+  it("makes no third-party font request for the default IBM Plex preset", () => {
+    expect(link()).toBeNull();
+  });
+
+  it("loads a non-hosted face from Google Fonts only when it is selected", () => {
+    tweaks.setDisplayFont("newsreader");
+    const l = link();
+    expect(l).not.toBeNull();
+    expect(l!.rel).toBe("stylesheet");
+    expect(l!.href).toContain("fonts.googleapis.com/css2?family=Newsreader");
+    expect(l!.href).toContain("display=swap");
+  });
+
+  it("carries every selected remote family in one link, deduplicated", () => {
+    tweaks.setDisplayFont("jetbrains");
+    tweaks.setMonoFont("jetbrains");
+    tweaks.setUiFont("inter");
+    const href = link()!.href;
+    expect(href.match(/family=JetBrains\+Mono/g)).toHaveLength(1);
+    expect(href).toContain("family=Inter");
+    expect(document.querySelectorAll("#dynamic-google-fonts")).toHaveLength(1);
+  });
+
+  it("removes the link again once every face is self-hosted", () => {
+    tweaks.setDisplayFont("newsreader");
+    expect(link()).not.toBeNull();
+    tweaks.setDisplayFont("ibmsans");
+    expect(link()).toBeNull();
+  });
+});
