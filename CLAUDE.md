@@ -45,7 +45,10 @@ exception: long keys, string states, ISO-8601 timestamps. They exist for agents
 and humans on a one-shot fetch, the UI never reads them, and they are
 deliberately **not** mirrored in `deucalion-types.ts`. Their shape is pinned by
 the `Discovery` tests in `ApiIntegrationTests.cs`, and `public/llms.txt` must
-keep naming every endpoint (`DiscoveryHeadTests.cs` fails otherwise).
+keep naming every endpoint (`DiscoveryHeadTests.cs` fails otherwise). `MonitorRun`
+(`Deucalion.Core/Storage/MonitorRun.cs`, `IStorage.GetCurrentRunAsync`) is the
+storage-side sibling of those DTOs: it backs `since`/`sinceIsLowerBound` and is
+likewise not mirrored in TS.
 
 ## Engine invariants
 

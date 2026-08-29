@@ -264,12 +264,14 @@ Everything the page shows is available as JSON, unauthenticated, with open CORS 
 
 | Endpoint | Returns |
 |----------|---------|
-| `GET /api/status` | Self-describing summary: overall `status` (`operational` -- nothing down; `degraded` -- some monitors down; `outage` -- every monitor down), `updatedAt`, overall `availability` (%), one entry per monitor (`name`, `group`, `type`, `state` as `up` / `warn` / `down` / `degraded` / `unknown`, `since`, `availability`, `latencyMs`), and `links` to the other endpoints. Timestamps are ISO-8601 UTC. Start here. |
+| `GET /api/status` | Self-describing summary: overall `status` (`operational` -- nothing down; `degraded` -- some monitors down; `outage` -- every monitor down), `updatedAt`, overall `availability` (%), one entry per monitor (`name`, `group`, `type`, `state` as `up` / `warn` / `down` / `degraded` / `unknown`, `since`, `sinceIsLowerBound`, `availability`, `latencyMs`), and `links` to the other endpoints. `since` is when the current run began -- "down since" or "up since" (`warn` and `degraded` count as up) -- computed from the whole stored history, not the 60-probe stats window; `sinceIsLowerBound: true` means the run reaches the oldest event still retained, so the monitor has been in that state *at least* since then. Timestamps are ISO-8601 UTC. Start here. |
+| `GET /api/status?group=<name>` | The same document restricted to one group (case-insensitive); `status` and `availability` are recomputed over that group and the response echoes `group`. An unknown group returns `404` `application/problem+json` whose `detail` lists the configured groups. |
+| `GET /api/status/{name}` | One monitor: `updatedAt`, `monitor` (the same shape as its entry in `/api/status`) and `links` (`self`, `status`, `monitor` = the full-detail document, `events`). Unknown names return `404` `application/problem+json`. |
 | `GET /` with `Accept: application/json` | The same document as `/api/status` (responses carry `Vary: Accept`; a browser's Accept header still gets the HTML). |
 | `GET /api/version` | `name`, `version` (build number and git SHA), `runtime`, `startedAt` -- tells you which build a deployment is actually running. |
 | `GET /api/monitors` | Full detail per monitor as the UI consumes it: `config`, rolling `stats` (last 60 probes), and the recent `events` in compact form (`at` unix seconds, `st` numeric state, `ms` latency). |
 | `GET /api/monitors/{name}` | One monitor in the same shape. Unknown names return `404` `application/problem+json`. |
-| `GET /api/monitors/events` | Server-Sent Events stream: `MonitorChecked` (`n`, `at`, `fr`, `st`, `ms`, `ns`) on every probe and `MonitorStateChanged` (`n`, `at`, `fr`, `st`) on transitions. |
+| `GET /api/monitors/events` | Server-Sent Events stream: `MonitorChecked` (`n`, `at`, `st`, `ms`, `ns`) on every probe and `MonitorStateChanged` (`n`, `at`, `st`) on transitions. |
 | `POST /api/monitors/{name}/checkin` | Heartbeat for `checkin` monitors -- see [`checkin` Monitor](#checkin-monitor). |
 | `GET /llms.txt` | Plain-Markdown description of the above, for agents that look for it. |
 
