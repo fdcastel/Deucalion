@@ -51,8 +51,9 @@ public static class Application
 
         // Application configuration
         var deucalionOptions = new DeucalionOptions();
-        builder.Configuration.GetSection("Deucalion").Bind(deucalionOptions);
+        builder.Configuration.GetSection(DeucalionOptions.SectionName).Bind(deucalionOptions);
         deucalionOptions.PageTitle ??= "Deucalion status";
+        deucalionOptions.Validate(); // Before anything consumes them: a bad value must not reach the purge timer (#23).
         builder.Services.AddSingleton(_ => deucalionOptions);
 
         var applicationConfiguration = ApplicationConfiguration.ReadFromFile(deucalionOptions.ConfigurationFile ?? "deucalion.yaml");
