@@ -163,6 +163,38 @@ public class ConfigurationTests
         Assert.Equal(65000, tcpMonitor.Port);
     }
 
+    [Theory]
+    [InlineData("events")]
+    [InlineData("Events")]
+    [InlineData("EVENTS")]
+    public void Issue23_ReservedMonitorName_Throws(string monitorName)
+    {
+        // '/api/monitors/events' is the SSE stream; a monitor with that name could never be
+        // fetched individually. Routing is case-insensitive, so the check is too.
+        var configurationContent = $@"
+            monitors:
+              {monitorName}:
+                !ping
+                host: 192.168.1.1
+        ";
+
+        var exception = CatchConfigurationException(configurationContent);
+        Assert.Equal(string.Format(ApplicationConfiguration.Messages.ConfigurationReservedMonitorName, monitorName, "events"), exception.Message);
+    }
+
+    [Fact]
+    public void MonitorNameContainingReservedWord_IsAccepted()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              events-api:
+                !ping
+                host: 192.168.1.1
+        ";
+
+        Assert.Equal("events-api", ReadSingleMonitorFromConfiguration(ConfigurationContent).Name);
+    }
+
     [Fact]
     public void CheckInMonitor_CanDeserialize()
     {
