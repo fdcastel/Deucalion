@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Deucalion.Api.Endpoints;
 using Deucalion.Api.Http;
 using Deucalion.Api.Models;
@@ -11,6 +14,7 @@ using Deucalion.Monitors;
 using Deucalion.Network.Monitors;
 using Deucalion.Storage;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,6 +22,9 @@ namespace Deucalion.Api;
 
 public static class Application
 {
+    internal const string CheckInRateLimitPolicy = "checkin";
+    internal const int CheckInRateLimitPerMinute = 60;
+
     public static WebApplicationBuilder ConfigureApplicationBuilder(this WebApplicationBuilder builder)
     {
         // Json.
@@ -39,6 +46,23 @@ public static class Application
 
         // CORS
         builder.Services.AddCors();
+
+        // Check-in rate limiting: the endpoint is unauthenticated (or guarded by a shared
+        // secret) and reachable from anywhere, so bound how fast one client can hammer it.
+        // Partitioned per client IP; a fixed window keeps the bookkeeping to one counter.
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(CheckInRateLimitPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = CheckInRateLimitPerMinute,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    }));
+        });
 
         // Response compression
         builder.Services.AddResponseCompression(options =>
@@ -100,6 +124,8 @@ public static class Application
             })
         );
 
+        app.UseRateLimiter();
+
         app.UseResponseCompression();
 
         app.Services.GetRequiredService<IStorage>().InitializeAsync().GetAwaiter().GetResult();
@@ -143,11 +169,11 @@ public static class Application
                     return DeucalionResults.NotCheckInMonitor(monitorName, $"/api/monitors/{monitorName}");
                 }
 
-                // No configured secret means no authentication. Compare as strings: the
-                // StringValues overload of '!=' compares counts first, so an empty secret
-                // never matches an absent header.
+                // No configured secret means no authentication. The header is read through
+                // StringValues.ToString(), so an absent header is an empty string and never
+                // matches a non-empty secret.
                 if (!string.IsNullOrEmpty(cim.Secret) &&
-                    !string.Equals(cim.Secret, request.Headers["deucalion-checkin-secret"].ToString(), StringComparison.Ordinal))
+                    !SecretMatches(cim.Secret, request.Headers["deucalion-checkin-secret"].ToString()))
                 {
                     return DeucalionResults.InvalidCheckInSecret(monitorName, $"/api/monitors/{monitorName}");
                 }
@@ -155,7 +181,8 @@ public static class Application
                 cim.CheckIn();
 
                 return Results.Ok();
-            });
+            })
+            .RequireRateLimiting(CheckInRateLimitPolicy);
 
         // SSE event stream
         app.MapGet("/api/monitors/events", async (MonitorEventBroadcaster broadcaster, HttpContext httpContext) =>
@@ -221,6 +248,19 @@ public static class Application
         }
 
         return app;
+    }
+
+    /// <summary>
+    /// Constant-time comparison: string.Equals short-circuits on the first mismatching
+    /// character, which leaks how much of the secret an attacker has right (#23). The length
+    /// check leaks only the length, which FixedTimeEquals requires anyway.
+    /// </summary>
+    private static bool SecretMatches(string expected, string supplied)
+    {
+        var expectedBytes = Encoding.UTF8.GetBytes(expected);
+        var suppliedBytes = Encoding.UTF8.GetBytes(supplied);
+        return expectedBytes.Length == suppliedBytes.Length
+            && CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes);
     }
 
     // The frontend's heartbeat strip scales from 60 (mobile) up to 120 ticks
