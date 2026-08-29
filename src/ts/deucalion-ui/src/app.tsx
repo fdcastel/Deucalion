@@ -1,7 +1,7 @@
 import { createEffect, ErrorBoundary, onMount, Show, type Component } from "solid-js";
 
 import { configuration } from "./stores/configuration-store";
-import { monitorsLoaded } from "./stores/monitors-store";
+import { monitorsLoaded, monitorsResource } from "./stores/monitors-store";
 
 import { TopBar } from "./components/top-bar";
 import { HeroAvailability } from "./components/hero/hero-availability";
@@ -33,27 +33,36 @@ const Crashed: Component<{ err: unknown }> = (props) => {
   );
 };
 
-export const App: Component = () => {
-  const ready = (): boolean => Boolean(configuration() && monitorsLoaded());
+// Everything that decides readiness lives *inside* the ErrorBoundary. Both
+// resources are read here: a rejected resource only rethrows on read, so a
+// fatal /api/monitors fetch that nothing reads would leave the splash up
+// forever with no error surfaced (#17). Reading it from a computation owned
+// by the boundary routes the rethrow to the fallback.
+const Dashboard: Component = () => {
+  const ready = (): boolean => Boolean(configuration() && monitorsResource() && monitorsLoaded());
 
   createEffect(() => {
     if (ready()) hideSplash();
   });
 
   return (
-    <ErrorBoundary fallback={(err: unknown) => <Crashed err={err} />}>
-      <Show when={ready()}>
-        <div class="shell">
-          <TopBar />
-          <div class="hero">
-            <HeroAvailability />
-          </div>
-          <MonitorList />
-          <Footer />
+    <Show when={ready()}>
+      <div class="shell">
+        <TopBar />
+        <div class="hero">
+          <HeroAvailability />
         </div>
-      </Show>
-      <ToastStack />
-      <TweaksPanel />
-    </ErrorBoundary>
+        <MonitorList />
+        <Footer />
+      </div>
+    </Show>
   );
 };
+
+export const App: Component = () => (
+  <ErrorBoundary fallback={(err: unknown) => <Crashed err={err} />}>
+    <Dashboard />
+    <ToastStack />
+    <TweaksPanel />
+  </ErrorBoundary>
+);
