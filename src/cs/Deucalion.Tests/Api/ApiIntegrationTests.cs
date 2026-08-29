@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Deucalion.Api.Services;
 using Deucalion.Storage;
+using Deucalion.Tests.Network;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -32,6 +33,11 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     private readonly string _configurationPath;
     private readonly TestApiFactory _factory;
 
+    // web-main probes this instead of the public internet, so the engine's start-up probe has
+    // the same outcome on every machine: Up, from a local 200. Before, the target was a public
+    // site and the very same tests were Down offline and Up on a connected runner.
+    private TestHttpServer? _webServer;
+
     public ApiIntegrationTests()
     {
         _tempPath = Path.Combine(Path.GetTempPath(), $"Deucalion.Tests.Api_{Guid.NewGuid()}");
@@ -39,11 +45,22 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
 
         Directory.CreateDirectory(_tempPath);
 
+        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, _configurationPath);
+        Environment.SetEnvironmentVariable(StoragePathEnvVar, Path.Combine(_tempPath, "storage"));
+
+        // Builds the host lazily, on first CreateClient()/Services -- after InitializeAsync.
+        _factory = new TestApiFactory();
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        _webServer = await TestHttpServer.StartAsync(HttpStatusCode.OK, "ok");
+
         // Long intervals on purpose: the engine probes each monitor exactly once at host start
         // and never again during the test, so it cannot race assertions about stored events.
         // Check-in monitors short-circuit their delay, so the SSE test still works.
         File.WriteAllText(_configurationPath,
-            """
+            $"""
             defaults:
               intervalWhenUp: 00:05:00
               intervalWhenDown: 00:05:00
@@ -51,7 +68,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
 
             monitors:
               web-main: !http
-                url: https://example.com
+                url: {_webServer.Url}
                 group: Web
 
               checkin-main: !checkin
@@ -61,14 +78,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
               checkin-open: !checkin
                 group: Main
             """);
-
-        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, _configurationPath);
-        Environment.SetEnvironmentVariable(StoragePathEnvVar, Path.Combine(_tempPath, "storage"));
-
-        _factory = new TestApiFactory();
     }
-
-    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
     // Cleanup lives here, not in IDisposable.Dispose(): xunit.v3 calls only DisposeAsync() on a
     // class that implements IAsyncLifetime, so the old Dispose() never ran -- the env vars
@@ -76,6 +86,10 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await _factory.DisposeAsync();
+        if (_webServer is not null)
+        {
+            await _webServer.DisposeAsync();
+        }
 
         Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, null);
         Environment.SetEnvironmentVariable(StoragePathEnvVar, null);
@@ -130,7 +144,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
 
         // Verify href auto-derivation: HTTP monitor without explicit href should use URL
         var httpMonitor = payload.EnumerateArray().Single(x => x.GetProperty("name").GetString() == "web-main");
-        Assert.Equal("https://example.com", httpMonitor.GetProperty("config").GetProperty("href").GetString());
+        Assert.Equal(_webServer!.Url.ToString(), httpMonitor.GetProperty("config").GetProperty("href").GetString());
     }
 
     [Fact]
@@ -642,10 +656,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         // Regression: `since` used to be derived from the last 60 events, so a monitor down for
         // longer than the stats window reported "down since the 60th-newest probe".
         //
-        // A check-in monitor, not web-main: the engine probes every monitor at host start, and
-        // web-main's probe of example.com succeeds on a runner with internet access. That Up would
-        // be newer than the seeded run and flip the state. A check-in nobody checked in to is
-        // Down at startup, which just extends the seeded Down run.
+        // A check-in monitor: the engine probes every monitor at host start, and web-main's probe
+        // of the local test server is Up -- newer than the seeded run, it would flip the state. A
+        // check-in nobody checked in to is Down at startup, which just extends the seeded Down run.
         using var scope = _factory.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
         var start = DateTimeOffset.UtcNow.AddMinutes(-200);
@@ -697,9 +710,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         var now = DateTimeOffset.UtcNow.AddSeconds(1);
 
         // Web is down, Main is up: the whole page is "degraded", the Main group is "operational".
-        // Three probes each so the seeded runs dominate the availability regardless of what the
-        // engine's own startup probe recorded (web-main's probe of example.com succeeds on a
-        // runner with internet access, fails without): Web ends <= 25 %, Main >= 75 %.
+        // Three probes each so the seeded runs dominate the availability over the engine's own
+        // start-up probe (web-main Up against the local server, the check-ins Down): Web ends at
+        // 25 %, Main at 75 %.
         for (var i = 0; i < 3; i++)
         {
             var at = now.AddSeconds(i);
