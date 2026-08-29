@@ -213,13 +213,13 @@ public sealed class DiscoveryHeadTests : IAsyncLifetime
         Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
 
         var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        foreach (var path in new[] { "/api/status", "/api/monitors", "/api/monitors/{name}", "/api/monitors/events", "/api/version", "/api/monitors/{name}/checkin" })
+        foreach (var path in new[] { "/api/status", "/api/status?group=", "/api/status/{name}", "/api/monitors", "/api/monitors/{name}", "/api/monitors/events", "/api/version", "/api/monitors/{name}/checkin" })
         {
             Assert.Contains(path, text, StringComparison.Ordinal);
         }
 
         // The SSE short keys, as documented for agents.
-        foreach (var key in new[] { "\"n\"", "\"at\"", "\"fr\"", "\"st\"", "\"ms\"", "\"ns\"" })
+        foreach (var key in new[] { "\"n\"", "\"at\"", "\"st\"", "\"ms\"", "\"ns\"" })
         {
             Assert.Contains(key, text, StringComparison.Ordinal);
         }

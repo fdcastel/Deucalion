@@ -52,7 +52,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
             monitors:
               web-main: !http
                 url: https://example.com
-                group: Main
+                group: Web
 
               checkin-main: !checkin
                 secret: test-secret
@@ -634,6 +634,142 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
 
         var after = monitors.Values.Select(m => (m.Name, m.AutoWarnTimeout, m.WarnTimeout)).ToArray();
         Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public async Task GetStatus_Since_IsTheStartOfTheRun_NotTheStatsWindow()
+    {
+        // Regression: `since` used to be derived from the last 60 events, so a monitor down for
+        // longer than the stats window reported "down since the 60th-newest probe".
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var start = DateTimeOffset.UtcNow.AddMinutes(-200);
+
+        await storage.SaveEventAsync("web-main", new StoredEvent(start, MonitorState.Up, TimeSpan.FromMilliseconds(30), null), TestContext.Current.CancellationToken);
+        for (var i = 1; i <= 100; i++)
+        {
+            await storage.SaveEventAsync("web-main", new StoredEvent(start.AddMinutes(i), MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        }
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
+        var web = payload.GetProperty("monitors").EnumerateArray().Single(m => m.GetProperty("name").GetString() == "web-main");
+
+        Assert.Equal("down", web.GetProperty("state").GetString());
+        Assert.Equal(start.AddMinutes(1).UtcDateTime, DateTime.Parse(web.GetProperty("since").GetString()!, null, System.Globalization.DateTimeStyles.AdjustToUniversal), TimeSpan.FromMilliseconds(1));
+        Assert.False(web.GetProperty("sinceIsLowerBound").GetBoolean(), "an Up probe precedes the run, so `since` is exact");
+    }
+
+    [Fact]
+    public async Task GetStatus_SinceIsLowerBound_WhenTheRunReachesTheOldestEvent()
+    {
+        // The engine probes every monitor once at host start; a check-in monitor that nobody has
+        // checked in to is Down from that first probe. Extending that Down run means no event of
+        // the other kind exists at all, so `since` can only be a lower bound.
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
+
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(now, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(now.AddSeconds(1), MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/status/checkin-open", TestContext.Current.CancellationToken);
+        var monitor = payload.GetProperty("monitor");
+
+        Assert.Equal("down", monitor.GetProperty("state").GetString());
+        var since = DateTime.Parse(monitor.GetProperty("since").GetString()!, null, System.Globalization.DateTimeStyles.AdjustToUniversal);
+        Assert.True(since <= now.UtcDateTime, "the run starts at the engine's startup probe, before the seeded events");
+        Assert.True(monitor.GetProperty("sinceIsLowerBound").GetBoolean());
+        Assert.False(monitor.TryGetProperty("latencyMs", out _), "a failed probe has no latency; the key must be omitted");
+    }
+
+    [Fact]
+    public async Task GetStatus_GroupFilter_RestrictsMonitorsAndRecomputesTheSummary()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
+
+        // Web is down, Main is up: the whole page is "degraded", the Main group is "operational".
+        await storage.SaveEventAsync("web-main", new StoredEvent(now, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+
+        using var client = _factory.CreateClient();
+        var whole = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
+        Assert.Equal("degraded", whole.GetProperty("status").GetString());
+        Assert.False(whole.TryGetProperty("group", out _));
+
+        // Case-insensitive match; the response echoes the filter and links to itself.
+        var main = await client.GetFromJsonAsync<JsonElement>("/api/status?group=main", TestContext.Current.CancellationToken);
+        Assert.Equal("operational", main.GetProperty("status").GetString());
+        Assert.Equal("main", main.GetProperty("group").GetString());
+        Assert.Equal(["checkin-main", "checkin-open"], main.GetProperty("monitors").EnumerateArray().Select(m => m.GetProperty("name").GetString()));
+        // Recomputed over the group only: the Web monitor (0 % after its Down) no longer drags it.
+        Assert.True(main.GetProperty("availability").GetDouble() > whole.GetProperty("availability").GetDouble());
+        Assert.Equal("/api/status?group=main", main.GetProperty("links").GetProperty("self").GetString());
+        Assert.Equal("/api/status/{name}", main.GetProperty("links").GetProperty("monitorStatus").GetString());
+
+        var web = await client.GetFromJsonAsync<JsonElement>("/api/status?group=Web", TestContext.Current.CancellationToken);
+        Assert.Equal("outage", web.GetProperty("status").GetString());
+        Assert.Single(web.GetProperty("monitors").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task GetStatus_UnknownGroup_Returns404ProblemListingTheGroups()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/status?group=nope", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("/api/errors/group-not-found", problem.GetProperty("type").GetString());
+        var detail = problem.GetProperty("detail").GetString()!;
+        Assert.Contains("'nope'", detail, StringComparison.Ordinal);
+        Assert.Contains("'Web'", detail, StringComparison.Ordinal);
+        Assert.Contains("'Main'", detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetMonitorStatus_MirrorsTheEntryInTheFullDocument()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now.AddSeconds(1), MonitorState.Up, TimeSpan.FromMilliseconds(42), null), TestContext.Current.CancellationToken);
+
+        using var client = _factory.CreateClient();
+        var whole = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
+        var entry = whole.GetProperty("monitors").EnumerateArray().Single(m => m.GetProperty("name").GetString() == "checkin-main");
+
+        using var response = await client.GetAsync("/api/status/checkin-main", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        var single = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+
+        Assert.Equal(entry.GetRawText(), single.GetProperty("monitor").GetRawText());
+        Assert.True(DateTimeOffset.TryParse(single.GetProperty("updatedAt").GetString(), out _));
+        var links = single.GetProperty("links");
+        Assert.Equal("/api/status/checkin-main", links.GetProperty("self").GetString());
+        Assert.Equal("/api/status", links.GetProperty("status").GetString());
+        Assert.Equal("/api/monitors/checkin-main", links.GetProperty("monitor").GetString());
+        Assert.Equal("/api/monitors/events", links.GetProperty("events").GetString());
+    }
+
+    [Fact]
+    public async Task GetMonitorStatus_UnknownMonitor_Returns404Problem()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/status/does-not-exist", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("/api/errors/monitor-not-found", problem.GetProperty("type").GetString());
     }
 
     [Fact]
