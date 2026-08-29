@@ -4,6 +4,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Deucalion.Api is only ever run through `dotnet run`/`dotnet watch` or hosted by
+         Deucalion.Service. The apphost would otherwise be copied into the Service's AOT
+         publish output as a Deucalion.Api.exe that has no Deucalion.Api.dll to load. -->
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
