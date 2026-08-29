@@ -47,6 +47,15 @@ deliberately **not** mirrored in `deucalion-types.ts`. Their shape is pinned by
 the `Discovery` tests in `ApiIntegrationTests.cs`, and `public/llms.txt` must
 keep naming every endpoint (`DiscoveryHeadTests.cs` fails otherwise).
 
+## Engine invariants
+
+Only `EngineBackgroundService` writes a monitor's auto-WARN baseline (via
+`WarnThresholdPolicy.Refresh`); request handlers such as `GET /api/monitors` and
+`/api/status` must use the read-only `WarnThresholdPolicy.Compute`. A GET that
+mutated the live monitor from concurrent request threads tore the 16-byte
+`TimeSpan?` (issue #15, 2026-08-29). Pinned by `WarnThresholdPolicyTests` and
+`PullMonitorAutoWarnConcurrencyTests`.
+
 ## Tests
 
 `dotnet test` needs the `global.json` opt-in to Microsoft.Testing.Platform;
