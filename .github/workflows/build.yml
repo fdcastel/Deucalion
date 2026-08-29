@@ -33,6 +33,11 @@ env:
   # Gate for the DNS/ICMP tests. '1' only on the weekly schedule and on manual
   # runs that ask for it.
   DEUCALION_TESTS_NETWORK: ${{ (github.event_name == 'schedule' || inputs.network-tests == true) && '1' || '0' }}
+  # GitHub-hosted runners (Linux and Windows alike) cannot send ICMP echo to
+  # the internet, so the one test that expects a ping to succeed is excluded.
+  # Verified on a workflow_dispatch run: it is the only network test that
+  # fails there. The other seven (DNS, TCP, ping-to-unreachable) run.
+  TEST_FILTER: --filter-not-method Deucalion.Tests.Network.PingMonitorTests.PingMonitor_ReturnsUp_WhenReachable
 
 jobs:
   test:
@@ -63,7 +68,7 @@ jobs:
       - name: Test .NET
         # `--` hands the option to the test host; without it `dotnet test`
         # silently ignores --minimum-expected-tests.
-        run: dotnet test --no-build -c Release -- --minimum-expected-tests "$MINIMUM_EXPECTED_TESTS"
+        run: dotnet test --no-build -c Release -- --minimum-expected-tests "$MINIMUM_EXPECTED_TESTS" $TEST_FILTER
 
       - name: Install npm dependencies
         working-directory: src/ts/deucalion-ui
@@ -140,7 +145,7 @@ jobs:
         run: dotnet build --no-restore -c Release
 
       - name: Test .NET
-        run: dotnet test --no-build -c Release -- --minimum-expected-tests "$env:MINIMUM_EXPECTED_TESTS"
+        run: dotnet test --no-build -c Release -- --minimum-expected-tests "$env:MINIMUM_EXPECTED_TESTS" $env:TEST_FILTER.Split(' ')
 
   # Build-only Docker/AOT image (amd64) so trim and AOT publish failures
   # surface on the PR instead of on the `edge` push after merge.
