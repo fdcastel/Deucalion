@@ -25,3 +25,6 @@ playwright-report/
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# TypeScript incremental build state (written by `tsc --build`)
+*.tsbuildinfo
