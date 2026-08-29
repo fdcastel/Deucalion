@@ -641,23 +641,28 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     {
         // Regression: `since` used to be derived from the last 60 events, so a monitor down for
         // longer than the stats window reported "down since the 60th-newest probe".
+        //
+        // A check-in monitor, not web-main: the engine probes every monitor at host start, and
+        // web-main's probe of example.com succeeds on a runner with internet access. That Up would
+        // be newer than the seeded run and flip the state. A check-in nobody checked in to is
+        // Down at startup, which just extends the seeded Down run.
         using var scope = _factory.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
         var start = DateTimeOffset.UtcNow.AddMinutes(-200);
 
-        await storage.SaveEventAsync("web-main", new StoredEvent(start, MonitorState.Up, TimeSpan.FromMilliseconds(30), null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(start, MonitorState.Up, TimeSpan.FromMilliseconds(30), null), TestContext.Current.CancellationToken);
         for (var i = 1; i <= 100; i++)
         {
-            await storage.SaveEventAsync("web-main", new StoredEvent(start.AddMinutes(i), MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+            await storage.SaveEventAsync("checkin-open", new StoredEvent(start.AddMinutes(i), MonitorState.Down, null, null), TestContext.Current.CancellationToken);
         }
 
         using var client = _factory.CreateClient();
         var payload = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
-        var web = payload.GetProperty("monitors").EnumerateArray().Single(m => m.GetProperty("name").GetString() == "web-main");
+        var monitor = payload.GetProperty("monitors").EnumerateArray().Single(m => m.GetProperty("name").GetString() == "checkin-open");
 
-        Assert.Equal("down", web.GetProperty("state").GetString());
-        Assert.Equal(start.AddMinutes(1).UtcDateTime, DateTime.Parse(web.GetProperty("since").GetString()!, null, System.Globalization.DateTimeStyles.AdjustToUniversal), TimeSpan.FromMilliseconds(1));
-        Assert.False(web.GetProperty("sinceIsLowerBound").GetBoolean(), "an Up probe precedes the run, so `since` is exact");
+        Assert.Equal("down", monitor.GetProperty("state").GetString());
+        Assert.Equal(start.AddMinutes(1).UtcDateTime, DateTime.Parse(monitor.GetProperty("since").GetString()!, null, System.Globalization.DateTimeStyles.AdjustToUniversal), TimeSpan.FromMilliseconds(1));
+        Assert.False(monitor.GetProperty("sinceIsLowerBound").GetBoolean(), "an Up probe precedes the run, so `since` is exact");
     }
 
     [Fact]
