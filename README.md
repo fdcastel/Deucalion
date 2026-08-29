@@ -36,7 +36,8 @@ Simply create a configuration file, start the service, and you're done.
 - .NET 10 SDK (for development and building)
 - PowerShell (for build scripts)
 - [Invoke-Build](https://github.com/nightroman/Invoke-Build) (for build automation)
-- [GitVersion](https://gitversion.net/)
+
+[GitVersion](https://gitversion.net/) is pinned in `.config/dotnet-tools.json` and restored by the build script (`dotnet tool restore`); it does not need to be installed globally.
 
 # Usage
 
@@ -300,7 +301,9 @@ Install [`Invoke-Build`](https://github.com/nightroman/Invoke-Build).
 
 `Invoke-Build` or `Invoke-Build build` will put all artifacts in the `./publish` folder.
 
-`Invoke-Build test` runs the .NET unit tests (`dotnet test`) and the frontend unit tests (Vitest).
+The version is computed by GitVersion, restored from the repo-local tool manifest. When it cannot run (no git history, a shallow clone, a source tarball) the build warns and uses `0.0.0-dev` instead of failing.
+
+`Invoke-Build test` runs the .NET unit tests (`dotnet test -c Release`, with a minimum-expected-tests floor so a silent zero-test run fails) and the frontend unit tests (Vitest). Set `DEUCALION_TESTS_NETWORK=1` to include the DNS/ICMP tests that need the public internet; CI runs them weekly.
 
 End-to-end tests are separate -- they boot both servers themselves:
 
