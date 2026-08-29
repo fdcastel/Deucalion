@@ -18,8 +18,13 @@ permissions:
   contents: read
 
 # One run per branch; a newer push to a PR cancels the run it supersedes.
+# The "build-" prefix matters: when this workflow is called by release.yml on a
+# tag, github.workflow is "release" and github.ref the tag, so without it the
+# group would equal the caller's own (release-refs/tags/vX) and GitHub refuses
+# to queue a reusable workflow inside its caller's concurrency group -- the test
+# job silently never starts and the release fails.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
