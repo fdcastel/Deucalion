@@ -77,16 +77,8 @@ task Build Version, Clear, {
 
     exec { npm --prefix './src/ts/deucalion-ui' ci }
 
-    # Pass version information to frontend build
-    $env:VITE_BUILD_VERSION = $BuildVersion
-    $env:VITE_INFORMATIONAL_VERSION = $InformationalVersion
-
     # Quote '--' https://stackoverflow.com/a/72260631/332443
     exec { npm --prefix './src/ts/deucalion-ui' run build '--' --outDir "../../../$publishFolder/wwwroot" }
-
-    # Clean up environment variables
-    Remove-Item env:VITE_BUILD_VERSION -ErrorAction SilentlyContinue
-    Remove-Item env:VITE_INFORMATIONAL_VERSION -ErrorAction SilentlyContinue
 }
 
 # synopsis: Start a development environment.

@@ -95,9 +95,6 @@ jobs:
 
       - name: Build frontend
         working-directory: src/ts/deucalion-ui
-        env:
-          VITE_BUILD_VERSION: ${{ needs.version.outputs.semVer }}
-          VITE_INFORMATIONAL_VERSION: ${{ needs.version.outputs.informationalVersion }}
         run: npm run build
 
       - uses: actions/upload-artifact@v7
