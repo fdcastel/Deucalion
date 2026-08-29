@@ -6,8 +6,14 @@ public sealed class CheckInMonitor : PullMonitor
 {
     public static readonly TimeSpan DefaultIntervalToDown = TimeSpan.FromMinutes(1);
 
+    // CheckIn() runs on ASP.NET request threads; QueryAsync and the delay arming run on the
+    // engine's polling loop. Everything below is shared between them and guarded by _gate
+    // (issue #22: DateTimeOffset? is a multi-word struct, so an unguarded read can tear).
+    private readonly Lock _gate = new();
     private DateTimeOffset? _lastCheckInTime;
     private MonitorResponse? _lastResponse;
+    private bool _checkInPending;
+    private CancellationTokenSource? _delayCts;
 
     // null means "no authentication" -- see the check-in endpoint in Deucalion.Api.
     public string? Secret { get; set; }
@@ -15,34 +21,80 @@ public sealed class CheckInMonitor : PullMonitor
 
     public void CheckIn(MonitorResponse? response = null)
     {
-        _lastCheckInTime = TimeProvider.GetUtcNow();
-        _lastResponse = response ?? MonitorResponse.Up();
+        CancellationTokenSource? delayCts;
+        lock (_gate)
+        {
+            // Record first, then short-circuit: whatever the polling loop is doing right now,
+            // it either sees the live delay source cancelled or finds the pending flag when it
+            // next arms a delay. Either way this check-in is reflected by the next probe.
+            _lastCheckInTime = TimeProvider.GetUtcNow();
+            _lastResponse = response ?? MonitorResponse.Up();
+            _checkInPending = true;
+            delayCts = _delayCts;
+        }
 
+        // Cancelled outside the lock: cancelling runs the delay's continuation, which may run the
+        // polling loop inline on this thread, and that loop takes _gate itself.
         try
         {
-            DelayCts?.Cancel(); // Short-circuit the polling delay
+            delayCts?.Cancel();
         }
         catch (ObjectDisposedException)
         {
-            // The polling loop already moved past this delay and disposed the source.
-            // The check-in is still recorded above; the next probe picks it up.
+            // Lost the race with DisarmDelay() + Dispose(): the loop is already past this delay
+            // and about to probe, and the check-in is recorded above, so nothing is missed.
         }
     }
 
     public override Task<MonitorResponse> QueryAsync(CancellationToken cancellationToken = default)
     {
-        if (!_lastCheckInTime.HasValue)
+        DateTimeOffset? lastCheckInTime;
+        MonitorResponse? lastResponse;
+        lock (_gate)
+        {
+            // This probe reflects every check-in recorded so far; only later ones are "pending".
+            _checkInPending = false;
+            lastCheckInTime = _lastCheckInTime;
+            lastResponse = _lastResponse;
+        }
+
+        if (!lastCheckInTime.HasValue)
             return Task.FromResult(MonitorResponse.Down());
 
-        if ((TimeProvider.GetUtcNow() - _lastCheckInTime.Value) > IntervalToDown)
+        if ((TimeProvider.GetUtcNow() - lastCheckInTime.Value) > IntervalToDown)
             return Task.FromResult(MonitorResponse.Down());
 
-        return Task.FromResult(_lastResponse ?? MonitorResponse.Up());
+        return Task.FromResult(lastResponse ?? MonitorResponse.Up());
     }
 
     /// <summary>
-    /// Set by the polling loop each iteration so <see cref="CheckIn"/> can cut the delay short.
-    /// Engine implementation detail -- the loop owns its lifetime and disposes it.
+    /// Installs the polling loop's delay source so <see cref="CheckIn"/> can cut the delay short.
+    /// Engine implementation detail -- the loop owns the source's lifetime and must call
+    /// <see cref="DisarmDelay"/> before disposing it.
     /// </summary>
-    public CancellationTokenSource? DelayCts { get; set; }
+    /// <returns>
+    /// <see langword="false"/> when a check-in arrived after the last <see cref="QueryAsync"/>,
+    /// i.e. in the window where no delay source was armed (issue #22). The caller should skip the
+    /// delay and probe again immediately; the source is armed either way.
+    /// </returns>
+    public bool ArmDelay(CancellationTokenSource delayCts)
+    {
+        lock (_gate)
+        {
+            _delayCts = delayCts;
+            return !_checkInPending;
+        }
+    }
+
+    /// <summary>
+    /// Forgets the delay source armed by <see cref="ArmDelay"/>. Call before disposing it so a
+    /// later <see cref="CheckIn"/> never targets a disposed source.
+    /// </summary>
+    public void DisarmDelay()
+    {
+        lock (_gate)
+        {
+            _delayCts = null;
+        }
+    }
 }

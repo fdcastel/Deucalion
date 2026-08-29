@@ -138,10 +138,25 @@ public static class MonitorExtensions
                     // on Dispose(). Leaking one per poll grew stopToken's callback list forever
                     // (~1440/day per check-in monitor at the 60s default) and made every
                     // subsequent CreateLinkedTokenSource lock a longer list.
+                    //
+                    // The monitor must forget the source before it is disposed, or a check-in
+                    // arriving between iterations targets a disposed source and is not
+                    // short-circuited (issue #22). The finally runs before the `using` disposals.
                     using var delayCts = new CancellationTokenSource();
-                    checkInMonitor.DelayCts = delayCts;
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stopToken, delayCts.Token);
-                    await Task.Delay(delayInterval, monitor.TimeProvider, linkedCts.Token);
+                    try
+                    {
+                        // A check-in that landed while no source was armed (during the probe
+                        // above) is caught here instead of waiting out a full interval.
+                        if (checkInMonitor.ArmDelay(delayCts))
+                        {
+                            await Task.Delay(delayInterval, monitor.TimeProvider, linkedCts.Token);
+                        }
+                    }
+                    finally
+                    {
+                        checkInMonitor.DisarmDelay();
+                    }
                 }
                 else
                 {

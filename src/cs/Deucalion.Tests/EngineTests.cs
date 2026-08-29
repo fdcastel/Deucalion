@@ -175,11 +175,14 @@ public class EngineTests
         // First probe: nothing has checked in yet.
         Assert.Equal([MonitorState.Down], await harness.StateChangesAsync("m1", 1, pulse));
 
-        // Check in, then let the engine observe it.
+        // Check in, then let the engine observe it. The check-in itself cuts the delay short
+        // (issue #22), so the Up probe needs no clock advance -- and must not get one: the
+        // re-probe runs on a pool thread, and with IntervalToDown == pulse, two advances landing
+        // before it would make the check-in stale and the probe report Down (a 1-in-25 hang).
         m1.CheckIn();
         Assert.Equal(
             [MonitorState.Down, MonitorState.Up],
-            await harness.StateChangesAsync("m1", 2, pulse));
+            await harness.StateChangesAsync("m1", 2, TimeSpan.Zero));
 
         // Stop checking in: once IntervalToDown lapses it drops back to Down.
         Assert.Equal(
