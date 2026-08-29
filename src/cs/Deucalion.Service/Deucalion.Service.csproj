@@ -7,9 +7,6 @@
 
     <!-- "web.config" file is unnecessary for a Windows Services app. Source: https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/windows-service?view=aspnetcore-7.0&tabs=visual-studio#framework-dependent-deployment-fdd -->
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
-    
-    <!-- Ignore errors about duplicate "appsettings.json" files in publish folder. Source: https://stackoverflow.com/a/69919694-->      
-    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
 
     <PublishAot>true</PublishAot>
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>

@@ -73,7 +73,7 @@ task Clear-Npm Clear, {
 
 # synopsis: Clear and build projects.
 task Build Version, Clear, {
-    exec { dotnet publish './src/cs/Deucalion.Service/Deucalion.Service.csproj' -c $configuration -o $publishFolder -p:DebugType=None -p:Version=$BuildVersion -p:InformationalVersion=$InformationalVersion --self-contained }
+    exec { dotnet publish './src/cs/Deucalion.Service/Deucalion.Service.csproj' -c $configuration -o $publishFolder -p:DebugType=None -p:Version=$BuildVersion -p:InformationalVersion=$InformationalVersion }
 
     exec { npm --prefix './src/ts/deucalion-ui' ci }
 
