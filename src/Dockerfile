@@ -42,11 +42,11 @@ COPY ts/deucalion-ui/ .
 RUN npm run build
 
 # final image -- AOT produces a native binary, no .NET runtime needed.
-# Chiseled: ~30 MB, no shell, no package manager, non-root by default. The
-# "-extra" variant adds ICU and tzdata, which the runtime needs unless
-# InvariantGlobalization is set. HEALTHCHECK and ENTRYPOINT use the exec form
+# Chiseled: no shell, no package manager, non-root by default. The plain (not
+# "-extra") variant has no ICU/tzdata; Deucalion.Service sets
+# InvariantGlobalization, so the runtime never asks for them. HEALTHCHECK and ENTRYPOINT use the exec form
 # because there is no shell to interpret anything else.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled
 WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \

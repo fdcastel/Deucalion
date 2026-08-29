@@ -9,6 +9,11 @@
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
 
     <PublishAot>true</PublishAot>
+
+    <!-- Invariant globalization: no ICU at runtime. The API is UTC/ISO-8601 and enum-as-string
+         throughout, logs are the only culture-formatted text, and it lets the Docker image use the
+         plain chiseled base (no ICU/tzdata, ~10 MB smaller). -->
+    <InvariantGlobalization>true</InvariantGlobalization>
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
