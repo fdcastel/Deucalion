@@ -11,11 +11,16 @@ namespace Deucalion.Tests.Network;
 /// </summary>
 public class HttpMonitorTests
 {
+    // The default WARN threshold is 1 s. On a loaded CI runner (windows-latest in particular) a cold
+    // Kestrel request can take longer than that, turning an Up assertion into Warn. Tests that assert
+    // Up pin a generous threshold; the Warn case sets its own tight one.
+    private static readonly TimeSpan HermeticWarnTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task ReturnsUp_OnSuccessStatus()
     {
         await using var server = await TestHttpServer.StartAsync(HttpStatusCode.OK, "hello");
-        HttpMonitor monitor = new() { Url = server.Url };
+        HttpMonitor monitor = new() { Url = server.Url, WarnTimeout = HermeticWarnTimeout };
 
         var result = await monitor.QueryAsync(TestContext.Current.CancellationToken);
 
@@ -39,7 +44,7 @@ public class HttpMonitorTests
     public async Task ExpectedStatusCode_TurnsAFailureStatusIntoUp()
     {
         await using var server = await TestHttpServer.StartAsync(HttpStatusCode.NotFound);
-        HttpMonitor monitor = new() { Url = server.Url, ExpectedStatusCode = HttpStatusCode.NotFound };
+        HttpMonitor monitor = new() { Url = server.Url, ExpectedStatusCode = HttpStatusCode.NotFound, WarnTimeout = HermeticWarnTimeout };
 
         var result = await monitor.QueryAsync(TestContext.Current.CancellationToken);
 
@@ -62,7 +67,7 @@ public class HttpMonitorTests
     public async Task ExpectedResponseBodyPattern_MatchingBodyIsUp()
     {
         await using var server = await TestHttpServer.StartAsync(HttpStatusCode.OK, """{"current_user_url":"..."}""");
-        HttpMonitor monitor = new() { Url = server.Url, ExpectedResponseBodyPattern = "current_user_url" };
+        HttpMonitor monitor = new() { Url = server.Url, ExpectedResponseBodyPattern = "current_user_url", WarnTimeout = HermeticWarnTimeout };
 
         var result = await monitor.QueryAsync(TestContext.Current.CancellationToken);
 
@@ -205,6 +210,7 @@ public class HttpMonitorTests
             Url = server.Url,
             ExpectedResponseBodyPattern = "needle-at-the-start",
             Timeout = TimeSpan.FromSeconds(5),
+            WarnTimeout = HermeticWarnTimeout,
         };
 
         var result = await monitor.QueryAsync(TestContext.Current.CancellationToken);
