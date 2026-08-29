@@ -8,6 +8,10 @@ internal static class DeucalionResults
         Problem("monitor-not-found", "Monitor not found.", HttpStatusCode.NotFound,
             $"Monitor '{monitorName}' not found.");
 
+    internal static IResult GroupNotFound(string group, IEnumerable<string> knownGroups) =>
+        Problem("group-not-found", "Group not found.", HttpStatusCode.NotFound,
+            $"Group '{group}' not found. Configured groups: {string.Join(", ", knownGroups.Select(g => $"'{g}'"))}.");
+
     internal static IResult NotCheckInMonitor(string monitorName, string instanceUri) =>
         Problem("not-checkin-monitor", "Not a check-in monitor.", HttpStatusCode.BadRequest,
             $"'{monitorName}' is not a check-in monitor.", instanceUri);
