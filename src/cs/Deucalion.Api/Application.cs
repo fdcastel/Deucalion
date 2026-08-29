@@ -91,7 +91,7 @@ public static class Application
         builder.Services.AddSingleton<SqliteStorage>(sp =>
         {
             var options = sp.GetRequiredService<DeucalionOptions>();
-            return new SqliteStorage(options.StoragePath);
+            return new SqliteStorage(options.StoragePath, sp.GetRequiredService<TimeProvider>());
         });
         builder.Services.AddSingleton<IStorage>(sp => sp.GetRequiredService<SqliteStorage>());
         builder.Services.TryAddSingleton(TimeProvider.System);
