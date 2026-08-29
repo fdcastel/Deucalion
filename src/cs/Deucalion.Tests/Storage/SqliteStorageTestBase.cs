@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Deucalion.Tests.Storage;
 
-public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
+public abstract class SqliteStorageTestBase : IAsyncLifetime
 {
     protected readonly string StoragePath;
     protected readonly string DbFilePath;
@@ -26,9 +26,10 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
 
     public ValueTask InitializeAsync() => new(Storage.InitializeAsync(TestContext.Current.CancellationToken));
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public void Dispose()
+    // Cleanup lives here, not in IDisposable.Dispose(): xunit.v3 calls only DisposeAsync() on a
+    // class that implements IAsyncLifetime, so a Dispose() silently never ran and every test
+    // instance leaked its directory under %TEMP%.
+    public ValueTask DisposeAsync()
     {
         // Dispose the storage first -- it clears the connection pool, which releases the
         // database file handle before we try to delete the directory.
@@ -36,7 +37,7 @@ public abstract class SqliteStorageTestBase : IAsyncLifetime, IDisposable
 
         TestPaths.DeleteWithRetry(StoragePath);
 
-        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>
