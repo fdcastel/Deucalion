@@ -61,4 +61,5 @@ VOLUME /storage
 
 EXPOSE 8080
 USER $APP_UID
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["./Deucalion.Service", "--healthcheck"]
 ENTRYPOINT ["./Deucalion.Service"]
