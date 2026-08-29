@@ -16,8 +16,12 @@ public sealed class SqliteStorage : IStorage, IDisposable
         Directory.CreateDirectory(dbPath);
 
         _dbFile = Path.Combine(dbPath, "deucalion.sqlite.db"); // Store the full path
-        // Enable connection pooling (Cache=Shared) and WAL mode for better concurrency
-        _connectionString = $"Data Source={_dbFile};Mode=ReadWriteCreate;Cache=Shared";
+        // Microsoft.Data.Sqlite pools connections by default (Pooling=True), and InitializeAsync
+        // switches the database to WAL. Do not add Cache=Shared: it is SQLite shared-cache mode,
+        // not pooling, and it replaces WAL's file-level locking with in-process table locks that
+        // serialise readers against the writer and can raise SQLITE_LOCKED, which busy_timeout
+        // does not retry (#21).
+        _connectionString = $"Data Source={_dbFile};Mode=ReadWriteCreate";
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
