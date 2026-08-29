@@ -5,7 +5,6 @@ import { MonitorState } from "./deucalion-types";
 import {
   aggregateAvailability,
   avail,
-  avgMs,
   lastIncident,
   minMs,
   percentile,
@@ -51,20 +50,18 @@ describe("avail()", () => {
   });
 });
 
-describe("avgMs() / minMs()", () => {
+describe("minMs()", () => {
   it("returns undefined when no event has a response time", () => {
     const events = buildEvents([MonitorState.Down, MonitorState.Down], {
       ms: () => undefined,
     });
-    expect(avgMs(events)).toBeUndefined();
     expect(minMs(events)).toBeUndefined();
   });
 
-  it("averages only the events that carry an ms value", () => {
+  it("considers only the events that carry an ms value", () => {
     const events = buildEvents([MonitorState.Up, MonitorState.Down, MonitorState.Up], {
       ms: (_i, st) => (st === MonitorState.Down ? undefined : 100),
     });
-    expect(avgMs(events)).toBe(100);
     expect(minMs(events)).toBe(100);
   });
 
@@ -73,7 +70,6 @@ describe("avgMs() / minMs()", () => {
       ms: (i) => [120, 30, 80][i],
     });
     expect(minMs(events)).toBe(30);
-    expect(avgMs(events)).toBeCloseTo((120 + 30 + 80) / 3);
   });
 
   it("excludes Down events that carry a timing (e.g. PingMonitor 0ms failures)", () => {
@@ -84,7 +80,6 @@ describe("avgMs() / minMs()", () => {
       [MonitorState.Down, MonitorState.Down, MonitorState.Up, MonitorState.Down],
       { ms: (_i, st) => (st === MonitorState.Down ? 0 : 50) },
     );
-    expect(avgMs(events)).toBe(50);
     expect(minMs(events)).toBe(50);
   });
 });

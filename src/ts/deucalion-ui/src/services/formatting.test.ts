@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitorState } from "./deucalion-types";
 import {
   fmtAgo,
-  fmtDur,
   fmtMs,
   monitorStateToDescription,
   monitorStateToToastVariant,
@@ -28,7 +27,7 @@ describe("fmtMs", () => {
   });
 });
 
-describe("fmtAgo / fmtDur", () => {
+describe("fmtAgo", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-25T12:00:00Z"));
@@ -43,14 +42,6 @@ describe("fmtAgo / fmtDur", () => {
     expect(fmtAgo(nowSec() - 90)).toBe("2m ago");
     expect(fmtAgo(nowSec() - 7200)).toBe("2h ago");
     expect(fmtAgo(nowSec() - 86400 * 3)).toBe("3d ago");
-  });
-
-  it("formats durations with the same buckets", () => {
-    expect(fmtDur(0)).toBe("0s");
-    expect(fmtDur(45)).toBe("45s");
-    expect(fmtDur(120)).toBe("2m");
-    expect(fmtDur(7200)).toBe("2.0h");
-    expect(fmtDur(86400 * 3)).toBe("3.0d");
   });
 });
 

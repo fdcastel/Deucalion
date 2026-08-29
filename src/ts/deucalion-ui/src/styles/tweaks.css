@@ -173,41 +173,6 @@ select.twk-field {
   cursor: pointer;
 }
 
-.twk-seg {
-  position: relative;
-  display: flex;
-  padding: 2px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.06);
-  user-select: none;
-}
-[data-theme="dark"] .twk-seg { background: rgba(255, 255, 255, 0.08); }
-.twk-seg-thumb {
-  position: absolute;
-  top: 2px; bottom: 2px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-  transition: left 0.15s cubic-bezier(0.3, 0.7, 0.4, 1), width 0.15s;
-}
-[data-theme="dark"] .twk-seg-thumb { background: rgba(255, 255, 255, 0.18); }
-.twk-seg.dragging .twk-seg-thumb { transition: none; }
-.twk-seg button {
-  appearance: none;
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 500;
-  height: 22px;
-  border-radius: 6px;
-  cursor: pointer;
-  padding: 0;
-}
-
 .twk-btn {
   appearance: none;
   height: 26px;
