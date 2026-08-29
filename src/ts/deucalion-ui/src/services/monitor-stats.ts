@@ -23,18 +23,6 @@ export const avail = (events: MonitorEventDto[]): number => {
   return ((total - down) / total) * 100;
 };
 
-export const avgMs = (events: MonitorEventDto[]): number | undefined => {
-  let sum = 0;
-  let n = 0;
-  for (const e of events) {
-    if (e.ms != null && isHealthyLatency(e.st)) {
-      sum += e.ms;
-      n++;
-    }
-  }
-  return n > 0 ? sum / n : undefined;
-};
-
 export const minMs = (events: MonitorEventDto[]): number | undefined => {
   let min: number | undefined;
   for (const e of events) {

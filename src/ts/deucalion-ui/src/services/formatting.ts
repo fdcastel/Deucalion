@@ -15,13 +15,6 @@ export const fmtAgo = (epochSeconds: number): string => {
   return `${Math.round(diff / 86400).toString()}d ago`;
 };
 
-export const fmtDur = (seconds: number): string => {
-  if (seconds < 60) return `${Math.round(seconds).toString()}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60).toString()}m`;
-  if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
-  return `${(seconds / 86400).toFixed(1)}d`;
-};
-
 export const fmtTime = (epochSeconds: number): string => {
   const d = new Date(epochSeconds * 1000);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
