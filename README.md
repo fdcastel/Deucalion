@@ -255,6 +255,8 @@ curl -X POST \
 - `secret` is **optional**. If you omit it no authentication is performed: anyone who can reach
   the endpoint can mark the monitor UP.
 - Each check-in marks the monitor UP. If none arrives within `intervalToDown`, it goes DOWN.
+- Check-ins are limited to 60 per minute per client address; further ones get `429 Too Many Requests`
+  until the minute is over.
 
 # API
 
