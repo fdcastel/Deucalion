@@ -1,0 +1,17 @@
+# Deucalion status page
+
+> A minimal service-status page. The JSON API below is public: no authentication, no API key, CORS open for reads.
+
+## Endpoints (all GET, all JSON)
+
+- `/api/status` — self-describing summary: `status` (`operational` | `degraded` | `outage`), `updatedAt` (ISO-8601 UTC), `availability` (%), and `monitors[]` with `name`, `group`, `type`, `state` (`up` | `warn` | `down` | `degraded` | `unknown`), `since`, `availability`, `latencyMs`. Start here. `GET /` with `Accept: application/json` returns the same document.
+- `/api/monitors` — full detail per monitor: `config`, rolling `stats`, and the recent `events[]` in the compact form `{ "at": <unix seconds>, "st": <state>, "ms": <latency> }` where `st` is 0 unknown, 1 down, 2 up, 3 warn, 4 degraded.
+- `/api/monitors/{name}` — one monitor in the same shape; unknown names return 404 `application/problem+json`.
+- `/api/version` — `name`, `version` (build + git SHA), `runtime`, `startedAt`.
+- `/api/monitors/events` — Server-Sent Events stream. Event `MonitorChecked`: `{ "n": name, "at": unix seconds, "fr": previous state, "st": state, "ms": latency, "ns": new stats }`. Event `MonitorStateChanged`: `{ "n", "at", "fr", "st" }`. Opens with a `: connected` comment.
+
+## Writes
+
+- `POST /api/monitors/{name}/checkin` — heartbeat for `checkin`-type monitors. Send the monitor's secret (if configured) in the `deucalion-checkin-secret` header. Returns 200; 401 on a wrong secret; 400 if the monitor is not a check-in monitor.
+
+Source and documentation: https://github.com/fdcastel/Deucalion

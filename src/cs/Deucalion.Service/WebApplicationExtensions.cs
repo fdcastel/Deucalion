@@ -1,8 +1,10 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using System.Web;
+using Deucalion.Api.Endpoints;
 using Deucalion.Api.Options;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
 namespace Deucalion.Service;
@@ -117,6 +119,22 @@ internal static class WebApplicationExtensions
                         return;
                     }
 
+                    // Content negotiation: the same URL a human gets serves agents the
+                    // self-describing JSON summary when they ask for it. Both variants
+                    // must carry Vary: Accept, or a cache could hand one client the other's.
+                    context.Response.Headers.Vary = "Accept";
+                    if (PrefersJson(context.Request.Headers.Accept))
+                    {
+                        if (HttpMethods.IsHead(method))
+                        {
+                            context.Response.ContentType = "application/json";
+                            return;
+                        }
+
+                        await DiscoveryEndpoints.WriteStatusAsync(context);
+                        return;
+                    }
+
                     // Conditional GET: return 304 if client has current version
                     var ifNoneMatch = context.Request.Headers.IfNoneMatch.ToString();
                     if (ifNoneMatch == "*" || ifNoneMatch.Contains(etag))
@@ -176,6 +194,64 @@ internal static class WebApplicationExtensions
         return wildcard is not null && (wildcard.Quality ?? 1) > 0;
     }
 
+    /// <summary>
+    /// Whether the Accept header ranks <c>application/json</c> strictly above <c>text/html</c>.
+    /// A browser's Accept (<c>text/html,...,*/*;q=0.8</c>) and curl's bare <c>*/*</c> both keep
+    /// HTML; only a client that asks for JSON by name (or with a higher q) gets it.
+    /// </summary>
+    internal static bool PrefersJson(StringValues accept)
+    {
+        if (!MediaTypeHeaderValue.TryParseList(accept, out var accepted))
+        {
+            return false;
+        }
+
+        return Quality(accepted, "application", "json") > Quality(accepted, "text", "html");
+    }
+
+    /// <summary>
+    /// The q-value the most specific matching range assigns to <paramref name="type"/>/<paramref name="subType"/>
+    /// (exact beats <c>type/*</c> beats <c>*/*</c>); 0 when nothing matches.
+    /// </summary>
+    private static double Quality(IList<MediaTypeHeaderValue> accepted, string type, string subType)
+    {
+        var best = 0.0;
+        var bestSpecificity = -1;
+
+        foreach (var range in accepted)
+        {
+            int specificity;
+            if (range.MatchesAllTypes)
+            {
+                specificity = 0;
+            }
+            else if (!range.Type.Equals(type, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            else if (range.MatchesAllSubTypes)
+            {
+                specificity = 1;
+            }
+            else if (range.SubType.Equals(subType, StringComparison.OrdinalIgnoreCase))
+            {
+                specificity = 2;
+            }
+            else
+            {
+                continue;
+            }
+
+            if (specificity > bestSpecificity)
+            {
+                bestSpecificity = specificity;
+                best = range.Quality ?? 1;
+            }
+        }
+
+        return best;
+    }
+
     private static void SetImmutableCacheHeaders(HttpResponse response)
     {
         var headers = response.GetTypedHeaders();
@@ -198,8 +274,23 @@ internal static class WebApplicationExtensions
         var options = app.Services.GetRequiredService<DeucalionOptions>();
         var htmlTitle = HttpUtility.HtmlEncode(options.PageTitle);
 
+        // Head metadata is what survives an agent's text-extraction pipeline (empirically: the
+        // title and meta tags of the served page made it through; the body did not), so the
+        // API is advertised here, in the initial payload, not by anything JS renders later.
+        var description = HttpUtility.HtmlEncode(
+            $"{options.PageTitle} — live service status. Machine-readable status at {DiscoveryEndpoints.StatusPath}; docs at {DiscoveryEndpoints.DocsPath}");
+
+        var head =
+            $"<title>{htmlTitle}</title>\n" +
+            $"    <link rel=\"alternate\" type=\"application/json\" href=\"{DiscoveryEndpoints.StatusPath}\" />\n" +
+            $"    <meta name=\"description\" content=\"{description}\" />";
+
+        var noscript =
+            $"<noscript><p>This page needs JavaScript. Machine-readable status: <a href=\"{DiscoveryEndpoints.StatusPath}\">{DiscoveryEndpoints.StatusPath}</a></p></noscript>";
+
         var indexContent = File.ReadAllText(indexFile);
         return indexContent
-            .Replace("<!-- $DEUCALION__PAGETITLE -->", $"<title>{htmlTitle}</title>");
+            .Replace("<!-- $DEUCALION__PAGETITLE -->", head)
+            .Replace("<!-- $DEUCALION__NOSCRIPT -->", noscript);
     }
 }
