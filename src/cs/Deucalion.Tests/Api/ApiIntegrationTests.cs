@@ -16,7 +16,7 @@ using Xunit;
 namespace Deucalion.Tests.Api;
 
 [Collection(ProcessEnvironmentCollection.Name)]
-public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
+public sealed class ApiIntegrationTests : IAsyncLifetime
 {
     // Configuration file path is read during WebApplicationBuilder construction,
     // before WebApplicationFactory's ConfigureWebHost callbacks land — so we
@@ -70,7 +70,18 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async ValueTask DisposeAsync() => await _factory.DisposeAsync();
+    // Cleanup lives here, not in IDisposable.Dispose(): xunit.v3 calls only DisposeAsync() on a
+    // class that implements IAsyncLifetime, so the old Dispose() never ran -- the env vars
+    // outlived each test and every instance leaked its directory under %TEMP%.
+    public async ValueTask DisposeAsync()
+    {
+        await _factory.DisposeAsync();
+
+        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, null);
+        Environment.SetEnvironmentVariable(StoragePathEnvVar, null);
+
+        TestPaths.DeleteWithRetry(_tempPath);
+    }
 
     [Fact]
     public async Task GetConfiguration_ReturnsConfiguredMetadata()
@@ -499,14 +510,6 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
                     entries.Add((logLevel, category, formatter(state, exception) + (exception is null ? "" : $" [{exception.GetType().Name}]")));
             }
         }
-    }
-
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, null);
-        Environment.SetEnvironmentVariable(StoragePathEnvVar, null);
-
-        TestPaths.DeleteWithRetry(_tempPath);
     }
 
     private sealed class TestApiFactory : WebApplicationFactory<Program>
