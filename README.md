@@ -46,7 +46,6 @@ Simply create a configuration file, start the service, and you're done.
 # docker-compose.yaml
 services:
   deucalion:
-    user: root
     container_name: deucalion
     image: ghcr.io/fdcastel/deucalion:latest
     ports:
@@ -54,8 +53,8 @@ services:
     environment:
       - DEUCALION__PAGETITLE=Deucalion status
     volumes:
-      - ./example.yaml:/app/example.yaml  # Rename or copy your configuration file as needed.
-      - ./data/:/storage/
+      - ./example.yaml:/app/deucalion.yaml  # The image reads /app/deucalion.yaml; mount your configuration file there.
+      - ./data/:/storage/                    # Must be writable by UID 1654 (the image runs as a non-root user).
 ```
 
 ```yaml

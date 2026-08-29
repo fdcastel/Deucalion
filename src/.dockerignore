@@ -1,0 +1,31 @@
+# Build context is ./src (see .github/workflows/edge.yml and release.yml).
+# Paths here are relative to that directory.
+
+# Local build output -- the image builds from source
+**/bin
+**/obj
+**/dist
+**/node_modules
+**/publish
+
+# Tests, test artefacts, and tooling state
+cs/Deucalion.Tests
+**/test-results
+**/playwright-report
+**/.playwright
+**/.e2e-storage
+**/*.log
+
+# Editor / VCS / local config
+**/.git
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+**/.env
+**/.env.*
+**/*.local
+
+# Docker files themselves
+Dockerfile*
+.dockerignore
