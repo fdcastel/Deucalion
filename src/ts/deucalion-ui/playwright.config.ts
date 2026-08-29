@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// One storage directory per run; see tests/e2e/global-teardown.ts for why.
+const STORAGE_RUN_ID = Date.now().toString();
+process.env.E2E_STORAGE_RUN_ID = STORAGE_RUN_ID;
+
 const PORT = 5173;
 const BASE_URL = `http://localhost:${PORT.toString()}`;
 
@@ -43,7 +47,7 @@ export default defineConfig({
         "dotnet run --project ../../cs/Deucalion.Api -c Release --no-build --no-launch-profile --urls http://localhost:5000",
       env: {
         ASPNETCORE_ENVIRONMENT: "Development",
-        DEUCALION__STORAGEPATH: "./.e2e-storage",
+        DEUCALION__STORAGEPATH: `./.e2e-storage/${STORAGE_RUN_ID}`,
       },
       url: "http://localhost:5000/api/configuration",
       reuseExistingServer: !process.env.CI,
