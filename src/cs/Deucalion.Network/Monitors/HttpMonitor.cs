@@ -11,11 +11,34 @@ namespace Deucalion.Network.Monitors;
 public class HttpMonitor : PullMonitor
 {
     // https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines#recommended-use
-    private static readonly HttpClient CachedHttpClient = new();
-    private static readonly HttpClient CachedHttpClientIgnoreCertificate = new(new HttpClientHandler()
+    //
+    // Process-lifetime clients over SocketsHttpHandler with a bounded PooledConnectionLifetime.
+    // The default lifetime is infinite, so a pooled connection is never re-resolved: a daemon
+    // that runs for months would keep reporting Up against an IP decommissioned at failover --
+    // the exact failure a monitor exists to catch (#20).
+    private static readonly SocketsHttpHandler CachedHandler = CreateHandler(ignoreCertificateErrors: false);
+    private static readonly SocketsHttpHandler CachedHandlerIgnoreCertificate = CreateHandler(ignoreCertificateErrors: true);
+
+    private static readonly HttpClient CachedHttpClient = new(CachedHandler);
+    private static readonly HttpClient CachedHttpClientIgnoreCertificate = new(CachedHandlerIgnoreCertificate);
+
+    /// <summary>Exposed for tests only.</summary>
+    internal static IReadOnlyList<SocketsHttpHandler> CachedHandlers { get; } = [CachedHandler, CachedHandlerIgnoreCertificate];
+
+    private static SocketsHttpHandler CreateHandler(bool ignoreCertificateErrors)
     {
-        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-    });
+        var handler = new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        };
+
+        if (ignoreCertificateErrors)
+        {
+            handler.SslOptions.RemoteCertificateValidationCallback = static (_, _, _, _) => true;
+        }
+
+        return handler;
+    }
 
     private const int MaxResponseBodySize = 1024 * 1024; // 1 MB
 
@@ -60,19 +83,17 @@ public class HttpMonitor : PullMonitor
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            // Use HttpCompletionOption.ResponseContentRead if we expect a response body.
-            // Otherwise use ResponseHeadersRead to avoid reading the body unnecessarily.
-            // https://www.stevejgordon.co.uk/using-httpcompletionoption-responseheadersread-to-improve-httpclient-performance-dotnet
-            var completionOption = ExpectedResponseBodyPattern is not null
-                ? HttpCompletionOption.ResponseContentRead
-                : HttpCompletionOption.ResponseHeadersRead;
-
             // Use the appropriate HttpClient based on whether we ignore certificate errors or not.
             var httpClient = IgnoreCertificateErrors ?? false
                 ? CachedHttpClientIgnoreCertificate
                 : CachedHttpClient;
 
-            using var response = await httpClient.SendAsync(request, completionOption, timeoutCts.Token);
+            // Always ResponseHeadersRead, even when a body pattern is set. ResponseContentRead
+            // buffered the entire body inside SendAsync -- up to MaxResponseContentBufferSize,
+            // 2 GB by default -- before the 1 MB cap below was ever applied, so a monitor pointed
+            // at a log dump paid the whole allocation (#20). The body is streamed and capped below.
+            // https://www.stevejgordon.co.uk/using-httpcompletionoption-responseheadersread-to-improve-httpclient-performance-dotnet
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
 
             // Freezes stopwatch.Elapsed
             stopwatch.Stop();

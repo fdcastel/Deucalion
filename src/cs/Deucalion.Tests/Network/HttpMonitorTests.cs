@@ -176,4 +176,88 @@ public class HttpMonitorTests
 
         Assert.Equal(MonitorState.Warn, result.State);
     }
+
+    [Fact]
+    public async Task Issue20_BodyPattern_DoesNotBufferTheWholeResponseBeforeMatching()
+    {
+        // Regression for #20: with HttpCompletionOption.ResponseContentRead the whole body was
+        // buffered inside SendAsync before the 1 MB cap was applied. A server that streams past
+        // the cap and then never completes the response made the monitor time out, even though
+        // the pattern was already in the first kilobyte. With ResponseHeadersRead the monitor reads
+        // its 1 MB, matches, and returns -- the cap is real.
+        var chunk = new string('x', 64 * 1024);
+        await using var server = await TestHttpServer.StartAsync(async context =>
+        {
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            await context.Response.WriteAsync("needle-at-the-start ", context.RequestAborted);
+            for (var i = 0; i < 32; i++) // 2 MB, well past the cap
+            {
+                await context.Response.WriteAsync(chunk, context.RequestAborted);
+                await context.Response.Body.FlushAsync(context.RequestAborted);
+            }
+
+            // Never finish: a full-content read can only end by timeout.
+            await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted);
+        });
+
+        HttpMonitor monitor = new()
+        {
+            Url = server.Url,
+            ExpectedResponseBodyPattern = "needle-at-the-start",
+            Timeout = TimeSpan.FromSeconds(5),
+        };
+
+        var result = await monitor.QueryAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(MonitorState.Up, result.State);
+    }
+
+    [Fact]
+    public async Task BodyPattern_BeyondTheOneMegabyteCap_IsNotSeen()
+    {
+        // Documents the cap: only the first 1 MB is inspected, so a needle after it is a miss.
+        var chunk = new string('x', 64 * 1024);
+        await using var server = await TestHttpServer.StartAsync(async context =>
+        {
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            for (var i = 0; i < 48; i++) // 3 MB
+            {
+                await context.Response.WriteAsync(chunk, context.RequestAborted);
+            }
+            await context.Response.WriteAsync("needle-at-the-end", context.RequestAborted);
+        });
+
+        HttpMonitor monitor = new()
+        {
+            Url = server.Url,
+            ExpectedResponseBodyPattern = "needle-at-the-end",
+            Timeout = TimeSpan.FromSeconds(5),
+        };
+
+        var result = await monitor.QueryAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(MonitorState.Down, result.State);
+        Assert.StartsWith("Unexpected response:", result.ResponseText);
+    }
+
+    [Fact]
+    public void Issue20_CachedClients_RecyclePooledConnections()
+    {
+        // Regression for #20: the default handler's PooledConnectionLifetime is infinite, so a
+        // daemon running for months never re-resolves DNS and keeps probing a decommissioned IP.
+        foreach (var handler in HttpMonitor.CachedHandlers)
+        {
+            Assert.NotEqual(Timeout.InfiniteTimeSpan, handler.PooledConnectionLifetime);
+            Assert.InRange(handler.PooledConnectionLifetime, TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(5));
+        }
+    }
+
+    [Fact]
+    public void IgnoreCertificateErrors_HandlerAcceptsAnyCertificate()
+    {
+        var handler = HttpMonitor.CachedHandlers.Single(h => h.SslOptions.RemoteCertificateValidationCallback is not null);
+
+        Assert.True(handler.SslOptions.RemoteCertificateValidationCallback!(
+            this, certificate: null, chain: null, System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors));
+    }
 }
