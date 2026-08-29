@@ -8,11 +8,10 @@ permissions:
   contents: write
   packages: write
 
-env:
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
-  DOTNET_NOLOGO: true
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/deucalion
+# One run per tag; never cancel a release in flight.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -21,111 +20,25 @@ jobs:
       contents: read
       packages: read
 
-  version:
-    runs-on: ubuntu-latest
-    outputs:
-      semVer: ${{ steps.gitversion.outputs.semVer }}
-      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
-      major: ${{ steps.gitversion.outputs.major }}
-      minor: ${{ steps.gitversion.outputs.minor }}
-      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Normalize Git state for GitVersion
-        run: git checkout -B ${{ github.event.repository.default_branch }} ${{ github.sha }}
-
-      - uses: gittools/actions/gitversion/setup@v4
-        with:
-          versionSpec: '6.x'
-
-      - id: gitversion
-        uses: gittools/actions/gitversion/execute@v4
-
   docker:
-    needs: [test, version]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: docker/setup-buildx-action@v4
-
-      - uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@v7
-        with:
-          context: ./src
-          platforms: ${{ matrix.platform }}
-          outputs: type=image,"name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}",push-by-digest=true,name-canonical=true,push=true
-          build-args: |
-            VERSION=${{ needs.version.outputs.semVer }}
-            INFORMATIONAL_VERSION=${{ needs.version.outputs.informationalVersion }}
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
-
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: digest-${{ matrix.runner }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
+    needs: test
+    uses: ./.github/workflows/docker-publish.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      push: true
+      tags: |
+        {majorMinorPatch}
+        {major}.{minor}
+        {major}
+        latest
 
   release:
-    needs: [version, docker]
+    needs: docker
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: docker/setup-buildx-action@v4
-
-      - uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          path: /tmp/digests
-          pattern: digest-*
-          merge-multiple: true
-
-      - name: Create multi-arch manifest and push
-        run: |
-          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          version="${{ needs.version.outputs.majorMinorPatch }}"
-          major="${{ needs.version.outputs.major }}"
-          minor="${{ needs.version.outputs.minor }}"
-
-          digests=$(cd /tmp/digests && printf "${image}@sha256:%s " *)
-
-          docker buildx imagetools create \
-            --tag "${image}:${version}" \
-            --tag "${image}:${major}.${minor}" \
-            --tag "${image}:${major}" \
-            --tag "${image}:latest" \
-            ${digests}
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
