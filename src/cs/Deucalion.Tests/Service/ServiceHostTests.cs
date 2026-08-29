@@ -16,7 +16,7 @@ namespace Deucalion.Tests.Service;
 /// a throw-away <c>wwwroot</c>, and exercises that middleware over HTTP.
 /// </summary>
 [Collection(ProcessEnvironmentCollection.Name)]
-public sealed class ServiceHostTests : IAsyncLifetime, IDisposable
+public sealed class ServiceHostTests : IAsyncLifetime
 {
     // See ApiIntegrationTests for why these are environment variables.
     private const string ConfigurationFileEnvVar = "Deucalion__ConfigurationFile";
@@ -73,16 +73,19 @@ public sealed class ServiceHostTests : IAsyncLifetime, IDisposable
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public async ValueTask DisposeAsync() => await _factory.DisposeAsync();
-
-    public void Dispose()
+    // Cleanup lives here, not in IDisposable.Dispose(): xunit.v3 calls only DisposeAsync() on a
+    // class that implements IAsyncLifetime, so a Dispose() would silently never run.
+    public async ValueTask DisposeAsync()
     {
+        await _factory.DisposeAsync();
+
         // ApiIntegrationTests asserts the title from appsettings.Development.json; an env var
         // would override it, so it must not outlive this class.
         Environment.SetEnvironmentVariable(PageTitleEnvVar, null);
+        Environment.SetEnvironmentVariable(ConfigurationFileEnvVar, null);
+        Environment.SetEnvironmentVariable(StoragePathEnvVar, null);
 
         TestPaths.DeleteWithRetry(_tempPath);
-        GC.SuppressFinalize(this);
     }
 
     // --- Index page ---------------------------------------------------------------------------
