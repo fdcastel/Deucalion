@@ -697,9 +697,16 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         var now = DateTimeOffset.UtcNow.AddSeconds(1);
 
         // Web is down, Main is up: the whole page is "degraded", the Main group is "operational".
-        await storage.SaveEventAsync("web-main", new StoredEvent(now, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
-        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
-        await storage.SaveEventAsync("checkin-open", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+        // Three probes each so the seeded runs dominate the availability regardless of what the
+        // engine's own startup probe recorded (web-main's probe of example.com succeeds on a
+        // runner with internet access, fails without): Web ends <= 25 %, Main >= 75 %.
+        for (var i = 0; i < 3; i++)
+        {
+            var at = now.AddSeconds(i);
+            await storage.SaveEventAsync("web-main", new StoredEvent(at, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+            await storage.SaveEventAsync("checkin-main", new StoredEvent(at, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+            await storage.SaveEventAsync("checkin-open", new StoredEvent(at, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+        }
 
         using var client = _factory.CreateClient();
         var whole = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
@@ -711,7 +718,8 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal("operational", main.GetProperty("status").GetString());
         Assert.Equal("main", main.GetProperty("group").GetString());
         Assert.Equal(["checkin-main", "checkin-open"], main.GetProperty("monitors").EnumerateArray().Select(m => m.GetProperty("name").GetString()));
-        // Recomputed over the group only: the Web monitor (0 % after its Down) no longer drags it.
+        // Recomputed over the group only: the Web monitor (<= 25 %) no longer drags it.
+        Assert.True(main.GetProperty("availability").GetDouble() >= 75);
         Assert.True(main.GetProperty("availability").GetDouble() > whole.GetProperty("availability").GetDouble());
         Assert.Equal("/api/status?group=main", main.GetProperty("links").GetProperty("self").GetString());
         Assert.Equal("/api/status/{name}", main.GetProperty("links").GetProperty("monitorStatus").GetString());
