@@ -26,7 +26,7 @@ const fetchMonitors = async (): Promise<MonitorDto[]> => {
   return await response.json() as MonitorDto[];
 };
 
-const [monitorsResource] = createResource(async () => {
+const [monitorsResource, { refetch }] = createResource(async () => {
   const list = await fetchMonitors();
   setState(
     produce((s) => {
@@ -44,8 +44,18 @@ const [monitorsResource] = createResource(async () => {
 
 // eslint-disable-next-line solid/reactivity
 export const monitors = state;
+
+// Consumers that decide whether the app is "ready" must read the resource
+// itself, not just `loaded`: Solid stores a resource's rejection and only
+// rethrows on read, so a fatal fetch (4xx) that nobody reads is swallowed
+// and the splash never goes away (#17).
 export { monitorsResource };
 export const monitorsLoaded = (): boolean => state.loaded;
+
+// Re-run the initial fetch. Used by the SSE layer after a reconnect: events
+// missed while the stream was down would otherwise leave a permanent hole
+// in the heartbeat strip and stale stats (#18).
+export const refetchMonitors = (): void => { void refetch(); };
 
 export const monitorList = (): MonitorDto[] => state.order.map((name) => state.byName[name]);
 
