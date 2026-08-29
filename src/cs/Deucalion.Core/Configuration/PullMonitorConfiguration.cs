@@ -1,9 +1,8 @@
-using SharpYaml;
-using SharpYaml.Serialization;
-
 namespace Deucalion.Configuration;
 
-[YamlPolymorphic(DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag, UnknownDerivedTypeHandling = YamlUnknownDerivedTypeHandling.FallBackToBase)]
+// Polymorphic over the YAML type tag (!ping, !tcp, ...). The derived types live in
+// Deucalion.Network and the tag mapping in Deucalion.Application's DeucalionYamlContext, so
+// this project stays free of any serializer dependency.
 public record PullMonitorConfiguration
 {
     public string? Name { get; set; }
