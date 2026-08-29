@@ -1,7 +1,7 @@
 import {
   MonitorState,
   type MonitorEventDto,
-  type MonitorProps,
+  type MonitorDto,
   type MonitorStatsDto,
 } from "../services/deucalion-types";
 
@@ -43,7 +43,7 @@ export const buildStats = (over: Partial<MonitorStatsDto> = {}): MonitorStatsDto
   ...over,
 });
 
-export const buildMonitor = (over: Partial<MonitorProps> = {}): MonitorProps => ({
+export const buildMonitor = (over: Partial<MonitorDto> = {}): MonitorDto => ({
   name: "test-monitor",
   config: { type: "http" },
   stats: buildStats(),

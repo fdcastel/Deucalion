@@ -48,7 +48,7 @@ export interface MonitorStateChangedDto {
   st: MonitorState;
 }
 
-export interface MonitorProps {
+export interface MonitorDto {
   name: string;
   config: MonitorConfigurationDto;
   stats?: MonitorStatsDto;

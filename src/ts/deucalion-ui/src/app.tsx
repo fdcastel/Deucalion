@@ -4,7 +4,7 @@ import { configuration } from "./stores/configuration-store";
 import { monitorsLoaded } from "./stores/monitors-store";
 
 import { TopBar } from "./components/top-bar";
-import { Hero } from "./components/hero/hero";
+import { HeroAvailability } from "./components/hero/hero-availability";
 import { MonitorList } from "./components/monitor/monitor-list";
 import { Footer } from "./components/footer";
 import { ToastStack } from "./components/common/toast";
@@ -45,7 +45,9 @@ export const App: Component = () => {
       <Show when={ready()}>
         <div class="shell">
           <TopBar />
-          <Hero />
+          <div class="hero">
+            <HeroAvailability />
+          </div>
           <MonitorList />
           <Footer />
         </div>

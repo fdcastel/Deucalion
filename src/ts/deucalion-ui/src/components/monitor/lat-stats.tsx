@@ -1,18 +1,18 @@
 import type { Component } from "solid-js";
 
-import type { MonitorProps } from "../../services/deucalion-types";
+import type { MonitorDto } from "../../services/deucalion-types";
 import { fmtMs } from "../../services/formatting";
 import { minMs, percentile } from "../../services/monitor-stats";
 import { SPARKLINE_NOISE_FLOOR_MS } from "./sparkline";
 
 interface LatStatsProps {
-  monitor: MonitorProps;
+  monitor: MonitorDto;
 }
 
 export const LatStats: Component<LatStatsProps> = (props) => {
   // Prefer backend-computed percentiles when present; fall back to a
   // client-side computation over the event window.
-  const stats = (): MonitorProps["stats"] => props.monitor.stats;
+  const stats = (): MonitorDto["stats"] => props.monitor.stats;
   const min = (): number | undefined => stats()?.minResponseTimeMs ?? minMs(props.monitor.events);
   const p50 = (): number | undefined => stats()?.latency50Ms ?? percentile(props.monitor.events, 0.5);
   const p95 = (): number | undefined => stats()?.latency95Ms ?? percentile(props.monitor.events, 0.95);

@@ -1,6 +1,6 @@
 import { type Component, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
 
-import { MonitorState, type MonitorProps } from "../../services/deucalion-types";
+import { MonitorState, type MonitorDto } from "../../services/deucalion-types";
 import { avail, lastIncident } from "../../services/monitor-stats";
 import { fmtAgo, stateName } from "../../services/formatting";
 
@@ -9,7 +9,7 @@ import { LatStats } from "./lat-stats";
 import { Sparkline } from "./sparkline";
 
 interface MonitorRowProps {
-  monitor: MonitorProps;
+  monitor: MonitorDto;
 }
 
 export const MonitorRow: Component<MonitorRowProps> = (props) => {

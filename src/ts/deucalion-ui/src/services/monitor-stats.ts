@@ -1,4 +1,4 @@
-import { MonitorState, type MonitorEventDto, type MonitorProps } from "./deucalion-types";
+import { MonitorState, type MonitorEventDto, type MonitorDto } from "./deucalion-types";
 
 // Pure helpers over MonitorEventDto[]. The backend returns events newest-first,
 // and we keep that convention internally.
@@ -90,7 +90,7 @@ export interface AggregateAvailability {
 
 // Aggregate availability across all monitors. We use stats.availability when
 // present and fall back to computing from events.
-export const aggregateAvailability = (monitors: MonitorProps[]): AggregateAvailability => {
+export const aggregateAvailability = (monitors: MonitorDto[]): AggregateAvailability => {
   let sum = 0;
   let up = 0, warn = 0, down = 0, degraded = 0, unknown = 0;
   for (const m of monitors) {
