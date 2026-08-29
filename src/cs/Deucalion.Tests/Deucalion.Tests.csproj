@@ -22,6 +22,10 @@
     <ProjectReference Include="..\Deucalion.Core\Deucalion.Core.csproj" />
     <ProjectReference Include="..\Deucalion.Network\Deucalion.Network.csproj" />
     <ProjectReference Include="..\Deucalion.Storage\Deucalion.Storage.csproj" />
+    <!-- Aliased: Deucalion.Service and Deucalion.Api both declare a global-namespace `Program`. -->
+    <ProjectReference Include="..\Deucalion.Service\Deucalion.Service.csproj">
+      <Aliases>Service</Aliases>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

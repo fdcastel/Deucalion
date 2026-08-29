@@ -11,6 +11,7 @@ using Xunit;
 
 namespace Deucalion.Tests.Api;
 
+[Collection(ProcessEnvironmentCollection.Name)]
 public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
 {
     // Configuration file path is read during WebApplicationBuilder construction,
