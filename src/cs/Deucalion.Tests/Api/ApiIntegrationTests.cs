@@ -206,6 +206,44 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task Issue23_CheckInEndpoint_IsRateLimited_PerClient()
+    {
+        // Unauthenticated and reachable from anywhere: without a limit one client could hammer
+        // the endpoint (and brute-force a secret) without bound.
+        using var client = _factory.CreateClient();
+
+        for (var i = 0; i < Deucalion.Api.Application.CheckInRateLimitPerMinute; i++)
+        {
+            using var accepted = await client.PostAsync("/api/monitors/checkin-open/checkin", content: null, TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        }
+
+        using var rejected = await client.PostAsync("/api/monitors/checkin-open/checkin", content: null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+
+        // Other endpoints are not subject to the check-in limit.
+        using var monitors = await client.GetAsync("/api/monitors", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, monitors.StatusCode);
+    }
+
+    [Fact]
+    public async Task CheckInEndpoint_SecretOfDifferentLength_IsRejected()
+    {
+        // A prefix of the secret and a longer string must both fail (length is checked before
+        // the constant-time comparison).
+        using var client = _factory.CreateClient();
+
+        foreach (var wrong in new[] { "test-secre", "test-secret-and-more", "TEST-SECRET" })
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
+            request.Headers.Add("deucalion-checkin-secret", wrong);
+
+            using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task Issue23_CorsPreflight_ForCheckIn_AllowsMethodAndSecretHeader()
     {
         // A cross-origin check-in carries a custom header, so the browser sends a preflight.
