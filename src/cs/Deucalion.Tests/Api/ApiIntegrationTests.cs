@@ -408,4 +408,14 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         var startedAt = DateTimeOffset.Parse(payload.GetProperty("startedAt").GetString()!);
         Assert.InRange(startedAt, DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow);
     }
+
+    [Fact]
+    public void JsonContext_DeclaresProblemDetails_ForAotProblemResponses()
+    {
+        // #16: the deployed (native AOT) instance returned an empty 500 for unknown monitor names
+        // because Results.Problem(...) could not serialize ProblemDetails -- no reflection resolver
+        // exists under AOT and the source-generated context did not declare the type. This JIT
+        // host cannot reproduce the failure, so pin the declaration directly.
+        Assert.NotNull(Deucalion.Api.DeucalionJsonContext.Default.GetTypeInfo(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails)));
+    }
 }

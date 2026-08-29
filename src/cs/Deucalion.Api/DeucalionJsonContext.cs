@@ -23,4 +23,9 @@ namespace Deucalion.Api;
 [JsonSerializable(typeof(PageConfigurationDto))]
 [JsonSerializable(typeof(StatusDto))]
 [JsonSerializable(typeof(VersionDto))]
+// ProblemDetails backs every Results.Problem(...) -- the 404 for unknown monitors, the check-in
+// errors and the exception handler. Under native AOT there is no reflection fallback resolver,
+// so without this entry each of those threw NotSupportedException and surfaced as an empty 500
+// (#16). The JIT test host hides the omission; ApiIntegrationTests pins the entry instead.
+[JsonSerializable(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails))]
 internal partial class DeucalionJsonContext : JsonSerializerContext;
