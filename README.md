@@ -24,6 +24,7 @@ Simply create a configuration file, start the service, and you're done.
   - [`dns` Monitor](#dns-monitor)
   - [`http` Monitor](#http-monitor)
   - [`checkin` Monitor](#checkin-monitor)
+- [API](#api)
 - [Development notes](#development-notes)
   - [How to debug](#how-to-debug)
   - [Logging](#logging)
@@ -237,6 +238,31 @@ curl -X POST \
 - `secret` is **optional**. If you omit it no authentication is performed: anyone who can reach
   the endpoint can mark the monitor UP.
 - Each check-in marks the monitor UP. If none arrives within `intervalToDown`, it goes DOWN.
+
+# API
+
+Everything the page shows is available as JSON, unauthenticated, with open CORS for reads. An agent (or a human with `curl`) given only the page URL can find it without reading the JavaScript: the served HTML advertises it (`<link rel="alternate" type="application/json" href="/api/status">`, a `<meta name="description">` naming the endpoint, and a `<noscript>` pointer), `GET /` with `Accept: application/json` returns the summary directly, and `/llms.txt` is a one-screen description of the whole API.
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /api/status` | Self-describing summary: overall `status` (`operational` -- nothing down; `degraded` -- some monitors down; `outage` -- every monitor down), `updatedAt`, overall `availability` (%), one entry per monitor (`name`, `group`, `type`, `state` as `up` / `warn` / `down` / `degraded` / `unknown`, `since`, `availability`, `latencyMs`), and `links` to the other endpoints. Timestamps are ISO-8601 UTC. Start here. |
+| `GET /` with `Accept: application/json` | The same document as `/api/status` (responses carry `Vary: Accept`; a browser's Accept header still gets the HTML). |
+| `GET /api/version` | `name`, `version` (build number and git SHA), `runtime`, `startedAt` -- tells you which build a deployment is actually running. |
+| `GET /api/monitors` | Full detail per monitor as the UI consumes it: `config`, rolling `stats` (last 60 probes), and the recent `events` in compact form (`at` unix seconds, `st` numeric state, `ms` latency). |
+| `GET /api/monitors/{name}` | One monitor in the same shape. Unknown names return `404` `application/problem+json`. |
+| `GET /api/monitors/events` | Server-Sent Events stream: `MonitorChecked` (`n`, `at`, `fr`, `st`, `ms`, `ns`) on every probe and `MonitorStateChanged` (`n`, `at`, `fr`, `st`) on transitions. |
+| `POST /api/monitors/{name}/checkin` | Heartbeat for `checkin` monitors -- see [`checkin` Monitor](#checkin-monitor). |
+| `GET /llms.txt` | Plain-Markdown description of the above, for agents that look for it. |
+
+Numeric states in the compact payloads: `0` unknown, `1` down, `2` up, `3` warn, `4` degraded.
+
+```bash
+curl -s http://localhost:5000/api/status
+curl -s -H 'Accept: application/json' http://localhost:5000/
+curl -s http://localhost:5000/api/version
+```
+
+The Docker image declares a `HEALTHCHECK` that runs `Deucalion.Service --healthcheck`, which probes `/api/version` on the container's own port (`ASPNETCORE_HTTP_PORTS`, default `8080`) and exits `0` on a 2xx.
 
 # Development notes
 

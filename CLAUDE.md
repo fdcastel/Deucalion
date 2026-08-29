@@ -31,6 +31,14 @@ Change both or neither. The `Wire contract` tests in
 `MonitorState` is likewise declared in both `Deucalion.Core/MonitorState.cs` and
 `deucalion-types.ts` — the numeric values must match.
 
+The discovery payloads (`/api/status`, `/api/version`; `Models/StatusDto.cs`,
+`Models/VersionDto.cs`, served from `Endpoints/DiscoveryEndpoints.cs`) are the
+exception: long keys, string states, ISO-8601 timestamps. They exist for agents
+and humans on a one-shot fetch, the UI never reads them, and they are
+deliberately **not** mirrored in `deucalion-types.ts`. Their shape is pinned by
+the `Discovery` tests in `ApiIntegrationTests.cs`, and `public/llms.txt` must
+keep naming every endpoint (`DiscoveryHeadTests.cs` fails otherwise).
+
 ## Tests
 
 `dotnet test` needs the `global.json` opt-in to Microsoft.Testing.Platform;
