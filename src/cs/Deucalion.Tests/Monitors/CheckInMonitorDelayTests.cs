@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Deucalion.Application;
 using Deucalion.Events;
 using Deucalion.Network.Monitors;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Deucalion.Tests.Monitors;
@@ -10,7 +11,8 @@ namespace Deucalion.Tests.Monitors;
 /// <summary>
 /// The check-in short-circuit path allocates two CancellationTokenSources per poll. Both must
 /// be disposed: the linked source registers a callback on the application-lifetime stop token,
-/// and that registration is only released on Dispose().
+/// and that registration is only released on Dispose(). And a check-in must cut the delay short
+/// no matter when it arrives relative to that per-poll lifetime (issue #22).
 /// </summary>
 public class CheckInMonitorDelayTests
 {
@@ -139,11 +141,16 @@ public class CheckInMonitorDelayTests
     [Fact]
     public async Task CheckIn_ShortCircuitsThePollingDelay()
     {
-        // A long interval means the second probe can only arrive if CheckIn() cut the delay.
+        // Regression for issue #22. A 5-minute interval on a frozen clock means the second probe
+        // can only arrive if the single CheckIn() below cut the delay short -- whether it landed
+        // on the armed delay source or in the gap between iterations. Before the fix this test
+        // had to call CheckIn() in a retry loop until one "landed on a live delay source".
         var cancellationToken = TestContext.Current.CancellationToken;
+        var time = new FakeTimeProvider();
         var monitor = new CheckInMonitor
         {
             Name = "m",
+            TimeProvider = time,
             IntervalToDown = TimeSpan.FromMinutes(5),
             IntervalWhenUp = TimeSpan.FromMinutes(5),
             IntervalWhenDown = TimeSpan.FromMinutes(5),
@@ -159,27 +166,79 @@ public class CheckInMonitorDelayTests
         var first = await ReadNextCheckedAsync(channel.Reader, stopCts.Token);
         Assert.Equal(MonitorState.Down, first.Response?.State);
 
-        // Poll CheckIn() until it lands on a live delay source, then expect a prompt second probe.
-        MonitorChecked? second = null;
-        while (second is null)
-        {
-            monitor.CheckIn();
-            try
-            {
-                using var attempt = CancellationTokenSource.CreateLinkedTokenSource(stopCts.Token);
-                attempt.CancelAfter(TimeSpan.FromMilliseconds(200));
-                second = await ReadNextCheckedAsync(channel.Reader, attempt.Token);
-            }
-            catch (OperationCanceledException) when (!stopCts.Token.IsCancellationRequested)
-            {
-                // The loop had not reached its delay yet; try again.
-            }
-        }
+        monitor.CheckIn();
 
+        // Exactly one check-in, no retries, and virtual time never advances.
+        var second = await ReadNextCheckedAsync(channel.Reader, stopCts.Token);
         Assert.Equal(MonitorState.Up, second.Response?.State);
 
         await stopCts.CancelAsync();
         try { await engineTask; } catch (OperationCanceledException) { }
+    }
+
+    // The three tests below pin the ArmDelay/DisarmDelay contract the polling loop relies on,
+    // in the exact interleavings issue #22 describes. They drive the monitor the way the loop
+    // does, so they are deterministic instead of racing a background task.
+
+    [Fact]
+    public async Task CheckIn_WhileNoDelayIsArmed_IsReportedByTheNextArmDelay()
+    {
+        // The gap between iterations: the previous delay source is gone, the next is not yet
+        // armed. The check-in must not wait out a full interval.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromMinutes(5), TimeProvider = new FakeTimeProvider() };
+
+        monitor.CheckIn();
+
+        using var delayCts = new CancellationTokenSource();
+        Assert.False(monitor.ArmDelay(delayCts), "ArmDelay must report the check-in that arrived while nothing was armed.");
+        Assert.False(delayCts.IsCancellationRequested, "The source armed after the check-in must not be cancelled.");
+        monitor.DisarmDelay();
+
+        // The probe consumes the pending check-in; a fresh delay then runs normally.
+        var response = await monitor.QueryAsync(cancellationToken);
+        Assert.Equal(MonitorState.Up, response.State);
+
+        using var nextDelayCts = new CancellationTokenSource();
+        Assert.True(monitor.ArmDelay(nextDelayCts));
+        monitor.DisarmDelay();
+    }
+
+    [Fact]
+    public void CheckIn_WhileADelayIsArmed_CancelsIt()
+    {
+        var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromMinutes(5), TimeProvider = new FakeTimeProvider() };
+
+        using var delayCts = new CancellationTokenSource();
+        Assert.True(monitor.ArmDelay(delayCts));
+
+        monitor.CheckIn();
+
+        Assert.True(delayCts.IsCancellationRequested);
+        monitor.DisarmDelay();
+    }
+
+    [Fact]
+    public async Task CheckIn_AfterTheDelayIsDisarmedAndDisposed_IsStillRecorded()
+    {
+        // The loop has disarmed and disposed its source: CheckIn() must not touch the disposed
+        // object, and the check-in must still reach the next probe.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromMinutes(5), TimeProvider = new FakeTimeProvider() };
+
+        var delayCts = new CancellationTokenSource();
+        Assert.True(monitor.ArmDelay(delayCts));
+        monitor.DisarmDelay();
+        delayCts.Dispose();
+
+        monitor.CheckIn();
+
+        using var nextDelayCts = new CancellationTokenSource();
+        Assert.False(monitor.ArmDelay(nextDelayCts));
+        monitor.DisarmDelay();
+
+        var response = await monitor.QueryAsync(cancellationToken);
+        Assert.Equal(MonitorState.Up, response.State);
     }
 
     private static async Task<MonitorChecked> ReadNextCheckedAsync(ChannelReader<IMonitorEvent> reader, CancellationToken cancellationToken)
