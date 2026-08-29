@@ -8,15 +8,49 @@ $publishFolder = './publish'
 $BuildVersion = '0.0.0-dev'
 $InformationalVersion = '0.0.0-dev'
 
-# synopsis: Determine version using GitVersion.
+# Floor for `dotnet test`. The xunit.v3 project runs on Microsoft.Testing.Platform
+# (see global.json); if that opt-in is ever lost, `dotnet test` finds no tests
+# and exits 0. The floor turns that into a failure (exit code 9). Keep it around
+# 80% of the tests that run without DEUCALION_TESTS_NETWORK, and keep it in
+# sync with .github/workflows/build.yml.
+$MinimumExpectedTests = 101
+
+# synopsis: Determine version using GitVersion (falls back to 0.0.0-dev).
+# GitVersion comes from the repo-local tool manifest (.config/dotnet-tools.json),
+# so `dotnet tool restore` is the only prerequisite. When the tool cannot be
+# restored, or it cannot compute a version (shallow clone, git worktree, tarball
+# export...), the build still goes through with the 0.0.0-dev placeholder.
 task Version {
-    $command = Get-Command dotnet-gitversion -ErrorAction SilentlyContinue
-    if (-not $command) {
-        throw "GitVersion is not installed. Please install it using:`n`ndotnet tool install --global GitVersion.Tool"
+    $versionJson = $null
+
+    dotnet tool restore
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "'dotnet tool restore' failed (exit code $LASTEXITCODE). Using fallback version $script:BuildVersion."
     }
-    $versionJson = dotnet gitversion | ConvertFrom-Json
-    $script:BuildVersion = $versionJson.SemVer
-    $script:InformationalVersion = $versionJson.InformationalVersion
+    else {
+        # Capture stdout only. GitVersion prints its own diagnostics on stderr,
+        # which must reach the console rather than be parsed as JSON.
+        $output = dotnet gitversion /output json
+        if ($LASTEXITCODE -eq 0) {
+            try {
+                $versionJson = ($output | Out-String) | ConvertFrom-Json
+            }
+            catch {
+                Write-Warning "Could not parse GitVersion output: $_"
+            }
+        }
+        else {
+            Write-Warning "'dotnet gitversion' failed (exit code $LASTEXITCODE); see the output above."
+        }
+    }
+
+    if ($versionJson) {
+        $script:BuildVersion = $versionJson.SemVer
+        $script:InformationalVersion = $versionJson.InformationalVersion
+    }
+    else {
+        Write-Warning "GitVersion unavailable. Using fallback version $script:BuildVersion."
+    }
 
     Write-Output "Build Version: $script:BuildVersion"
     Write-Output "Informational Version: $script:InformationalVersion"
@@ -83,7 +117,11 @@ task Prod {
 # End-to-end tests are separate -- they boot both servers and take ~30s:
 #   npm --prefix ./src/ts/deucalion-ui run test:e2e
 task Test {
-    exec { dotnet test }
+    # -c Release so the trim/AOT analyzers run (src/cs/Directory.Build.props
+    # gates them on Release) and local runs see the same warnings as CI.
+    # `--` hands the option to the test host; without it `dotnet test` silently
+    # ignores --minimum-expected-tests.
+    exec { dotnet test -c Release -- --minimum-expected-tests $MinimumExpectedTests }
     exec { npm --prefix './src/ts/deucalion-ui' run test }
     exec { npm --prefix './src/ts/deucalion-ui' run lint }
 }
