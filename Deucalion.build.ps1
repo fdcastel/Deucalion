@@ -11,8 +11,8 @@ $InformationalVersion = '0.0.0-dev'
 # Floor for `dotnet test`. The xunit.v3 project runs on Microsoft.Testing.Platform
 # (see global.json); if that opt-in is ever lost, `dotnet test` finds no tests
 # and exits 0. The floor turns that into a failure (exit code 9). Keep it around
-# 80% of the tests that run without DEUCALION_TESTS_NETWORK, and keep it in
-# sync with .github/workflows/build.yml.
+# 80% of the tests that run without DEUCALION_TESTS_NETWORK. CI runs this same
+# task (.github/workflows/build.yml), so this is the only place to change it.
 $MinimumExpectedTests = 101
 
 # synopsis: Determine version using GitVersion (falls back to 0.0.0-dev).
