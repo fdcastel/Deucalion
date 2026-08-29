@@ -10,6 +10,7 @@ WORKDIR /source
 # Install native AOT prerequisites
 RUN apt-get update && apt-get install -y clang zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
+COPY cs/Directory.Build.props ./
 COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
 COPY cs/Deucalion.Application/*.csproj ./Deucalion.Application/
 COPY cs/Deucalion.Core/*.csproj ./Deucalion.Core/
@@ -53,5 +54,11 @@ ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
 COPY --from=build-net /app ./
 COPY --from=build-node /source/dist ./wwwroot/
 
+# SqliteStorage creates its database under /storage at startup; the directory
+# must exist and be writable by the non-root user before USER switches to it.
+RUN mkdir -p /storage && chown $APP_UID:$APP_UID /storage
+VOLUME /storage
+
+EXPOSE 8080
 USER $APP_UID
 ENTRYPOINT ["./Deucalion.Service"]
