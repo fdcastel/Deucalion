@@ -8,7 +8,7 @@ namespace Deucalion.Tests.Network;
 /// </summary>
 public class PingMonitorTests
 {
-    [Fact(Skip = "Requires public internet access. Set DEUCALION_TESTS_NETWORK=1 to run.", SkipUnless = nameof(TestEnvironment.NetworkTestsEnabled), SkipType = typeof(TestEnvironment))]
+    [Fact(Skip = "Requires public internet access and ICMP echo (not available on GitHub-hosted runners). Set DEUCALION_TESTS_NETWORK=1 to run.", SkipUnless = nameof(TestEnvironment.IcmpEchoAvailable), SkipType = typeof(TestEnvironment))]
     public async Task PingMonitor_ReturnsUp_WhenReachable()
     {
         PingMonitor pingMonitor = new() { Host = "1.1.1.1" };

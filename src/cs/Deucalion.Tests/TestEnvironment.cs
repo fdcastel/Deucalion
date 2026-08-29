@@ -10,4 +10,13 @@ public static class TestEnvironment
     /// </summary>
     public static bool NetworkTestsEnabled =>
         Environment.GetEnvironmentVariable("DEUCALION_TESTS_NETWORK") == "1";
+
+    /// <summary>
+    /// Narrower gate for the one test that expects an ICMP echo to *succeed*. GitHub-hosted
+    /// runners (Linux and Windows alike) cannot send ICMP echo to the internet, so even the weekly
+    /// network run cannot pass it there; verified on a workflow_dispatch run, it is the only
+    /// network test that fails on those runners.
+    /// </summary>
+    public static bool IcmpEchoAvailable =>
+        NetworkTestsEnabled && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true";
 }
