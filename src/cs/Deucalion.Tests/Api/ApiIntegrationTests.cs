@@ -772,6 +772,66 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal("/api/errors/monitor-not-found", problem.GetProperty("type").GetString());
     }
 
+    // --- GET /api/monitors: columnar events and the ?events= cap --------------------------------
+
+    [Fact]
+    public async Task GetMonitors_ShipsEventsColumnar_NewestFirst()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var t0 = DateTimeOffset.FromUnixTimeSeconds(1_800_000_000);
+
+        // Older than anything the engine's startup probe stored, so the tail is deterministic.
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(t0, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(t0.AddSeconds(60), MonitorState.Warn, TimeSpan.FromMilliseconds(900), null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(t0.AddSeconds(121), MonitorState.Up, TimeSpan.FromMilliseconds(118), null), TestContext.Current.CancellationToken);
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/monitors/checkin-open?events=3", TestContext.Current.CancellationToken);
+        var events = payload.GetProperty("events");
+
+        Assert.Equal(1_800_000_121, events.GetProperty("at").GetInt64());
+        Assert.Equal([61, 60], events.GetProperty("dt").EnumerateArray().Select(d => d.GetInt32()));
+        Assert.Equal("231", events.GetProperty("st").GetString()); // Up, Warn, Down
+        var ms = events.GetProperty("ms").EnumerateArray().ToArray();
+        Assert.Equal(118, ms[0].GetInt32());
+        Assert.Equal(900, ms[1].GetInt32());
+        Assert.Equal(JsonValueKind.Null, ms[2].ValueKind);
+    }
+
+    [Theory]
+    [InlineData("?events=2", 2)]
+    [InlineData("?events=0", 1)]        // clamped up
+    [InlineData("?events=999", 120)]    // clamped to EventHistoryCount
+    [InlineData("", 120)]               // default
+    public async Task GetMonitors_EventsQuery_CapsTheHistory(string query, int expectedCount)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var t0 = DateTimeOffset.FromUnixTimeSeconds(1_800_000_000);
+        for (var i = 0; i < 150; i++)
+        {
+            await storage.SaveEventAsync("checkin-main", new StoredEvent(t0.AddSeconds(i), MonitorState.Up, TimeSpan.FromMilliseconds(i), null), TestContext.Current.CancellationToken);
+        }
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/monitors/checkin-main" + query, TestContext.Current.CancellationToken);
+        var events = payload.GetProperty("events");
+
+        // The engine's own startup probe adds one more row than the 150 seeded here, so the
+        // count is what was asked for, never more; the default and the over-cap ask both stop at 120.
+        Assert.Equal(expectedCount, events.GetProperty("st").GetString()!.Length);
+        Assert.Equal(expectedCount, events.GetProperty("ms").GetArrayLength());
+        Assert.Equal(expectedCount - 1, events.GetProperty("dt").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task GetMonitors_MonitorWithoutEvents_OmitsTheEventsKey()
+    {
+        // The engine probes every monitor at host start, so this is asserted at the DTO level.
+        Assert.Null(Deucalion.Api.Models.MonitorEventsDto.From([]));
+    }
+
     [Fact]
     public async Task GetVersion_IdentifiesTheRunningBuild()
     {

@@ -19,7 +19,9 @@ carries the handful of resets the layout actually needs.
 ## The wire contract is mirrored by hand
 
 The SSE and REST payloads use short keys (`n`, `at`, `st`, `ms`, `ns`) to
-keep frames small. They are declared twice, with nothing generating one from the
+keep frames small, and `GET /api/monitors` ships each monitor's events in
+columnar form (`events: { at, dt, st, ms }`, `MonitorEventsDto`, decoded by
+`services/wire.ts`) -- the event lists are most of that payload. They are declared twice, with nothing generating one from the
 other:
 
 - `src/cs/Deucalion.Api/Models/*.cs` (`[JsonPropertyName]`)

@@ -1,35 +1,13 @@
-import { For, type Accessor, type Component, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { For, type Component, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { stripLen as sharedStripLen } from "../../services/viewport";
 
 import type { MonitorEventDto } from "../../services/deucalion-types";
 import { fmtMs, fmtTime, stateLabel, stateName } from "../../services/formatting";
 
-// Viewport-tier'd strip lengths, picked from a Playwright sweep that
-// measured the col-strip width and per-tick width at each breakpoint.
-// Targets keep tick width ≥ ~3px (visibly distinguishable colour bands)
-// rather than crushing every tick to the 2px CSS minimum:
-//   ≥1480 → 120 ticks (~4.8px each on a 812px strip)
-//   ≥1280 →  90 ticks (~4.8px each on a ~612px strip)
-//    ≥720 →  60 ticks (~4–5px each on a 360–500px strip)
-//   < 720 →  60 ticks (mobile — already crushed to 2px, more wouldn't help)
-const stripLenForWidth = (w: number): number => {
-  if (w >= 1480) return 120;
-  if (w >= 1280) return 90;
-  return 60;
-};
-
-// One signal + one `resize` listener shared by every strip on the page.
-// Attached lazily on first use so importing this module has no side effects
-// (tests pin `window.innerWidth` before rendering, and SSR has no window).
-let sharedStripLen: Accessor<number> | undefined;
-
-const useStripLen = (): Accessor<number> => {
-  if (sharedStripLen) return sharedStripLen;
-  if (typeof window === "undefined") return () => 60;
-  const [len, setLen] = createSignal(stripLenForWidth(window.innerWidth));
-  window.addEventListener("resize", () => { setLen(stripLenForWidth(window.innerWidth)); });
-  sharedStripLen = len;
-  return len;
-};
+// Strip length by viewport tier and the shared resize signal live in
+// services/viewport.ts: the monitors store asks the API for exactly that many
+// events, so both sides must agree on the tiers.
+const useStripLen = sharedStripLen;
 
 interface HeartbeatStripProps {
   events: MonitorEventDto[]; // newest-first

@@ -1,4 +1,4 @@
-import { createResource } from "solid-js";
+import { createEffect, createResource } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 
 import { API_MONITORS_URL, MAX_EVENT_HISTORY } from "../configuration";
@@ -6,8 +6,11 @@ import type {
   MonitorCheckedDto,
   MonitorEventDto,
   MonitorDto,
+  MonitorWireDto,
 } from "../services/deucalion-types";
 import { fetchWithRetry } from "../services/fetch-with-retry";
+import { stripLen } from "../services/viewport";
+import { decodeMonitor } from "../services/wire";
 
 interface MonitorsStoreState {
   byName: Record<string, MonitorDto>;
@@ -21,9 +24,17 @@ const [state, setState] = createStore<MonitorsStoreState>({
   loaded: false,
 });
 
+// Ask for as many events as the heartbeat strip can show at this viewport: the
+// event lists are most of the payload, and a phone never draws more than 60.
+// `loadedEventCount` remembers what was asked for, so growing the viewport past
+// it triggers a refetch (below) instead of leaving the wider strip half empty.
+let loadedEventCount = 0;
+
 const fetchMonitors = async (): Promise<MonitorDto[]> => {
-  const response = await fetchWithRetry(API_MONITORS_URL);
-  return await response.json() as MonitorDto[];
+  const count = stripLen()();
+  const response = await fetchWithRetry(`${API_MONITORS_URL}?events=${count.toString()}`);
+  loadedEventCount = count;
+  return (await response.json() as MonitorWireDto[]).map(decodeMonitor);
 };
 
 const [monitorsResource, { refetch }] = createResource(async () => {
@@ -56,6 +67,14 @@ export const monitorsLoaded = (): boolean => state.loaded;
 // missed while the stream was down would otherwise leave a permanent hole
 // in the heartbeat strip and stale stats (#18).
 export const refetchMonitors = (): void => { void refetch(); };
+
+// Resized into a wider tier than the initial fetch covered (phone -> desktop,
+// window un-snapped): fetch the longer history once. Never re-fetches on
+// shrink -- the strip simply shows fewer of the events already loaded.
+createEffect(() => {
+  const wanted = stripLen()();
+  if (state.loaded && wanted > loadedEventCount) refetchMonitors();
+});
 
 export const monitorList = (): MonitorDto[] => state.order.map((name) => state.byName[name]);
 

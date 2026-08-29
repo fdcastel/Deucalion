@@ -32,7 +32,7 @@ const defaultFetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> =
       headers: { "content-type": "application/json" },
     });
   }
-  if (url.endsWith("/api/monitors")) {
+  if (/\/api\/monitors(\?|$)/.test(url)) {
     return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
   }
   return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });

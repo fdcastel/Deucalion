@@ -72,6 +72,9 @@ public static class Application
             options.Providers.Add<GzipCompressionProvider>();
             options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["image/svg+xml"]);
         });
+        // Brotli defaults to Fastest (quality ~1). Optimal (~4) costs little CPU on payloads this
+        // size and takes another ~10 % off the event lists.
+        builder.Services.Configure<BrotliCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
 
         // Application configuration
         var deucalionOptions = new DeucalionOptions();
@@ -139,12 +142,15 @@ public static class Application
 
         app.MapDiscoveryEndpoints(app.Services.GetRequiredService<TimeProvider>());
 
-        app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, CancellationToken cancellationToken) =>
+        // `?events=N` caps the per-monitor history (1..EventHistoryCount). The UI asks for what its
+        // heartbeat strip can show at the current viewport; the event list is most of the payload.
+        app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, int? events, CancellationToken cancellationToken) =>
         {
+            var eventCount = Math.Clamp(events ?? EventHistoryCount, 1, EventHistoryCount);
             if (monitorName is null)
             {
                 var tasks = applicationConfiguration.Monitors
-                                  .Select(kvp => BuildMonitorDtoAsync(storage, applicationMonitors, kvp.Value, kvp.Key, cancellationToken));
+                                  .Select(kvp => BuildMonitorDtoAsync(storage, applicationMonitors, kvp.Value, kvp.Key, eventCount, cancellationToken));
                 var results = await Task.WhenAll(tasks);
                 return Results.Ok(results);
             }
@@ -154,7 +160,7 @@ public static class Application
                 return DeucalionResults.MonitorNotFound(monitorName);
             }
 
-            return Results.Ok(await BuildMonitorDtoAsync(storage, applicationMonitors, monitor, monitorName, cancellationToken));
+            return Results.Ok(await BuildMonitorDtoAsync(storage, applicationMonitors, monitor, monitorName, eventCount, cancellationToken));
         });
 
         app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, HttpRequest request) =>
@@ -268,7 +274,7 @@ public static class Application
     // gets full history and narrower viewports clip from the left.
     private const int EventHistoryCount = 120;
 
-    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, IReadOnlyDictionary<string, PullMonitor> applicationMonitors, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken)
+    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, IReadOnlyDictionary<string, PullMonitor> applicationMonitors, PullMonitorConfiguration m, string mn, int eventCount, CancellationToken cancellationToken)
     {
         // Stats use the rolling stats window; the event list uses the longer strip history.
         // These are deliberately different numbers -- see EventHistoryCount above.
@@ -283,8 +289,7 @@ public static class Application
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
             Stats: MonitorStatsDto.From(stats, effectiveWarn, timeout),
-            Events: from e in await storage.GetLastEventsAsync(mn, count: EventHistoryCount, cancellationToken: cancellationToken)
-                    select MonitorEventDto.From(e)
+            Events: MonitorEventsDto.From(await storage.GetLastEventsAsync(mn, count: eventCount, cancellationToken: cancellationToken))
         );
     }
 }

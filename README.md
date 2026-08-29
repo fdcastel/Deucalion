@@ -269,13 +269,13 @@ Everything the page shows is available as JSON, unauthenticated, with open CORS 
 | `GET /api/status/{name}` | One monitor: `updatedAt`, `monitor` (the same shape as its entry in `/api/status`) and `links` (`self`, `status`, `monitor` = the full-detail document, `events`). Unknown names return `404` `application/problem+json`. |
 | `GET /` with `Accept: application/json` | The same document as `/api/status` (responses carry `Vary: Accept`; a browser's Accept header still gets the HTML). |
 | `GET /api/version` | `name`, `version` (build number and git SHA), `runtime`, `startedAt` -- tells you which build a deployment is actually running. |
-| `GET /api/monitors` | Full detail per monitor as the UI consumes it: `config`, rolling `stats` (last 60 probes), and the recent `events` in compact form (`at` unix seconds, `st` numeric state, `ms` latency). |
+| `GET /api/monitors` | Full detail per monitor as the UI consumes it: `config`, rolling `stats` (last 60 probes), and the recent `events` in columnar form, newest first: `at` (unix seconds of the newest), `dt` (seconds between consecutive events), `st` (one numeric-state digit per event), `ms` (latency per event, `null` when none). `?events=N` caps the history (1..120; the UI asks for what its heartbeat strip can show). |
 | `GET /api/monitors/{name}` | One monitor in the same shape. Unknown names return `404` `application/problem+json`. |
 | `GET /api/monitors/events` | Server-Sent Events stream: `MonitorChecked` (`n`, `at`, `st`, `ms`, `ns`) on every probe and `MonitorStateChanged` (`n`, `at`, `st`) on transitions. |
 | `POST /api/monitors/{name}/checkin` | Heartbeat for `checkin` monitors -- see [`checkin` Monitor](#checkin-monitor). |
 | `GET /llms.txt` | Plain-Markdown description of the above, for agents that look for it. |
 
-Numeric states in the compact payloads: `0` unknown, `1` down, `2` up, `3` warn, `4` degraded.
+Numeric states in the compact payloads (and the digits of `events.st`): `0` unknown, `1` down, `2` up, `3` warn, `4` degraded.
 
 ```bash
 curl -s http://localhost:5000/api/status

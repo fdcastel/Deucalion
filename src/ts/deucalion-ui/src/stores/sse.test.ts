@@ -66,12 +66,12 @@ const lastSource = (): FakeEventSource => {
 const okFetch = (): ReturnType<typeof vi.fn> =>
   vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
     const url = typeof input === "string" ? input : input.toString();
-    const body = url.endsWith("/api/monitors") ? "[]" : "{}";
+    const body = /\/api\/monitors(\?|$)/.test(url) ? "[]" : "{}";
     return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
   });
 
 const monitorsFetches = (spy: ReturnType<typeof vi.fn>): number =>
-  spy.mock.calls.filter(([input]) => String(input).endsWith("/api/monitors")).length;
+  spy.mock.calls.filter(([input]) => /\/api\/monitors(\?|$)/.test(String(input))).length;
 
 describe("connectSSE()", () => {
   let fetchStub: ReturnType<typeof vi.fn>;

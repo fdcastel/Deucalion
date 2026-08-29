@@ -40,7 +40,7 @@ describe("<App> splash lifecycle", () => {
   it("surfaces a fatal /api/monitors fetch instead of hanging on the splash (#17)", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url.endsWith("/api/monitors")) return new Response("nope", { status: 404, statusText: "Not Found" });
+      if (/\/api\/monitors(\?|$)/.test(url)) return new Response("nope", { status: 404, statusText: "Not Found" });
       return jsonResponse({ pageTitle: "Test" });
     });
 

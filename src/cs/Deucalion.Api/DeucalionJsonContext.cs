@@ -15,7 +15,7 @@ namespace Deucalion.Api;
 )]
 [JsonSerializable(typeof(MonitorCheckedDto))]
 [JsonSerializable(typeof(MonitorStateChangedDto))]
-[JsonSerializable(typeof(MonitorEventDto))]
+[JsonSerializable(typeof(MonitorEventsDto))]
 [JsonSerializable(typeof(MonitorStatsDto))]
 [JsonSerializable(typeof(MonitorConfigurationDto))]
 [JsonSerializable(typeof(MonitorDto))]
