@@ -43,7 +43,7 @@ test.describe("Deucalion dashboard", () => {
 });
 
 test.describe("Wire contract", () => {
-  // Nothing else catches a rename of the short SSE keys (n/at/fr/st/ms/ns),
+  // Nothing else catches a rename of the short SSE keys (n/at/st/ms/ns),
   // which are mirrored by hand between Deucalion.Api/Models/*.cs and
   // src/services/deucalion-types.ts. The heartbeat ticks rendered on load come
   // from GET /api/monitors, so only a *live* update exercises mergeChecked.

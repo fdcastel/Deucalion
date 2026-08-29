@@ -37,7 +37,6 @@ export interface MonitorEventDto {
 export interface MonitorCheckedDto {
   n: string;
   at: number;
-  fr: MonitorState;
   st: MonitorState;
   ms?: number;
   ns: MonitorStatsDto;
@@ -46,7 +45,6 @@ export interface MonitorCheckedDto {
 export interface MonitorStateChangedDto {
   n: string;
   at: number;
-  fr: MonitorState;
   st: MonitorState;
 }
 
