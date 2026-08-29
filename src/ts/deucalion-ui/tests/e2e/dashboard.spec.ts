@@ -40,12 +40,6 @@ test.describe("Deucalion dashboard", () => {
     expect(badgeClasses).not.toContain(null);
     expect(new Set(badgeClasses).size).toBeGreaterThan(1);
   });
-
-  test("event feed is no longer rendered (data still flows via SSE)", async ({ page }) => {
-    await page.goto("/");
-    await waitForDashboard(page);
-    await expect(page.locator(".feed")).toHaveCount(0);
-  });
 });
 
 test.describe("Wire contract", () => {

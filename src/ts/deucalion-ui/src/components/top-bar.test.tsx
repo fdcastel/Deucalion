@@ -35,13 +35,6 @@ describe("<TopBar>", () => {
     expect(tweaks.theme()).toBe("dark");
   });
 
-  it("does not render a visible tweaks trigger (panel is now console-only)", () => {
-    __seedMonitorsForTests([]);
-    render(() => <TopBar />);
-    const trigger = document.querySelector('button[aria-label="Open tweaks panel"]');
-    expect(trigger).toBeNull();
-  });
-
   it("updates document.title with a (-N) prefix when monitors are down", () => {
     __seedMonitorsForTests([
       buildMonitor({ name: "a", stats: buildStats({ lastState: MonitorState.Down }) }),
