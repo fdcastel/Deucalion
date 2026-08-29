@@ -8,7 +8,7 @@ namespace Deucalion.Api;
 // == WhenWritingNull, so it only ever meant this. Stated plainly here.
 //
 // WhenWritingNull is also the *correct* behaviour: WhenWritingDefault would drop `lastState: 0`
-// (Unknown), `availability: 0` and `fr: 0`, all of which the UI reads.
+// (Unknown), `availability: 0` and `st: 0`, all of which the UI reads.
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull

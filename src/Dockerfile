@@ -29,17 +29,12 @@ RUN dotnet publish -c release -o /app \
 
 # build image for NodeJs
 FROM --platform=$BUILDPLATFORM node:lts-alpine AS build-node
-ARG VERSION=0.0.0-dev
-ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /source
 
 COPY ts/deucalion-ui/package*.json .
 RUN npm ci
 
 COPY ts/deucalion-ui/ .
-
-ENV VITE_BUILD_VERSION=$VERSION
-ENV VITE_INFORMATIONAL_VERSION=$INFORMATIONAL_VERSION
 
 RUN npm run build
 

@@ -35,7 +35,7 @@ public static class Application
         // the href-omission assertion in ApiIntegrationTests.
         //
         // WhenWritingNull, not WhenWritingDefault: the latter would also drop `lastState: 0`
-        // (Unknown), `availability: 0` and `fr: 0`, all of which the UI reads. (Note that
+        // (Unknown), `availability: 0` and `st: 0`, all of which the UI reads. (Note that
         // JsonIgnoreCondition is not a [Flags] enum -- the old
         // `WhenWritingDefault | WhenWritingNull` silently evaluated to 2|3 == 3 == WhenWritingNull.)
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
