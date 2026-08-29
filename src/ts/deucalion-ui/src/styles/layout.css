@@ -161,14 +161,6 @@
   row-gap: 6px;
 }
 
-.hero-label {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--fg-3);
-  font-weight: 500;
-}
-
 .hero-availability {
   font-family: var(--font-display);
   font-size: 64px;
@@ -232,12 +224,6 @@
 .hero-chip.up strong { color: var(--up); }
 .hero-chip.warn strong { color: var(--warn); }
 .hero-chip.down strong { color: var(--down); }
-.hero-chip-total {
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 11px;
-}
-
 .hero-spark-wrap {
   grid-area: spark;
   width: 240px;
@@ -278,43 +264,6 @@
 .group {
   margin-top: 36px;
 }
-
-.group-header {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding-bottom: 12px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-}
-
-.group-title {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: var(--fg);
-  margin: 0;
-}
-.group-title em {
-  font-style: var(--display-italic);
-  color: var(--fg-3);
-  font-weight: 400;
-}
-
-.group-meta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-3);
-  display: flex;
-  gap: 14px;
-  margin-left: auto;
-  letter-spacing: 0.02em;
-}
-
-.group-meta-up { color: var(--up); }
-.group-meta-warn { color: var(--warn); }
-.group-meta-down { color: var(--down); }
 
 /* ============= MONITOR ROW ============= */
 .row {

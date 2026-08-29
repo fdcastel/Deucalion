@@ -31,11 +31,4 @@ describe("<MonitorList>", () => {
     expect(subs).toContain("Edge");
     expect(subs).toContain("Origin");
   });
-
-  it("does not render a group-header any more (count + tally moved to the hero)", () => {
-    __seedMonitorsForTests([buildMonitor({ name: "a" }), buildMonitor({ name: "b" })]);
-    const { container } = render(() => <MonitorList />);
-    expect(container.querySelector(".group-header")).toBeNull();
-    expect(container.querySelector(".group-title")).toBeNull();
-  });
 });
