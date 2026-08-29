@@ -10,6 +10,9 @@ WORKDIR /source
 # Install native AOT prerequisites
 RUN apt-get update && apt-get install -y clang zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
+# Empty, non-root-owned storage directory for the final stage (see below).
+RUN mkdir -p /storage
+
 COPY cs/Directory.Build.props ./
 COPY cs/Deucalion.Api/*.csproj ./Deucalion.Api/
 COPY cs/Deucalion.Application/*.csproj ./Deucalion.Application/
@@ -38,8 +41,12 @@ COPY ts/deucalion-ui/ .
 
 RUN npm run build
 
-# final image -- AOT produces a native binary, no .NET runtime needed
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
+# final image -- AOT produces a native binary, no .NET runtime needed.
+# Chiseled: ~30 MB, no shell, no package manager, non-root by default. The
+# "-extra" variant adds ICU and tzdata, which the runtime needs unless
+# InvariantGlobalization is set. HEALTHCHECK and ENTRYPOINT use the exec form
+# because there is no shell to interpret anything else.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra
 WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \
@@ -50,8 +57,9 @@ COPY --from=build-net /app ./
 COPY --from=build-node /source/dist ./wwwroot/
 
 # SqliteStorage creates its database under /storage at startup; the directory
-# must exist and be writable by the non-root user before USER switches to it.
-RUN mkdir -p /storage && chown $APP_UID:$APP_UID /storage
+# must exist and be writable by the non-root user. The chiseled image has no
+# shell (no RUN), so the empty directory is copied in from the build stage.
+COPY --from=build-net --chown=$APP_UID:$APP_UID /storage /storage
 VOLUME /storage
 
 EXPOSE 8080
