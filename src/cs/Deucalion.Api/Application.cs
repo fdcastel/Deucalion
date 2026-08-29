@@ -209,8 +209,10 @@ public static class Application
         // These are deliberately different numbers -- see EventHistoryCount above.
         var stats = await storage.GetStatsAsync(mn, historyCount: PullMonitor.StatsWindow, cancellationToken: cancellationToken);
 
+        // Display only: request threads must not write the live monitor's auto-WARN baseline
+        // (issue #15). EngineBackgroundService is the sole writer, via WarnThresholdPolicy.Refresh.
         applicationMonitors.Monitors.TryGetValue(mn, out var monitor);
-        var (effectiveWarn, timeout) = WarnThresholdPolicy.Refresh(monitor, stats?.Latency95, stats?.SampleCount ?? 0);
+        var (effectiveWarn, timeout) = WarnThresholdPolicy.Compute(monitor, stats?.Latency95, stats?.SampleCount ?? 0);
 
         return new(
             Name: mn,
