@@ -96,6 +96,21 @@ monitors:
 
 Monitoring behavior is defined in a YAML configuration file (e.g., `deucalion.yaml`).
 
+### Server options
+
+Server settings come from the `Deucalion` configuration section -- as environment variables, `DEUCALION__<NAME>` (see the *Quick start* above). Every option has a default; an invalid value (e.g. a zero interval) stops the server at startup with a `Configuration error` naming the option.
+
+| Option                 | Default            | Description |
+|------------------------|--------------------|-------------|
+| `CONFIGURATIONFILE`    | `deucalion.yaml`   | Path of the YAML configuration file. |
+| `STORAGEPATH`          | `<temp>/Deucalion` | Directory of the SQLite database. |
+| `PAGETITLE`            | `Deucalion status` | Title of the web page. |
+| `EVENTRETENTIONPERIOD` | `30.00:00:00`      | Events older than this are deleted by the purge. |
+| `MAXEVENTSPERMONITOR`  | `100000`           | Newest events kept per monitor; the purge deletes the rest, even if still within the retention period. |
+| `PURGEINTERVAL`        | `1.00:00:00`       | How often the purge runs (it also runs once at startup). |
+
+The purge deletes in chunks of 10,000 rows, so the engine keeps recording events while a large backlog is removed, and then hands the freed pages back to the file system: the database file shrinks. The UI only ever reads the last 120 events per monitor, so `MAXEVENTSPERMONITOR` bounds disk usage without losing anything the dashboard shows.
+
 ### Defaults Section
 
 This optional section allows you to define default values that apply to all monitors, or to all monitors of a specific type, unless overridden in a monitor's configuration. Example:

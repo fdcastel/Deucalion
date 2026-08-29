@@ -33,8 +33,8 @@ internal class PurgeBackgroundService(
     {
         try
         {
-            logger.LogInformation("Starting periodic database purge (Retention: {RetentionPeriod})...", options.EventRetentionPeriod);
-            var deletedCount = await storage.PurgeOldEventsAsync(options.EventRetentionPeriod, cancellationToken);
+            logger.LogInformation("Starting periodic database purge (Retention: {RetentionPeriod}, MaxEventsPerMonitor: {MaxEventsPerMonitor})...", options.EventRetentionPeriod, options.MaxEventsPerMonitor);
+            var deletedCount = await storage.PurgeOldEventsAsync(options.EventRetentionPeriod, options.MaxEventsPerMonitor, cancellationToken);
             logger.LogInformation("Database purge completed. Deleted {DeletedCount} old events.", deletedCount);
         }
         catch (OperationCanceledException)

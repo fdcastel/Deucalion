@@ -6,11 +6,21 @@ public sealed class SqliteStorage : IStorage, IDisposable
 {
     private const string EventsTableName = "Events";
 
+    /// <summary>
+    /// Rows deleted per statement by <see cref="PurgeOldEventsAsync(TimeSpan, int, CancellationToken)"/>.
+    /// Each chunk is its own implicit transaction, so the write lock is released between chunks
+    /// and the engine keeps saving events while a large backlog is purged.
+    /// </summary>
+    public const int PurgeChunkSize = 10_000;
+
     private readonly string _connectionString;
     private readonly string _dbFile;
+    private readonly TimeProvider _timeProvider;
 
-    public SqliteStorage(string? storagePath = null)
+    public SqliteStorage(string? storagePath = null, TimeProvider? timeProvider = null)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
+
         var dbPath = storagePath ?? Path.Combine(Path.GetTempPath(), "Deucalion");
         // Ensure the directory exists
         Directory.CreateDirectory(dbPath);
@@ -31,6 +41,11 @@ public sealed class SqliteStorage : IStorage, IDisposable
 
         using var command = connection.CreateCommand();
         command.CommandText = $"""
+            -- Lets the purge hand free pages back to the OS with 'PRAGMA incremental_vacuum'
+            -- instead of a full VACUUM. Only takes effect on a database that has no tables yet;
+            -- older databases are converted once by the first purge that deletes rows.
+            PRAGMA auto_vacuum=INCREMENTAL;
+
             -- Enable Write-Ahead Logging for better concurrency
             PRAGMA journal_mode=WAL;
 
@@ -233,35 +248,145 @@ public sealed class SqliteStorage : IStorage, IDisposable
     }
 
     /// <summary>
-    /// Deletes events older than the specified retention period.
+    /// Deletes events older than <paramref name="retentionPeriod"/>. No per-monitor row cap.
     /// </summary>
-    /// <param name="retentionPeriod">The maximum age of events to keep.</param>
+    public Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, CancellationToken cancellationToken = default) =>
+        PurgeOldEventsAsync(retentionPeriod, maxEventsPerMonitor: 0, cancellationToken);
+
+    /// <summary>
+    /// Deletes events older than <paramref name="retentionPeriod"/> and, per monitor, any beyond
+    /// the newest <paramref name="maxEventsPerMonitor"/>; then returns the freed pages to the OS.
+    /// </summary>
+    /// <param name="retentionPeriod">The maximum age of events to keep; zero or negative disables the age purge.</param>
+    /// <param name="maxEventsPerMonitor">Newest events kept per monitor; zero or negative disables the cap.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of rows deleted.</returns>
-    public async Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// "Now" comes from the injected <see cref="TimeProvider"/>. Rows go in chunks of
+    /// <see cref="PurgeChunkSize"/> per monitor (both queries walk the primary-key index), so a
+    /// first purge of a large backlog is not one unbounded DELETE holding the write lock (#23).
+    /// </remarks>
+    public async Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, int maxEventsPerMonitor, CancellationToken cancellationToken = default)
     {
-        // If retention is zero or negative, nothing should be purged.
-        if (retentionPeriod <= TimeSpan.Zero)
+        var purgeByAge = retentionPeriod > TimeSpan.Zero;
+        var purgeByCount = maxEventsPerMonitor > 0;
+        if (!purgeByAge && !purgeByCount)
         {
             return 0;
         }
 
-        var cutoffTimestamp = DateTimeOffset.UtcNow - retentionPeriod;
-        var cutoffTicks = cutoffTimestamp.UtcTicks;
+        var cutoffTicks = (_timeProvider.GetUtcNow() - retentionPeriod).UtcTicks;
 
         // Create connection per operation
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        using var command = connection.CreateCommand();
-        command.CommandText = $"""
-            DELETE FROM {EventsTableName}
-            WHERE TimestampTicks < @CutoffTicks;
-        """;
-        command.Parameters.AddWithValue("@CutoffTicks", cutoffTicks);
+        var deleted = 0;
+        foreach (var monitorName in await ListMonitorNamesAsync(connection, cancellationToken))
+        {
+            if (purgeByAge)
+            {
+                deleted += await DeleteInChunksAsync(connection, $"""
+                    DELETE FROM {EventsTableName}
+                    WHERE rowid IN (
+                        SELECT rowid FROM {EventsTableName}
+                        WHERE MonitorName = @MonitorName AND TimestampTicks < @CutoffTicks
+                        ORDER BY TimestampTicks
+                        LIMIT @ChunkSize);
+                    """, monitorName, ("@CutoffTicks", cutoffTicks), cancellationToken);
+            }
+
+            if (purgeByCount)
+            {
+                deleted += await DeleteInChunksAsync(connection, $"""
+                    DELETE FROM {EventsTableName}
+                    WHERE rowid IN (
+                        SELECT rowid FROM {EventsTableName}
+                        WHERE MonitorName = @MonitorName
+                        ORDER BY TimestampTicks DESC
+                        LIMIT @ChunkSize OFFSET @MaxEvents);
+                    """, monitorName, ("@MaxEvents", maxEventsPerMonitor), cancellationToken);
+            }
+        }
+
+        if (deleted > 0)
+        {
+            await ReclaimSpaceAsync(connection, cancellationToken);
+        }
 
         // The caller (PurgeBackgroundService) logs the outcome with a real logger.
-        return await command.ExecuteNonQueryAsync(cancellationToken);
+        return deleted;
+    }
+
+    private static async Task<List<string>> ListMonitorNamesAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        var names = new List<string>();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT DISTINCT MonitorName FROM {EventsTableName};";
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            names.Add(reader.GetString(0));
+        }
+
+        return names;
+    }
+
+    private static async Task<int> DeleteInChunksAsync(
+        SqliteConnection connection, string sql, string monitorName, (string Name, long Value) parameter, CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("@MonitorName", monitorName);
+        command.Parameters.AddWithValue("@ChunkSize", PurgeChunkSize);
+        command.Parameters.AddWithValue(parameter.Name, parameter.Value);
+
+        var total = 0;
+        int chunk;
+        do
+        {
+            chunk = await command.ExecuteNonQueryAsync(cancellationToken);
+            total += chunk;
+        } while (chunk == PurgeChunkSize);
+
+        return total;
+    }
+
+    /// <summary>
+    /// Gives deleted pages back to the file system. Without this the database never shrank:
+    /// tightening the retention reclaimed zero disk (#23).
+    /// </summary>
+    private static async Task ReclaimSpaceAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        // 0 = NONE, 1 = FULL, 2 = INCREMENTAL.
+        long autoVacuum;
+        using (var query = connection.CreateCommand())
+        {
+            query.CommandText = "PRAGMA auto_vacuum;";
+            autoVacuum = (long)(await query.ExecuteScalarAsync(cancellationToken))!;
+        }
+
+        using var command = connection.CreateCommand();
+        command.CommandText = autoVacuum switch
+        {
+            // Frees every page on the freelist and truncates the file. Cheap: no rewrite.
+            2 => "PRAGMA incremental_vacuum;",
+            // FULL already shrinks the file on every commit.
+            1 => "",
+            // Database created before InitializeAsync set auto_vacuum: switching away from NONE
+            // needs one full VACUUM (a rewrite). Later purges take the incremental path.
+            _ => "PRAGMA auto_vacuum=INCREMENTAL; VACUUM;",
+        };
+        if (command.CommandText.Length > 0)
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        // In WAL mode the truncation lives in the log until a checkpoint copies it into the main
+        // file; TRUNCATE also resets the log, which a VACUUM can leave as large as the database.
+        // A busy checkpoint (concurrent reader) is not an error: the next automatic one finishes it.
+        command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>

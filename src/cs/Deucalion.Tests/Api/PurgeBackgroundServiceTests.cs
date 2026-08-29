@@ -19,17 +19,19 @@ public class PurgeBackgroundServiceTests
         private int _callCount;
 
         public List<TimeSpan> Retentions { get; } = [];
+        public List<int> MaxEventsPerMonitor { get; } = [];
         public Task FirstCall => _firstCall.Task;
         public int CallCount => Volatile.Read(ref _callCount);
 
         /// <summary>Set to have the next purge throw, to check the loop survives it.</summary>
         public bool ThrowOnPurge { get; set; }
 
-        public Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, CancellationToken cancellationToken = default)
+        public Task<int> PurgeOldEventsAsync(TimeSpan retentionPeriod, int maxEventsPerMonitor, CancellationToken cancellationToken = default)
         {
             lock (Retentions)
             {
                 Retentions.Add(retentionPeriod);
+                MaxEventsPerMonitor.Add(maxEventsPerMonitor);
             }
 
             Interlocked.Increment(ref _callCount);
@@ -48,13 +50,15 @@ public class PurgeBackgroundServiceTests
 
     private static (PurgeBackgroundService Service, RecordingStorage Storage, FakeTimeProvider Time) Build(
         TimeSpan? purgeInterval = null,
-        TimeSpan? retention = null)
+        TimeSpan? retention = null,
+        int maxEventsPerMonitor = 100_000)
     {
         var storage = new RecordingStorage();
         var options = new DeucalionOptions
         {
             PurgeInterval = purgeInterval ?? TimeSpan.FromHours(24),
             EventRetentionPeriod = retention ?? TimeSpan.FromDays(30),
+            MaxEventsPerMonitor = maxEventsPerMonitor,
         };
         var time = new FakeTimeProvider();
         var service = new PurgeBackgroundService(storage, options, time, NullLogger<PurgeBackgroundService>.Instance);
@@ -91,13 +95,14 @@ public class PurgeBackgroundServiceTests
     public async Task PurgesOnceImmediatelyAtStartup()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var (service, storage, _) = Build(retention: TimeSpan.FromDays(7));
+        var (service, storage, _) = Build(retention: TimeSpan.FromDays(7), maxEventsPerMonitor: 1234);
 
         await service.StartAsync(cancellationToken);
         await storage.FirstCall.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
 
         Assert.Equal(1, storage.CallCount);
         Assert.Equal(TimeSpan.FromDays(7), storage.Retentions[0]);
+        Assert.Equal(1234, storage.MaxEventsPerMonitor[0]); // The row cap reaches the storage (#23).
 
         await service.StopAsync(cancellationToken);
     }
