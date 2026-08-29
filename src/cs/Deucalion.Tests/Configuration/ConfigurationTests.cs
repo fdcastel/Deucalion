@@ -164,6 +164,46 @@ public class ConfigurationTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(65536)]
+    [InlineData(70000)]
+    public void Issue23_TcpMonitor_PortOutOfRange_Throws(int port)
+    {
+        // [Required] never fires on a non-nullable int, so these used to load fine and fail on
+        // every probe with ArgumentOutOfRangeException.
+        var configurationContent = $@"
+            monitors:
+              mtcp:
+                !tcp
+                host: 192.168.1.2
+                port: {port}
+        ";
+
+        var exception = CatchConfigurationException(configurationContent);
+        Assert.Contains("mtcp", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Port", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("65535", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(65535)]
+    public void TcpMonitor_PortAtRangeBounds_IsAccepted(int port)
+    {
+        var configurationContent = $@"
+            monitors:
+              mtcp:
+                !tcp
+                host: 192.168.1.2
+                port: {port}
+        ";
+
+        var tcpMonitor = Assert.IsType<TcpMonitorConfiguration>(ReadSingleMonitorFromConfiguration(configurationContent));
+        Assert.Equal(port, tcpMonitor.Port);
+    }
+
+    [Theory]
     [InlineData("events")]
     [InlineData("Events")]
     [InlineData("EVENTS")]
