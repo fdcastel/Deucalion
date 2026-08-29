@@ -104,36 +104,23 @@ const applyThemeAndAccent = (): void => {
 
 const applyFonts = (): void => {
   if (typeof document === "undefined") return;
+  const root = document.documentElement;
   const disp = DISPLAY_FONTS[displayFont()] ?? DISPLAY_FONTS.newsreader;
   const ui = UI_FONTS[uiFont()] ?? UI_FONTS.inter;
   const mono = MONO_FONTS[monoFont()] ?? MONO_FONTS.jetbrains;
-  const italic = disp.italicize ? "italic" : "normal";
-  let tag = document.getElementById("dynamic-fonts");
-  if (!tag) {
-    tag = document.createElement("style");
-    tag.id = "dynamic-fonts";
-    document.head.appendChild(tag);
-  }
-  tag.textContent = `
-    html, body, .ui-font { font-family: ${ui.stack} !important; }
-    .mono, .group-meta, .row-name, .type-badge, .lat-stats, .avail, .last-incident,
-    .subgroup, .footer, [data-tip]:hover::after, .hero-chip strong,
-    .hero-meta em, .tnum, .col-stats .lat-stats span strong
-      { font-family: ${mono.stack} !important; }
-    .serif, .brand-name, .hero-availability, .group-title, .footer em
-      { font-family: ${disp.stack} !important; }
-    .brand-name em, .group-title em, .footer em, .hero-availability .pct
-      { font-style: ${italic} !important; }
-    :root { --display-italic: ${italic}; }
-  `;
+  // The stylesheets only ever reference these tokens (tokens.css declares
+  // the defaults), so overriding them on the root is enough — no injected
+  // stylesheet, no selector list to keep in sync.
+  root.style.setProperty("--font-display", disp.stack);
+  root.style.setProperty("--font-ui", ui.stack);
+  root.style.setProperty("--font-mono", mono.stack);
+  root.style.setProperty("--display-italic", disp.italicize ? "italic" : "normal");
 };
 
+// A single effect: `persist()` reads every signal anyway, so splitting the
+// appliers across two effects only made each change persist twice.
 createEffect(() => {
   applyThemeAndAccent();
-  persist();
-});
-
-createEffect(() => {
   applyFonts();
   persist();
 });
