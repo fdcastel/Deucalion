@@ -205,6 +205,7 @@
 .hero-meta-left  { grid-area: lavail; }
 .hero-meta-right { grid-area: ltrend; text-align: right; }
 .hero-meta em {
+  font-family: var(--font-mono);
   font-style: italic;
   color: var(--accent);
   text-transform: none;
@@ -457,8 +458,19 @@
 .tick.down { background: var(--down); }
 .tick.unknown { background: var(--unknown); opacity: 0.5; }
 
-.tick.fresh {
+/* The strip flags itself `.is-fresh` for ~600ms after a new event lands;
+   the newest tick is always the last child, so one class on the container
+   animates it without a reactive binding per tick. */
+.col-strip.is-fresh .tick:last-child {
   animation: tick-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+/* Keyboard users: focusing the strip reveals the newest tick's tooltip
+   (mouse users hover any tick — see the [data-tip] rule). */
+.col-strip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 @keyframes tick-in {
@@ -638,7 +650,8 @@
 [data-tip] {
   position: relative;
 }
-[data-tip]:hover::after {
+[data-tip]:hover::after,
+.col-strip:focus-visible .tick:last-child[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);

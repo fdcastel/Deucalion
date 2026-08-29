@@ -1,4 +1,4 @@
-import { For, type Component, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { For, type Accessor, type Component, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
 import type { MonitorEventDto } from "../../services/deucalion-types";
 import { fmtMs, fmtTime, stateLabel, stateName } from "../../services/formatting";
@@ -17,15 +17,17 @@ const stripLenForWidth = (w: number): number => {
   return 60;
 };
 
-const useStripLen = (): (() => number) => {
-  const [len, setLen] = createSignal(
-    typeof window === "undefined" ? 60 : stripLenForWidth(window.innerWidth),
-  );
-  onMount(() => {
-    const update = (): void => { setLen(stripLenForWidth(window.innerWidth)); };
-    window.addEventListener("resize", update);
-    onCleanup(() => { window.removeEventListener("resize", update); });
-  });
+// One signal + one `resize` listener shared by every strip on the page.
+// Attached lazily on first use so importing this module has no side effects
+// (tests pin `window.innerWidth` before rendering, and SSR has no window).
+let sharedStripLen: Accessor<number> | undefined;
+
+const useStripLen = (): Accessor<number> => {
+  if (sharedStripLen) return sharedStripLen;
+  if (typeof window === "undefined") return () => 60;
+  const [len, setLen] = createSignal(stripLenForWidth(window.innerWidth));
+  window.addEventListener("resize", () => { setLen(stripLenForWidth(window.innerWidth)); });
+  sharedStripLen = len;
   return len;
 };
 
@@ -33,20 +35,25 @@ interface HeartbeatStripProps {
   events: MonitorEventDto[]; // newest-first
 }
 
+const tipFor = (ev: MonitorEventDto): string =>
+  `${stateLabel(ev.st)} · ${fmtTime(ev.at)}${ev.ms != null ? ` · ${fmtMs(ev.ms)}` : ""}`;
+
 export const HeartbeatStrip: Component<HeartbeatStripProps> = (props) => {
-  const [freshSig, setFreshSig] = createSignal(0);
+  const [fresh, setFresh] = createSignal(false);
   let lastSeenAt: number | undefined;
   const stripLen = useStripLen();
 
-  // When the freshest event timestamp changes, set the fresh signal so the
-  // rightmost tick gets the .fresh class for ~600ms.
+  // When the freshest event timestamp changes, flag the strip as fresh for
+  // ~600ms. CSS (`.col-strip.is-fresh .tick:last-child`) animates the newest
+  // tick, so this is a single binding on the container rather than one
+  // per tick.
   createEffect(() => {
     if (props.events.length === 0) return;
     const top = props.events[0].at;
     if (top === lastSeenAt) return;
     lastSeenAt = top;
-    setFreshSig(Date.now());
-    const id = setTimeout(() => { setFreshSig(0); }, 600);
+    setFresh(true);
+    const id = setTimeout(() => { setFresh(false); }, 600);
     onCleanup(() => { clearTimeout(id); });
   });
 
@@ -63,14 +70,29 @@ export const HeartbeatStrip: Component<HeartbeatStripProps> = (props) => {
     return arr;
   });
 
+  // Accessible name for the whole strip. The per-tick tooltips are CSS-only
+  // (hover), so the newest check's detail is surfaced here for screen
+  // readers, and the strip is focusable so keyboard users can reveal the
+  // same tooltip (see `.col-strip:focus-visible` in layout.css).
+  const label = createMemo((): string => {
+    const evs = props.events;
+    if (evs.length === 0) return "Recent check history: no checks yet";
+    const shown = Math.min(stripLen(), evs.length);
+    return `Recent check history: ${shown.toString()} checks, latest ${tipFor(evs[0])}`;
+  });
+
   return (
-    <div class="col-strip" role="img" aria-label="Recent check history">
+    <div
+      class="col-strip"
+      classList={{ "is-fresh": fresh() }}
+      role="img"
+      tabindex="0"
+      aria-label={label()}
+    >
       <For each={oldestToNewest()}>
-        {(ev, i) => {
-          const fresh = (): boolean => i() === stripLen() - 1 && freshSig() !== 0;
+        {(ev) => {
           if (ev === null) return <span class="tick unknown" />;
-          const tip = `${stateLabel(ev.st)} · ${fmtTime(ev.at)}${ev.ms != null ? ` · ${fmtMs(ev.ms)}` : ""}`;
-          return <span class={`tick ${stateName(ev.st)}${fresh() ? " fresh" : ""}`} data-tip={tip} />;
+          return <span class={`tick ${stateName(ev.st)}`} data-tip={tipFor(ev)} />;
         }}
       </For>
     </div>
