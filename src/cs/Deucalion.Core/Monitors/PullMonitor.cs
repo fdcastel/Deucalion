@@ -32,7 +32,18 @@ public abstract class PullMonitor
     public TimeSpan? WarnTimeout { get; set; }
 
     // Computed from rolling P95; null until enough samples accumulate.
-    public TimeSpan? AutoWarnTimeout { get; set; }
+    //
+    // Written by the engine's event consumer and read by this monitor's own polling loop, on
+    // different threads. A TimeSpan? is a 16-byte struct, so a plain field can be read half
+    // written (HasValue from one write, Ticks from another -- issue #15). Storing it behind a
+    // volatile reference to an immutable boxed TimeSpan makes every read and write atomic.
+    private volatile object? _autoWarnTimeout;
+
+    public TimeSpan? AutoWarnTimeout
+    {
+        get => _autoWarnTimeout is TimeSpan value ? value : null;
+        set => _autoWarnTimeout = value;
+    }
 
     // Per-type fallback when neither manual nor auto is available. Subclasses override.
     public virtual TimeSpan TypeDefaultWarnTimeout => DefaultWarnTimeout;

@@ -89,6 +89,8 @@ internal class EngineBackgroundService(
         var newStats = await storage.GetStatsAsync(mc.Name, historyCount: PullMonitor.StatsWindow, cancellationToken: cancellationToken);
         if (newStats != null)
         {
+            // The one place that writes the auto-WARN baseline: the API's GET path only computes
+            // it for display (issue #15).
             monitors.Monitors.TryGetValue(mc.Name, out var monitor);
             var (effectiveWarn, timeout) = WarnThresholdPolicy.Refresh(monitor, newStats.Latency95, newStats.SampleCount);
 
