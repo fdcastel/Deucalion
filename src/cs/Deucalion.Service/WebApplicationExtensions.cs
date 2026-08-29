@@ -23,13 +23,16 @@ internal static class WebApplicationExtensions
             var path = context.Request.Path.Value;
             if (path?.StartsWith("/assets/") == true)
             {
-                var acceptEncoding = context.Request.Headers.AcceptEncoding.ToString();
                 var physicalPath = Path.Combine(webRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+                // Parse Accept-Encoding as a proper token list with q-values. A substring test
+                // would match e.g. "xbr" and would serve brotli to a client sending "br;q=0".
+                StringWithQualityHeaderValue.TryParseList(context.Request.Headers.AcceptEncoding, out var acceptedEncodings);
 
                 string? compressedPath = null;
                 string? encoding = null;
 
-                if (acceptEncoding.Contains("br"))
+                if (Accepts(acceptedEncodings, "br"))
                 {
                     var brPath = physicalPath + ".br";
                     if (File.Exists(brPath))
@@ -39,7 +42,7 @@ internal static class WebApplicationExtensions
                     }
                 }
 
-                if (compressedPath is null && acceptEncoding.Contains("gzip"))
+                if (compressedPath is null && Accepts(acceptedEncodings, "gzip"))
                 {
                     var gzPath = physicalPath + ".gz";
                     if (File.Exists(gzPath))
@@ -105,6 +108,15 @@ internal static class WebApplicationExtensions
             {
                 if (context.Request.Path == "/")
                 {
+                    // The page is a read-only resource: anything but GET/HEAD is not allowed.
+                    var method = context.Request.Method;
+                    if (!HttpMethods.IsGet(method) && !HttpMethods.IsHead(method))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+                        context.Response.Headers.Allow = "GET, HEAD";
+                        return;
+                    }
+
                     // Conditional GET: return 304 if client has current version
                     var ifNoneMatch = context.Request.Headers.IfNoneMatch.ToString();
                     if (ifNoneMatch == "*" || ifNoneMatch.Contains(etag))
@@ -118,7 +130,13 @@ internal static class WebApplicationExtensions
                     context.Response.ContentType = "text/html";
                     context.Response.Headers.CacheControl = "no-cache";
                     context.Response.Headers.ETag = etag;
-                    await context.Response.WriteAsync(cachedContent);
+
+                    // HEAD: same headers as GET, no body.
+                    if (HttpMethods.IsGet(method))
+                    {
+                        await context.Response.WriteAsync(cachedContent);
+                    }
+
                     return;
                 }
 
@@ -127,6 +145,35 @@ internal static class WebApplicationExtensions
         }
 
         return app;
+    }
+
+    /// <summary>
+    /// Whether the parsed Accept-Encoding list allows <paramref name="encoding"/>: an explicit
+    /// entry wins (its q-value decides, missing q means 1); otherwise a wildcard entry decides;
+    /// otherwise the encoding is not accepted. Comparison is case-insensitive per RFC 9110.
+    /// </summary>
+    private static bool Accepts(IList<StringWithQualityHeaderValue>? acceptedEncodings, string encoding)
+    {
+        if (acceptedEncodings is null)
+        {
+            return false;
+        }
+
+        StringWithQualityHeaderValue? wildcard = null;
+        foreach (var item in acceptedEncodings)
+        {
+            if (item.Value.Equals(encoding, StringComparison.OrdinalIgnoreCase))
+            {
+                return (item.Quality ?? 1) > 0;
+            }
+
+            if (item.Value.Equals("*", StringComparison.Ordinal))
+            {
+                wildcard = item;
+            }
+        }
+
+        return wildcard is not null && (wildcard.Quality ?? 1) > 0;
     }
 
     private static void SetImmutableCacheHeaders(HttpResponse response)
