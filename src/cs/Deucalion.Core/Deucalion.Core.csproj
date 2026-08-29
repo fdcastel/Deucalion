@@ -7,8 +7,4 @@
     <RootNamespace>Deucalion</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="SharpYaml" Version="3.13.0" />
-  </ItemGroup>
-
 </Project>

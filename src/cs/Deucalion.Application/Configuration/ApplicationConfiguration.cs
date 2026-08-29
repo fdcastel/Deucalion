@@ -88,6 +88,11 @@ public record ApplicationConfiguration
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
             Converters = [new IPEndPointConverter(), new HttpMethodConverter()],
+            PolymorphismOptions = new YamlPolymorphismOptions
+            {
+                DiscriminatorStyle = YamlTypeDiscriminatorStyle.Tag,
+                UnknownDerivedTypeHandling = YamlUnknownDerivedTypeHandling.FallBackToBase,
+            },
         };
 
         var result = YamlSerializer.Deserialize<ApplicationConfiguration>(content, options)
@@ -104,9 +109,9 @@ public record ApplicationConfiguration
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationMonitorCannotBeEmpty, monitor.Key));
             }
 
-            // PullMonitorConfiguration is declared with UnknownDerivedTypeHandling.FallBackToBase,
-            // so a typo'd or missing tag silently deserializes to the base type. Left alone it
-            // passes validation and blows up later as a NotImplementedException in BuildFrom.
+            // The serializer runs with UnknownDerivedTypeHandling.FallBackToBase (see
+            // DeucalionYamlContext), so a typo'd or missing tag silently deserializes to the base
+            // type. Left alone it passes validation and blows up later while building the monitors.
             if (monitor.Value.GetType() == typeof(PullMonitorConfiguration))
             {
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationUnknownMonitorType, monitor.Key));
