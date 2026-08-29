@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Threading.Channels;
 using Deucalion.Api.Models;
 using Deucalion.Application;
-using Deucalion.Application.Configuration;
 using Deucalion.Events;
 using Deucalion.Monitors;
 using Deucalion.Storage;
@@ -11,7 +10,7 @@ using Deucalion.Storage;
 namespace Deucalion.Api.Services;
 
 internal class EngineBackgroundService(
-    ApplicationMonitors monitors,
+    IReadOnlyDictionary<string, PullMonitor> monitors,
     IStorage storage,
     MonitorEventBroadcaster broadcaster,
     ILogger<EngineBackgroundService> logger) : BackgroundService
@@ -31,7 +30,7 @@ internal class EngineBackgroundService(
         {
             try
             {
-                await monitors.Monitors.Values.RunAllAsync(channel.Writer, internalToken);
+                await monitors.Values.RunAllAsync(channel.Writer, internalToken);
             }
             catch (OperationCanceledException)
             {
@@ -91,7 +90,7 @@ internal class EngineBackgroundService(
         {
             // The one place that writes the auto-WARN baseline: the API's GET path only computes
             // it for display (issue #15).
-            monitors.Monitors.TryGetValue(mc.Name, out var monitor);
+            monitors.TryGetValue(mc.Name, out var monitor);
             var (effectiveWarn, timeout) = WarnThresholdPolicy.Refresh(monitor, newStats.Latency95, newStats.SampleCount);
 
             var dto = MonitorCheckedDto.FromEvent(mc, newStats, effectiveWarn, timeout);
