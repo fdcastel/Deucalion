@@ -44,6 +44,7 @@ public class PurgeBackgroundServiceTests
 
         public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<MonitorStats?> GetStatsAsync(string monitorName, int historyCount = 60, CancellationToken cancellationToken = default) => Task.FromResult<MonitorStats?>(null);
+        public Task<MonitorRun?> GetCurrentRunAsync(string monitorName, CancellationToken cancellationToken = default) => Task.FromResult<MonitorRun?>(null);
         public Task<IEnumerable<StoredEvent>> GetLastEventsAsync(string monitorName, int count = 60, CancellationToken cancellationToken = default) => Task.FromResult<IEnumerable<StoredEvent>>([]);
         public Task SaveEventAsync(string monitorName, StoredEvent storedEvent, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

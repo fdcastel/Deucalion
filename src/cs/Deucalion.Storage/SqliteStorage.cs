@@ -220,6 +220,56 @@ public sealed class SqliteStorage : IStorage, IDisposable
         return results;
     }
 
+    public async Task<MonitorRun?> GetCurrentRunAsync(string monitorName, CancellationToken cancellationToken = default)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        // Runs are split by the down/available divide (Down vs Up/Warn/Degraded); Unknown rows are
+        // ignored throughout. `Boundary` is the newest event of the *other* kind; the run starts at
+        // the first event after it. No boundary at all means the run reaches the oldest stored row,
+        // so `Since` is only a lower bound. Every subquery walks the (MonitorName, TimestampTicks)
+        // primary key, so the cost does not grow with the length of the run.
+        using var command = connection.CreateCommand();
+        command.CommandText = $"""
+            WITH Newest AS (
+                SELECT State, ResponseTimeTicks
+                FROM {EventsTableName}
+                WHERE MonitorName = @MonitorName AND State <> {(int)MonitorState.Unknown}
+                ORDER BY TimestampTicks DESC
+                LIMIT 1
+            ),
+            Boundary AS (
+                SELECT MAX(TimestampTicks) AS T
+                FROM {EventsTableName}
+                WHERE MonitorName = @MonitorName AND State <> {(int)MonitorState.Unknown}
+                  AND (State = {(int)MonitorState.Down}) <> ((SELECT State FROM Newest) = {(int)MonitorState.Down})
+            )
+            SELECT
+                (SELECT State FROM Newest) AS State,
+                (SELECT ResponseTimeTicks FROM Newest) AS ResponseTimeTicks,
+                (SELECT MIN(TimestampTicks)
+                   FROM {EventsTableName}
+                  WHERE MonitorName = @MonitorName AND State <> {(int)MonitorState.Unknown}
+                    AND TimestampTicks > COALESCE((SELECT T FROM Boundary), -1)) AS SinceTicks,
+                (SELECT T FROM Boundary) IS NULL AS SinceIsLowerBound;
+            """;
+        command.Parameters.AddWithValue("@MonitorName", monitorName);
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken) || reader.IsDBNull(0))
+        {
+            return null;
+        }
+
+        return new MonitorRun(
+            State: (MonitorState)reader.GetInt64(0),
+            Since: new DateTimeOffset(reader.GetInt64(2), TimeSpan.Zero),
+            SinceIsLowerBound: reader.GetInt64(3) == 1,
+            LastResponseTime: reader.IsDBNull(1) ? null : new TimeSpan(reader.GetInt64(1))
+        );
+    }
+
     public async Task SaveEventAsync(string monitorName, StoredEvent storedEvent, CancellationToken cancellationToken = default)
     {
         // Create connection per operation
