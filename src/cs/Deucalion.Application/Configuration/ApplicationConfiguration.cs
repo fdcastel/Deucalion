@@ -30,7 +30,16 @@ public record ApplicationConfiguration
         public const string ConfigurationMonitorCannotBeEmpty = "Monitor '{0}' cannot be empty.";
         public const string ConfigurationInvalidTimeSpan = "Monitor '{0}': '{1}' must be a positive value, but was '{2}'.";
         public const string ConfigurationUnknownMonitorType = "Monitor '{0}': missing or unknown type tag. Expected one of: !ping, !tcp, !dns, !http, !checkin.";
+        public const string ConfigurationReservedMonitorName = "Monitor '{0}': the name is reserved (it would clash with the '/api/monitors/{1}' route). Choose another name.";
     }
+
+    /// <summary>
+    /// Monitor names that collide with literal segments under <c>/api/monitors/</c>. A monitor
+    /// named 'events' was reachable in the UI but not at <c>/api/monitors/events</c>, which the
+    /// SSE stream owns (#23). Compared case-insensitively: routing is case-insensitive too.
+    /// </summary>
+    public static readonly IReadOnlySet<string> ReservedMonitorNames =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "events" };
 
     public ConfigurationDefaults? Defaults { get; set; }
 
@@ -101,6 +110,11 @@ public record ApplicationConfiguration
             if (monitor.Value.GetType() == typeof(PullMonitorConfiguration))
             {
                 throw new ConfigurationErrorException(string.Format(Messages.ConfigurationUnknownMonitorType, monitor.Key));
+            }
+
+            if (ReservedMonitorNames.Contains(monitor.Key))
+            {
+                throw new ConfigurationErrorException(string.Format(Messages.ConfigurationReservedMonitorName, monitor.Key, monitor.Key.ToLowerInvariant()));
             }
 
             // Interpolate ${MONITOR_NAME} placeholders

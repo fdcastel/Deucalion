@@ -144,6 +144,8 @@ A `WARN` probe means "up, but slow". It counts as available: it does not advance
 
 This section defines the individual monitors. Each monitor has a unique name (e.g., `ping-example`) and a type indicated by a YAML tag (e.g., `!ping`).
 
+Monitor names appear in URLs (`/api/monitors/{monitorName}`). The name `events` (in any letter case) is reserved for the event stream endpoint and is rejected at startup.
+
 The following optional parameters are available for all monitors:
 - `group`: A string to group monitors together in the UI.
 - `href`: URL to link to when the monitor name is clicked.
