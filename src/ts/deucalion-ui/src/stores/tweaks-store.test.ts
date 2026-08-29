@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __resetTweaksForTests, tweaks } from "./tweaks-store";
 
@@ -30,11 +30,41 @@ describe("tweaks-store", () => {
     expect(root.style.getPropertyValue("--flash")).toContain("220");
   });
 
-  it("rewrites the dynamic-fonts <style> tag on font change", () => {
+  it("applies fonts as custom properties on the documentElement (issue #33)", () => {
+    const root = document.documentElement;
+
+    tweaks.setMonoFont("spacemono");
+    tweaks.setUiFont("system");
+    tweaks.setDisplayFont("newsreader");
+    expect(root.style.getPropertyValue("--font-mono")).toBe('"Space Mono", ui-monospace, monospace');
+    expect(root.style.getPropertyValue("--font-ui")).toContain("system-ui");
+    expect(root.style.getPropertyValue("--font-display")).toBe('"Newsreader", Georgia, serif');
+    expect(root.style.getPropertyValue("--display-italic")).toBe("italic");
+
+    // A display face that does not italicize flips the token back to normal.
+    tweaks.setDisplayFont("ibmsans");
+    expect(root.style.getPropertyValue("--font-display")).toBe('"IBM Plex Sans", sans-serif');
+    expect(root.style.getPropertyValue("--display-italic")).toBe("normal");
+  });
+
+  it("no longer injects a #dynamic-fonts stylesheet (issue #33)", () => {
     tweaks.setMonoFont("ibmmono");
-    const tag = document.getElementById("dynamic-fonts");
-    expect(tag).not.toBeNull();
-    expect(tag!.textContent).toContain("IBM Plex Mono");
+    expect(document.getElementById("dynamic-fonts")).toBeNull();
+    expect(document.querySelectorAll("style")).toHaveLength(0);
+  });
+
+  it("falls back to a known face for an unknown font key", () => {
+    tweaks.setMonoFont("does-not-exist");
+    expect(document.documentElement.style.getPropertyValue("--font-mono")).toBe('"JetBrains Mono", ui-monospace, monospace');
+  });
+
+  it("persists exactly once per change (single effect, issue #27)", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    tweaks.setAccentHue(12);
+    expect(setItem).toHaveBeenCalledTimes(1);
+    tweaks.setMonoFont("spacemono");
+    expect(setItem).toHaveBeenCalledTimes(2);
+    setItem.mockRestore();
   });
 
   it("persists every signal to localStorage", () => {
