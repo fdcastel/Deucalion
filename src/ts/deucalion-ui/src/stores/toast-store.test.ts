@@ -37,7 +37,6 @@ describe("toast-store", () => {
     const event: MonitorStateChangedDto = {
       n: "api-prod",
       at: 0,
-      fr: MonitorState.Up,
       st: MonitorState.Down,
     };
 

@@ -91,7 +91,6 @@ describe("connectSSE()", () => {
     lastSource().emit("MonitorChecked", {
       n: "m1",
       at: 100,
-      fr: MonitorState.Up,
       st: MonitorState.Down,
       ms: 250,
       ns: { lastState: MonitorState.Down, availability: 0 },
@@ -107,7 +106,6 @@ describe("connectSSE()", () => {
     lastSource().emit("MonitorStateChanged", {
       n: "m1",
       at: 100,
-      fr: MonitorState.Up,
       st: MonitorState.Down,
     });
 

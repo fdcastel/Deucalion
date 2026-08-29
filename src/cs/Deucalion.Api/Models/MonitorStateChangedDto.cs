@@ -6,7 +6,6 @@ namespace Deucalion.Api.Models;
 public record MonitorStateChangedDto(
     [property: JsonPropertyName("n")] string Name,
     [property: JsonPropertyName("at")] long Timestamp,
-    [property: JsonPropertyName("fr")] MonitorState From,
     [property: JsonPropertyName("st")] MonitorState State
 )
 {
@@ -14,7 +13,6 @@ public record MonitorStateChangedDto(
         new(
             Name: msc.Name,
             Timestamp: msc.At.ToUnixTimeSeconds(),
-            From: msc.From,
             State: msc.NewState
         );
 };

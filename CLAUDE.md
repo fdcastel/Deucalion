@@ -18,7 +18,7 @@ carries the handful of resets the layout actually needs.
 
 ## The wire contract is mirrored by hand
 
-The SSE and REST payloads use short keys (`n`, `at`, `fr`, `st`, `ms`, `ns`) to
+The SSE and REST payloads use short keys (`n`, `at`, `st`, `ms`, `ns`) to
 keep frames small. They are declared twice, with nothing generating one from the
 other:
 

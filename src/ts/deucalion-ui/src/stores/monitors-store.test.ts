@@ -33,7 +33,6 @@ describe("monitors-store", () => {
     const checked = (over: Partial<MonitorCheckedDto> = {}): MonitorCheckedDto => ({
       n: "m1",
       at: 1_700_000_001,
-      fr: MonitorState.Up,
       st: MonitorState.Warn,
       ms: 100,
       ns: buildStats({ lastState: MonitorState.Warn }),
