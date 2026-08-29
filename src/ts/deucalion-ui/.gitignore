@@ -26,5 +26,4 @@ playwright-report/
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
