@@ -1,5 +1,5 @@
-﻿using System.Reflection;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using Deucalion.Api.Endpoints;
 using Deucalion.Api.Http;
 using Deucalion.Api.Models;
 using Deucalion.Api.Options;
@@ -106,6 +106,8 @@ public static class Application
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
             Results.Ok(new PageConfigurationDto(options.PageTitle)));
 
+        app.MapDiscoveryEndpoints(app.Services.GetRequiredService<TimeProvider>());
+
         app.MapGet("/api/monitors/{monitorName?}", async (IStorage storage, string? monitorName, CancellationToken cancellationToken) =>
         {
             if (monitorName is null)
@@ -184,9 +186,7 @@ public static class Application
 
         // Get version info from assembly -- https://stackoverflow.com/a/64793765/33244
         //   SourceRevisionId included since .NET 8 SDK -- https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/8.0/source-link
-        var appVersion = Assembly.GetEntryAssembly()
-            ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion;
+        var appVersion = DiscoveryEndpoints.InformationalVersion;
 
         var cmdLineArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
         logger.LogInformation("Application Version = {version}.", appVersion);

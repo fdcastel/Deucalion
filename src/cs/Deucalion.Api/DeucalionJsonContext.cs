@@ -21,4 +21,6 @@ namespace Deucalion.Api;
 [JsonSerializable(typeof(MonitorDto))]
 [JsonSerializable(typeof(MonitorDto[]))]
 [JsonSerializable(typeof(PageConfigurationDto))]
+[JsonSerializable(typeof(StatusDto))]
+[JsonSerializable(typeof(VersionDto))]
 internal partial class DeucalionJsonContext : JsonSerializerContext;
