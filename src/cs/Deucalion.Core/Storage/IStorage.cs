@@ -8,6 +8,12 @@ public interface IStorage
 
     Task<IEnumerable<StoredEvent>> GetLastEventsAsync(string monitorName, int count = 60, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The monitor's current run (see <see cref="MonitorRun"/>), or null when it has no non-Unknown
+    /// events. One indexed query regardless of how long the run is.
+    /// </summary>
+    Task<MonitorRun?> GetCurrentRunAsync(string monitorName, CancellationToken cancellationToken = default);
+
     Task SaveEventAsync(string monitorName, StoredEvent storedEvent, CancellationToken cancellationToken = default);
 
     /// <summary>
