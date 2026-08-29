@@ -274,4 +274,138 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
             builder.UseEnvironment("Development");
         }
     }
+
+    // --- Discovery: /api/status and /api/version (#35, #16) -----------------------------------
+
+    [Fact]
+    public async Task GetStatus_ReturnsSelfDescribingSummary()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
+
+        // checkin-main: down, then up twice -> state "up" since the first up.
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now.AddSeconds(1), MonitorState.Up, TimeSpan.FromMilliseconds(120), null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now.AddSeconds(2), MonitorState.Up, TimeSpan.FromMilliseconds(123), null), TestContext.Current.CancellationToken);
+        // web-main: down -> the summary is "degraded" (some, not all, down).
+        await storage.SaveEventAsync("web-main", new StoredEvent(now.AddSeconds(2), MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+
+        using var client = _factory.CreateClient();
+        using var response = await client.GetAsync("/api/status", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+
+        Assert.Equal("degraded", payload.GetProperty("status").GetString());
+        Assert.True(payload.GetProperty("availability").GetDouble() is > 0 and <= 100);
+
+        // ISO-8601 UTC, not unix seconds.
+        var updatedAt = payload.GetProperty("updatedAt").GetString()!;
+        Assert.EndsWith("Z", updatedAt, StringComparison.Ordinal);
+        Assert.True(DateTimeOffset.TryParse(updatedAt, out _));
+
+        var monitors = payload.GetProperty("monitors").EnumerateArray().ToDictionary(m => m.GetProperty("name").GetString()!);
+        Assert.Equal(["web-main", "checkin-main", "checkin-open"], monitors.Keys); // configuration order
+
+        var checkIn = monitors["checkin-main"];
+        Assert.Equal("Main", checkIn.GetProperty("group").GetString());
+        Assert.Equal("checkin", checkIn.GetProperty("type").GetString());
+        Assert.Equal("up", checkIn.GetProperty("state").GetString());
+        Assert.Equal(123, checkIn.GetProperty("latencyMs").GetInt32());
+        Assert.True(checkIn.GetProperty("availability").GetDouble() > 0);
+        // `since` is the start of the trailing "up" run: the first up, not the last, not the down.
+        Assert.Equal(now.AddSeconds(1).UtcDateTime, DateTime.Parse(checkIn.GetProperty("since").GetString()!, null, System.Globalization.DateTimeStyles.AdjustToUniversal), TimeSpan.FromMilliseconds(1));
+
+        var web = monitors["web-main"];
+        Assert.Equal("http", web.GetProperty("type").GetString());
+        Assert.Equal("down", web.GetProperty("state").GetString());
+        Assert.False(web.TryGetProperty("latencyMs", out _), "a failed probe has no latency; the key must be omitted, not null");
+
+        var links = payload.GetProperty("links");
+        Assert.Equal("/api/status", links.GetProperty("self").GetString());
+        Assert.Equal("/api/monitors", links.GetProperty("monitors").GetString());
+        Assert.Equal("/api/monitors/events", links.GetProperty("events").GetString());
+        Assert.Equal("/api/version", links.GetProperty("version").GetString());
+        Assert.Equal("/llms.txt", links.GetProperty("docs").GetString());
+
+        // The advertised REST links resolve (the SSE stream and llms.txt are covered elsewhere).
+        foreach (var rel in new[] { "monitors", "version" })
+        {
+            using var linked = await client.GetAsync(links.GetProperty(rel).GetString(), TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, linked.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task GetStatus_AllDown_ReportsOutage()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
+
+        foreach (var name in new[] { "web-main", "checkin-main", "checkin-open" })
+        {
+            await storage.SaveEventAsync(name, new StoredEvent(now, MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        }
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
+
+        Assert.Equal("outage", payload.GetProperty("status").GetString());
+        Assert.All(payload.GetProperty("monitors").EnumerateArray(), m => Assert.Equal("down", m.GetProperty("state").GetString()));
+    }
+
+    [Fact]
+    public async Task GetStatus_AllUpOrWarn_ReportsOperational()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var now = DateTimeOffset.UtcNow.AddSeconds(1);
+
+        await storage.SaveEventAsync("web-main", new StoredEvent(now, MonitorState.Warn, TimeSpan.FromSeconds(2), null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-main", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(now, MonitorState.Up, TimeSpan.FromMilliseconds(5), null), TestContext.Current.CancellationToken);
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/status", TestContext.Current.CancellationToken);
+
+        Assert.Equal("operational", payload.GetProperty("status").GetString());
+        Assert.Equal("warn", payload.GetProperty("monitors")[0].GetProperty("state").GetString());
+    }
+
+    [Fact]
+    public async Task GetStatus_IsReadOnly_DoesNotMutateMonitors()
+    {
+        // Agents poll this endpoint; it must never touch the monitor objects (#15).
+        using var client = _factory.CreateClient();
+        var monitors = _factory.Services.GetRequiredService<Deucalion.Application.Configuration.ApplicationMonitors>().Monitors;
+        var before = monitors.Values.Select(m => (m.Name, m.AutoWarnTimeout, m.WarnTimeout)).ToArray();
+
+        using var response = await client.GetAsync("/api/status", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var after = monitors.Values.Select(m => (m.Name, m.AutoWarnTimeout, m.WarnTimeout)).ToArray();
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public async Task GetVersion_IdentifiesTheRunningBuild()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/version", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Deucalion", payload.GetProperty("name").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(payload.GetProperty("version").GetString()));
+        Assert.StartsWith(".NET ", payload.GetProperty("runtime").GetString(), StringComparison.Ordinal);
+
+        var startedAt = DateTimeOffset.Parse(payload.GetProperty("startedAt").GetString()!);
+        Assert.InRange(startedAt, DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow);
+    }
 }
