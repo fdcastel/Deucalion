@@ -80,6 +80,12 @@ public static class Application
 
     public static WebApplication ConfigureApplication(this WebApplication app)
     {
+        // Before the exception handler, so 500 responses carry CORS headers too. Methods and
+        // headers must be allowed explicitly: with origin only, a preflight for a check-in
+        // (POST + deucalion-checkin-secret) got no Allow-Methods/Allow-Headers and the browser
+        // blocked the call (#23).
+        app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
         app.UseExceptionHandler(exceptionHandlerApp =>
             exceptionHandlerApp.Run(async context =>
             {
@@ -93,8 +99,6 @@ public static class Application
                 await Results.Problem().ExecuteAsync(context);
             })
         );
-
-        app.UseCors(x => x.AllowAnyOrigin());
 
         app.UseResponseCompression();
 

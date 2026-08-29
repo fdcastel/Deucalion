@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Deucalion.Api.Services;
 using Deucalion.Storage;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -202,6 +203,43 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Issue23_CorsPreflight_ForCheckIn_AllowsMethodAndSecretHeader()
+    {
+        // A cross-origin check-in carries a custom header, so the browser sends a preflight.
+        // Origin-only CORS emitted no Allow-Methods / Allow-Headers and the browser blocked it.
+        using var client = _factory.CreateClient();
+
+        var preflight = new HttpRequestMessage(HttpMethod.Options, "/api/monitors/checkin-main/checkin");
+        preflight.Headers.Add("Origin", "https://status.example.org");
+        preflight.Headers.Add("Access-Control-Request-Method", "POST");
+        preflight.Headers.Add("Access-Control-Request-Headers", "deucalion-checkin-secret");
+
+        using var response = await client.SendAsync(preflight, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("*", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+        Assert.Contains("POST", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Methods")), StringComparison.Ordinal);
+        Assert.Contains("deucalion-checkin-secret", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Headers")), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Issue23_CorsHeaders_ArePresentOnUnhandledExceptionResponses()
+    {
+        // UseCors ran after UseExceptionHandler, so a 500 produced by the handler had no CORS
+        // headers and a browser could not even read the problem details. The factory appends a
+        // throwing middleware at the tail of the pipeline (see ThrowingTailFilter).
+        using var client = _factory.CreateClient();
+
+        var request = new HttpRequestMessage(HttpMethod.Get, ThrowingTailFilter.Path);
+        request.Headers.Add("Origin", "https://status.example.org");
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("*", Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
     }
 
     [Fact]
@@ -438,6 +476,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
+            builder.ConfigureServices(services => services.AddTransient<IStartupFilter, ThrowingTailFilter>());
         }
     }
 
@@ -583,5 +622,24 @@ public sealed class ApiIntegrationTests : IAsyncLifetime, IDisposable
         // exists under AOT and the source-generated context did not declare the type. This JIT
         // host cannot reproduce the failure, so pin the declaration directly.
         Assert.NotNull(Deucalion.Api.DeucalionJsonContext.Default.GetTypeInfo(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails)));
+    }
+
+    /// <summary>
+    /// Appends a middleware after the application's own pipeline (so after routing: only
+    /// unmatched paths reach it) that throws for one path. It stands in for any unhandled
+    /// exception so the exception handler's response can be inspected end to end.
+    /// </summary>
+    private sealed class ThrowingTailFilter : IStartupFilter
+    {
+        public const string Path = "/throw-for-test";
+
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            next(app);
+            app.Use((context, nextMiddleware) =>
+                context.Request.Path == Path
+                    ? throw new InvalidOperationException("Simulated unhandled exception.")
+                    : nextMiddleware(context));
+        };
     }
 }
