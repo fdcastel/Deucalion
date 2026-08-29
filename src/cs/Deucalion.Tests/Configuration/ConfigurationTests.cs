@@ -515,7 +515,7 @@ public class ConfigurationTests
 
         var configuration = ApplicationConfiguration.ReadFromString(ConfigurationContent);
 
-        var exception = Assert.Throws<ConfigurationErrorException>(() => ApplicationMonitors.BuildFrom(configuration));
+        var exception = Assert.Throws<ConfigurationErrorException>(() => configuration.BuildMonitors());
         Assert.Contains("mhttp", exception.Message, StringComparison.Ordinal);
     }
 

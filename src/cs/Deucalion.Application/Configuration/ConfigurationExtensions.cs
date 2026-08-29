@@ -7,6 +7,48 @@ namespace Deucalion.Application.Configuration;
 
 public static class ConfigurationExtensions
 {
+    /// <summary>
+    /// Builds the live monitors from a parsed configuration, keyed by monitor name.
+    /// </summary>
+    public static IReadOnlyDictionary<string, PullMonitor> BuildMonitors(this ApplicationConfiguration configuration) =>
+        new Dictionary<string, PullMonitor>(
+            from kvp in configuration.Monitors
+            select KeyValuePair.Create(kvp.Key, BuildMonitor(kvp.Key, kvp.Value))
+        );
+
+    private static PullMonitor BuildMonitor(string monitorName, PullMonitorConfiguration configuration)
+    {
+        try
+        {
+            return MonitorFromConfiguration(configuration);
+        }
+        catch (ConfigurationErrorException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Anything that only fails while constructing the live monitor -- a malformed
+            // 'url:' (UriFormatException), an invalid 'expectedResponseBodyPattern'
+            // (RegexParseException) -- is a configuration error, not a crash.
+            throw new ConfigurationErrorException($"Monitor '{monitorName}': {ex.Message}", ex);
+        }
+    }
+
+    private static PullMonitor MonitorFromConfiguration(PullMonitorConfiguration monitorConfiguration) =>
+        monitorConfiguration switch
+        {
+            CheckInMonitorConfiguration checkInMonitorConfiguration => checkInMonitorConfiguration.Build(),
+
+            DnsMonitorConfiguration dnsMonitorConfiguration => dnsMonitorConfiguration.Build(),
+            HttpMonitorConfiguration httpMonitorConfiguration => httpMonitorConfiguration.Build(),
+            PingMonitorConfiguration pingMonitorConfiguration => pingMonitorConfiguration.Build(),
+            TcpMonitorConfiguration tcpMonitorConfiguration => tcpMonitorConfiguration.Build(),
+
+            _ => throw new ConfigurationErrorException(
+                string.Format(ApplicationConfiguration.Messages.ConfigurationUnknownMonitorType, monitorConfiguration.Name)),
+        };
+
     internal static CheckInMonitor Build(this CheckInMonitorConfiguration configuration)
     {
         var monitor = new CheckInMonitor();

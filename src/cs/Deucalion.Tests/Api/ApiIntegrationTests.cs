@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Net.ServerSentEvents;
 using System.Text;
@@ -626,7 +626,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     {
         // Agents poll this endpoint; it must never touch the monitor objects (#15).
         using var client = _factory.CreateClient();
-        var monitors = _factory.Services.GetRequiredService<Deucalion.Application.Configuration.ApplicationMonitors>().Monitors;
+        var monitors = _factory.Services.GetRequiredService<IReadOnlyDictionary<string, Deucalion.Monitors.PullMonitor>>();
         var before = monitors.Values.Select(m => (m.Name, m.AutoWarnTimeout, m.WarnTimeout)).ToArray();
 
         using var response = await client.GetAsync("/api/status", TestContext.Current.CancellationToken);

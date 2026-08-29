@@ -84,7 +84,7 @@ public static class Application
         builder.Services.AddSingleton(_ => applicationConfiguration);
 
         // Build monitors from configuration
-        var applicationMonitors = ApplicationMonitors.BuildFrom(applicationConfiguration);
+        var applicationMonitors = applicationConfiguration.BuildMonitors();
         builder.Services.AddSingleton(_ => applicationMonitors);
 
         // Application services
@@ -131,7 +131,7 @@ public static class Application
         app.Services.GetRequiredService<IStorage>().InitializeAsync().GetAwaiter().GetResult();
 
         var applicationConfiguration = app.Services.GetRequiredService<ApplicationConfiguration>();
-        var applicationMonitors = app.Services.GetRequiredService<ApplicationMonitors>();
+        var applicationMonitors = app.Services.GetRequiredService<IReadOnlyDictionary<string, PullMonitor>>();
 
         // Setup Api endpoints
         app.MapGet("/api/configuration", (DeucalionOptions options) =>
@@ -159,7 +159,7 @@ public static class Application
 
         app.MapPost("/api/monitors/{monitorName}/checkin", (string monitorName, HttpRequest request) =>
             {
-                if (!applicationMonitors.Monitors.TryGetValue(monitorName, out var monitor))
+                if (!applicationMonitors.TryGetValue(monitorName, out var monitor))
                 {
                     return DeucalionResults.MonitorNotFound(monitorName);
                 }
@@ -268,7 +268,7 @@ public static class Application
     // gets full history and narrower viewports clip from the left.
     private const int EventHistoryCount = 120;
 
-    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, ApplicationMonitors applicationMonitors, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken)
+    private static async Task<MonitorDto> BuildMonitorDtoAsync(IStorage storage, IReadOnlyDictionary<string, PullMonitor> applicationMonitors, PullMonitorConfiguration m, string mn, CancellationToken cancellationToken)
     {
         // Stats use the rolling stats window; the event list uses the longer strip history.
         // These are deliberately different numbers -- see EventHistoryCount above.
@@ -276,7 +276,7 @@ public static class Application
 
         // Display only: request threads must not write the live monitor's auto-WARN baseline
         // (issue #15). EngineBackgroundService is the sole writer, via WarnThresholdPolicy.Refresh.
-        applicationMonitors.Monitors.TryGetValue(mn, out var monitor);
+        applicationMonitors.TryGetValue(mn, out var monitor);
         var (effectiveWarn, timeout) = WarnThresholdPolicy.Compute(monitor, stats?.Latency95, stats?.SampleCount ?? 0);
 
         return new(
