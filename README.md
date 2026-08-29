@@ -287,20 +287,59 @@ The Docker image declares a `HEALTHCHECK` that runs `Deucalion.Service --healthc
 
 ## Project guidelines:
   - Configuration files over CRUD forms
-  - [Hexagonal Architecture](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
+  - Layered architecture with an acyclic dependency graph (see below). This is
+    *not* Hexagonal Architecture: the engine and the API switch on the concrete
+    monitor types rather than talking to them through an abstraction.
   - [K.I.S.S.](https://en.wikipedia.org/wiki/KISS_principle)
   - [Do One Thing And Do It Well](https://en.wikipedia.org/wiki/Unix_philosophy): Not a "Status Page" (with incidents, justifications, etc)
 
 ## Projects overview:
 
-  - `Deucalion.Core`: Base types and events shared between servers and clients.
-  - `Deucalion.Application`: Core engine and configuration.
-  - `Deucalion.Network`: Base network monitors.
-  - `Deucalion.Storage`: Persistence and statistics.
-  - `Deucalion.Api`: Server-side ASP.NET Web API application.
-  - `Deucalion.Service`: Service Host for `Deucalion.Api`. Can run as a Windows Service.
+Six .NET projects, one SPA. Dependencies only point downwards:
+
+```
+Deucalion.Service
+  └─ Deucalion.Api ──────────┬─ Deucalion.Application ─ Deucalion.Network ─ Deucalion.Core
+                             └─ Deucalion.Storage ───────────────────────── Deucalion.Core
+```
+
+  - `Deucalion.Core`: The domain, with no package references. `PullMonitor`,
+    `MonitorState`, `MonitorResponse`, the monitor events, the base
+    `PullMonitorConfiguration` record, and the storage port (`IStorage`,
+    `MonitorStats`, `StoredEvent`, in the `Deucalion.Storage` namespace).
+  - `Deucalion.Network`: The five monitor implementations (`ping`, `tcp`, `dns`,
+    `http`, `checkin`) and their configuration records.
+  - `Deucalion.Application`: YAML parsing and validation of `deucalion.yaml`,
+    building live monitors from it, the polling engine (`RunAllAsync`) and the
+    auto-WARN policy. Knows every concrete monitor type.
+  - `Deucalion.Storage`: `SqliteStorage`, the one `IStorage` implementation.
+  - `Deucalion.Api`: ASP.NET Core endpoints, wire DTOs, the SSE broadcaster and
+    the background services. Also the composition root: it wires
+    `SqliteStorage` to `IStorage` and registers the built monitors.
+  - `Deucalion.Service`: Host for `Deucalion.Api`, Native AOT published. Can run
+    as a Windows Service.
   - `Deucalion.Tests`: xUnit tests.
   - `deucalion-ui`: Client-side SolidJS single-page application.
+
+### Adding a monitor type
+
+The monitor types are enumerated by hand in a few well-known places. A new type
+(`foo`) touches all of them:
+
+  1. `Deucalion.Network/Configuration/FooMonitorConfiguration.cs` -- the YAML
+     record, derived from `PullMonitorConfiguration`.
+  2. `Deucalion.Network/Monitors/FooMonitor.cs` -- the `PullMonitor`.
+  3. `Deucalion.Application/Configuration/DeucalionYamlContext.cs` --
+     `[YamlSerializable]` and the `!foo` `[YamlDerivedTypeMapping]`.
+  4. `Deucalion.Application/Configuration/ConfigurationExtensions.cs` -- a
+     `Build()` overload and its arm in `MonitorFromConfiguration`.
+  5. `Deucalion.Application/Configuration/ApplicationConfiguration.cs` -- the
+     `ConfigurationDefaults.Foo` block, `ApplyDefaults`, `InterpolateMonitorName`
+     and the tag list in `Messages.ConfigurationUnknownMonitorType`.
+  6. `Deucalion.Api/Models/MonitorConfigurationDto.cs` -- `ExtractType`.
+  7. `deucalion-ui/src/services/deucalion-types.ts` (`MonitorType`) and the
+     `.type-badge.t-foo` colour in `styles/layout.css`.
+  8. This README: the monitor's section and `deucalion-sample.yaml`.
 
 ## How to debug
 
