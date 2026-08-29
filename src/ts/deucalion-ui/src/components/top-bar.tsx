@@ -1,4 +1,4 @@
-import { createEffect, Show, type Component } from "solid-js";
+import { createEffect, createMemo, Show, type Component } from "solid-js";
 
 import { configuration } from "../stores/configuration-store";
 import { monitorList } from "../stores/monitors-store";
@@ -22,6 +22,7 @@ const parseTitle = (t: string): { head: string; emphasis: string; tail: string }
 
 export const TopBar: Component = () => {
   const pageTitle = (): string => configuration()?.pageTitle ?? "Deucalion";
+  const title = createMemo(() => parseTitle(pageTitle()));
 
   const downCount = (): number => {
     let n = 0;
@@ -52,11 +53,11 @@ export const TopBar: Component = () => {
       <div class="brand">
         <img class="brand-icon" src="/assets/deucalion-icon.svg" alt="" />
         <h1 class="brand-name">
-          {parseTitle(pageTitle()).head}
-          <Show when={parseTitle(pageTitle()).emphasis}>
-            <em>{parseTitle(pageTitle()).emphasis}</em>
+          {title().head}
+          <Show when={title().emphasis}>
+            <em>{title().emphasis}</em>
           </Show>
-          {parseTitle(pageTitle()).tail}
+          {title().tail}
         </h1>
       </div>
       <div class="topbar-right">

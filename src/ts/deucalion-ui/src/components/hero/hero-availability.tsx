@@ -27,11 +27,12 @@ export const HeroAvailability: Component = () => {
     return buckets.reverse();
   });
 
-  const fmtPct = (n: number): { whole: string; dec: string } => {
-    const fixed = n.toFixed(2);
-    const [whole, dec] = fixed.split(".");
-    return { whole: whole, dec };
-  };
+  // Split "99.57" into its parts once per availability change so the
+  // decimals can be styled separately.
+  const pct = createMemo((): { whole: string; dec: string } => {
+    const [whole, dec] = agg().weightedAvailability.toFixed(2).split(".");
+    return { whole, dec };
+  });
 
   return (
     <div class="hero-stat">
@@ -40,8 +41,8 @@ export const HeroAvailability: Component = () => {
         <div class="hero-meta hero-meta-right">trend <em>response</em></div>
         <div class="hero-content-left">
           <div class="hero-availability">
-            <span>{fmtPct(agg().weightedAvailability).whole}</span>
-            <span class="pct">.{fmtPct(agg().weightedAvailability).dec}%</span>
+            <span>{pct().whole}</span>
+            <span class="pct">.{pct().dec}%</span>
           </div>
           <div class="hero-summary-row">
             <span class="hero-chip up"><strong>{agg().states.up.toString()}</strong> online</span>
