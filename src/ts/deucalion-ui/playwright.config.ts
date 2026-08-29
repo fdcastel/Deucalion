@@ -13,6 +13,7 @@ const BASE_URL = `http://localhost:${PORT.toString()}`;
 // process (`reuseExistingServer: !CI`).
 export default defineConfig({
   testDir: "./tests/e2e",
+  globalTeardown: "./tests/e2e/global-teardown.ts",
   fullyParallel: false,
   // One retry hedges against a runner hiccup. More than that mostly hides
   // real regressions, and every assertion already carries a generous timeout.
