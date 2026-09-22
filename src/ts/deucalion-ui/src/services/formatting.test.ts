@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitorState } from "./deucalion-types";
 import {
   fmtAgo,
+  fmtDuration,
   fmtMs,
   monitorStateToDescription,
   monitorStateToToastVariant,
@@ -24,6 +25,16 @@ describe("fmtMs", () => {
   it("renders seconds with two decimals at and above 1000ms", () => {
     expect(fmtMs(1000)).toBe("1.00s");
     expect(fmtMs(1234)).toBe("1.23s");
+  });
+});
+
+describe("fmtDuration", () => {
+  it("renders one rounded unit by magnitude", () => {
+    expect(fmtDuration(0)).toBe("0s");
+    expect(fmtDuration(30)).toBe("30s");
+    expect(fmtDuration(90)).toBe("2m");
+    expect(fmtDuration(7200)).toBe("2h");
+    expect(fmtDuration(86400 * 3)).toBe("3d");
   });
 });
 

@@ -12,12 +12,12 @@ public record MonitorCheckedDto(
     [property: JsonPropertyName("ns")] MonitorStatsDto NewStats
 )
 {
-    internal static MonitorCheckedDto FromEvent(MonitorChecked mc, MonitorStats stats, TimeSpan? effectiveWarnTimeout, TimeSpan? timeout) =>
+    internal static MonitorCheckedDto FromEvent(MonitorChecked mc, MonitorStats stats, MonitorRun? run, TimeSpan? effectiveWarnTimeout, TimeSpan? timeout) =>
         new(
             Name: mc.Name,
             Timestamp: mc.At.ToUnixTimeSeconds(),
             State: mc.Response?.State ?? MonitorState.Unknown,
             ResponseTimeMs: (int?)mc.Response?.ResponseTime?.TotalMilliseconds,
-            NewStats: MonitorStatsDto.From(stats, effectiveWarnTimeout, timeout)!
+            NewStats: MonitorStatsDto.From(stats, run, effectiveWarnTimeout, timeout)!
         );
 }

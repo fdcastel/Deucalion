@@ -19,6 +19,15 @@ export interface MonitorStatsDto {
 
   availability: number;
 
+  // When the current run began (unix seconds): "down since" or "up since",
+  // Down on one side and Up/Warn/Degraded on the other, over the whole stored
+  // history -- the event list covers at most 120 probes. Absent when every
+  // stored event is Unknown.
+  since?: number;
+  // The run reaches the oldest stored event, so the monitor has been in this
+  // state *at least* since `since`. Absent when `since` is.
+  sinceIsLowerBound?: boolean;
+
   minResponseTimeMs?: number;
   latency50Ms?: number;
   latency95Ms?: number;

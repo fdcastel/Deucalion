@@ -6,18 +6,28 @@ export const fmtMs = (ms?: number): string => {
   return `${(ms / 1000).toFixed(2)}s`;
 };
 
+// One unit, rounded: "45s", "12m", "3h", "5d".
+export const fmtDuration = (seconds: number): string => {
+  if (seconds < 60) return `${Math.round(seconds).toString()}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60).toString()}m`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600).toString()}h`;
+  return `${Math.round(seconds / 86400).toString()}d`;
+};
+
 export const fmtAgo = (epochSeconds: number): string => {
   const diff = Date.now() / 1000 - epochSeconds;
   if (diff < 5) return "just now";
-  if (diff < 60) return `${Math.round(diff).toString()}s ago`;
-  if (diff < 3600) return `${Math.round(diff / 60).toString()}m ago`;
-  if (diff < 86400) return `${Math.round(diff / 3600).toString()}h ago`;
-  return `${Math.round(diff / 86400).toString()}d ago`;
+  return `${fmtDuration(diff)} ago`;
 };
 
 export const fmtTime = (epochSeconds: number): string => {
   const d = new Date(epochSeconds * 1000);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+};
+
+export const fmtDateTime = (epochSeconds: number): string => {
+  const d = new Date(epochSeconds * 1000);
+  return d.toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 };
 
 export const stateName = (s: MonitorState): string => {

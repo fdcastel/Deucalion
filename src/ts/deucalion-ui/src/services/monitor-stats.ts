@@ -1,4 +1,4 @@
-import { MonitorState, type MonitorEventDto, type MonitorDto } from "./deucalion-types";
+import { MonitorState, type MonitorEventDto, type MonitorDto, type MonitorStatsDto } from "./deucalion-types";
 
 // Pure helpers over MonitorEventDto[]. The backend returns events newest-first,
 // and we keep that convention internally.
@@ -47,15 +47,32 @@ export const percentile = (events: MonitorEventDto[], p: number): number | undef
 
 export interface LastIncident {
   start: number; // epoch seconds
-  end: number;   // epoch seconds
-  durationSec: number;
+  end: number;   // epoch seconds: the newest event of the run
+  durationSec: number; // start → end, or start → now while ongoing
   ageSec: number; // seconds since incident ended
   state: MonitorState;
+  ongoing: boolean; // the run reaches the newest event: the monitor is still in it
+  // The run reaches the oldest event known, so it may have begun before
+  // `start`: the monitor has been in this state *at least* that long.
+  startIsLowerBound: boolean;
 }
 
 // Walk events newest→oldest looking for the most recent run of Down/Degraded.
 // Returns undefined if there's no incident in the window.
-export const lastIncident = (events: MonitorEventDto[], nowEpoch?: number): LastIncident | undefined => {
+//
+// The window is at most 120 probes -- twenty minutes at a 10s interval -- so
+// for an ongoing Down run the start comes from the backend's `stats.since`,
+// which spans the whole stored history: a monitor down for three days must
+// not read as "down for 20m". Only Down is taken from there: the backend
+// counts Degraded on the available side of its run, so it says nothing about
+// where a Degraded run began. `stats.lastState` must agree with the window,
+// or the stats are from before the newest event (GET reads them in separate
+// queries; an SSE frame that only duplicates an event leaves them stale).
+export const lastIncident = (
+  events: MonitorEventDto[],
+  nowEpoch?: number,
+  stats?: Pick<MonitorStatsDto, "lastState" | "since" | "sinceIsLowerBound">,
+): LastIncident | undefined => {
   if (events.length === 0) return undefined;
   let endIdx = -1;
   for (let i = 0; i < events.length; i++) {
@@ -70,15 +87,28 @@ export const lastIncident = (events: MonitorEventDto[], nowEpoch?: number): Last
     if (s === incidentState) startIdx = i;
     else break;
   }
+  const ongoing = endIdx === 0;
   const end = events[endIdx].at;
-  const start = events[startIdx].at;
+  let start = events[startIdx].at;
+  let startIsLowerBound = startIdx === events.length - 1;
+  if (
+    ongoing &&
+    incidentState === MonitorState.Down &&
+    stats?.lastState === MonitorState.Down &&
+    stats.since !== undefined
+  ) {
+    start = stats.since;
+    startIsLowerBound = stats.sinceIsLowerBound ?? false;
+  }
   const now = nowEpoch ?? Math.floor(Date.now() / 1000);
   return {
     start,
     end,
-    durationSec: Math.max(0, end - start),
+    durationSec: Math.max(0, (ongoing ? now : end) - start),
     ageSec: Math.max(0, now - end),
     state: incidentState,
+    ongoing,
+    startIsLowerBound,
   };
 };
 

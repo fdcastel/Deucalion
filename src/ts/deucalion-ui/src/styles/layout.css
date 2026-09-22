@@ -318,9 +318,9 @@
     gap: 0;
   }
   .row .last-incident {
-    /* Stack <ago> on top of <state> so each fits in the 80px column
-       cleanly; the inline separator is meaningless when the parts
-       are on separate lines. */
+    /* Stack <state> on top of <time> ("down" / "33m ago", "down" / "3d")
+       so each fits in the 80px column cleanly; the inline separator is
+       meaningless when the parts are on separate lines. */
     display: flex;
     flex-direction: column;
     align-items: flex-end;

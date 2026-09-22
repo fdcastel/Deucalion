@@ -109,7 +109,7 @@ Server settings come from the `Deucalion` configuration section -- as environmen
 | `MAXEVENTSPERMONITOR`  | `100000`           | Newest events kept per monitor; the purge deletes the rest, even if still within the retention period. |
 | `PURGEINTERVAL`        | `1.00:00:00`       | How often the purge runs (it also runs once at startup). |
 
-The purge deletes in chunks of 10,000 rows, so the engine keeps recording events while a large backlog is removed, and then hands the freed pages back to the file system: the database file shrinks. The UI only ever reads the last 120 events per monitor, so `MAXEVENTSPERMONITOR` bounds disk usage without losing anything the dashboard shows.
+The purge deletes in chunks of 10,000 rows, so the engine keeps recording events while a large backlog is removed, and then hands the freed pages back to the file system: the database file shrinks. The UI only ever draws the last 120 events per monitor, so `MAXEVENTSPERMONITOR` bounds disk usage without losing anything the dashboard shows -- except how far back "down for" can see: an outage older than the retained history is shown as a lower bound (`down for 12d+`).
 
 ### Defaults Section
 
@@ -269,9 +269,9 @@ Everything the page shows is available as JSON, unauthenticated, with open CORS 
 | `GET /api/status/{name}` | One monitor: `updatedAt`, `monitor` (the same shape as its entry in `/api/status`) and `links` (`self`, `status`, `monitor` = the full-detail document, `events`). Unknown names return `404` `application/problem+json`. |
 | `GET /` with `Accept: application/json` | The same document as `/api/status` (responses carry `Vary: Accept`; a browser's Accept header still gets the HTML). |
 | `GET /api/version` | `name`, `version` (build number and git SHA), `runtime`, `startedAt` -- tells you which build a deployment is actually running. |
-| `GET /api/monitors` | Full detail per monitor as the UI consumes it: `config`, rolling `stats` (last 60 probes), and the recent `events` in columnar form, newest first: `at` (unix seconds of the newest), `dt` (seconds between consecutive events), `st` (one numeric-state digit per event), `ms` (latency per event, `null` when none). `?events=N` caps the history (1..120; the UI asks for what its heartbeat strip can show). |
+| `GET /api/monitors` | Full detail per monitor as the UI consumes it: `config`, rolling `stats` (last 60 probes, plus `since` / `sinceIsLowerBound` -- the current run as in `/api/status`, with `since` in unix seconds; the UI's "down for" comes from there, not from the event list), and the recent `events` in columnar form, newest first: `at` (unix seconds of the newest), `dt` (seconds between consecutive events), `st` (one numeric-state digit per event), `ms` (latency per event, `null` when none). `?events=N` caps the history (1..120; the UI asks for what its heartbeat strip can show). |
 | `GET /api/monitors/{name}` | One monitor in the same shape. Unknown names return `404` `application/problem+json`. |
-| `GET /api/monitors/events` | Server-Sent Events stream: `MonitorChecked` (`n`, `at`, `st`, `ms`, `ns`) on every probe and `MonitorStateChanged` (`n`, `at`, `st`) on transitions. |
+| `GET /api/monitors/events` | Server-Sent Events stream: `MonitorChecked` (`n`, `at`, `st`, `ms`, `ns` = the monitor's new `stats`) on every probe and `MonitorStateChanged` (`n`, `at`, `st`) on transitions. |
 | `POST /api/monitors/{name}/checkin` | Heartbeat for `checkin` monitors -- see [`checkin` Monitor](#checkin-monitor). |
 | `GET /llms.txt` | Plain-Markdown description of the above, for agents that look for it. |
 

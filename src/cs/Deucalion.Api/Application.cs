@@ -280,6 +280,10 @@ public static class Application
         // These are deliberately different numbers -- see EventHistoryCount above.
         var stats = await storage.GetStatsAsync(mn, historyCount: PullMonitor.StatsWindow, cancellationToken: cancellationToken);
 
+        // "Down since" spans the whole stored history: the strip's 120 events cover twenty minutes
+        // at a 10 s interval, and the row must not report a three-day outage as one that long.
+        var run = stats is null ? null : await storage.GetCurrentRunAsync(mn, cancellationToken);
+
         // Display only: request threads must not write the live monitor's auto-WARN baseline
         // (issue #15). EngineBackgroundService is the sole writer, via WarnThresholdPolicy.Refresh.
         applicationMonitors.TryGetValue(mn, out var monitor);
@@ -288,7 +292,7 @@ public static class Application
         return new(
             Name: mn,
             Config: MonitorConfigurationDto.From(m),
-            Stats: MonitorStatsDto.From(stats, effectiveWarn, timeout),
+            Stats: MonitorStatsDto.From(stats, run, effectiveWarn, timeout),
             Events: MonitorEventsDto.From(await storage.GetLastEventsAsync(mn, count: eventCount, cancellationToken: cancellationToken))
         );
     }

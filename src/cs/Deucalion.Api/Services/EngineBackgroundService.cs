@@ -88,12 +88,16 @@ internal class EngineBackgroundService(
         var newStats = await storage.GetStatsAsync(mc.Name, historyCount: PullMonitor.StatsWindow, cancellationToken: cancellationToken);
         if (newStats != null)
         {
+            // The frame's stats carry "down since" so the UI never has to derive it from its
+            // event window. One indexed query; see SqliteStorage.GetCurrentRunAsync.
+            var run = await storage.GetCurrentRunAsync(mc.Name, cancellationToken);
+
             // The one place that writes the auto-WARN baseline: the API's GET path only computes
             // it for display (issue #15).
             monitors.TryGetValue(mc.Name, out var monitor);
             var (effectiveWarn, timeout) = WarnThresholdPolicy.Refresh(monitor, newStats.Latency95, newStats.SampleCount);
 
-            var dto = MonitorCheckedDto.FromEvent(mc, newStats, effectiveWarn, timeout);
+            var dto = MonitorCheckedDto.FromEvent(mc, newStats, run, effectiveWarn, timeout);
             var json = JsonSerializer.Serialize(dto, DeucalionJsonContext.Default.MonitorCheckedDto);
             broadcaster.Broadcast(new SseItem<string>(json, "MonitorChecked"));
         }

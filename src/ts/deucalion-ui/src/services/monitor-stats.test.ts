@@ -151,6 +151,8 @@ describe("lastIncident()", () => {
     expect(inc!.durationSec).toBe(events[1].at - events[3].at);
     // events[1].at is `FIXED_NOW - 5`, so age is 5 seconds
     expect(inc!.ageSec).toBe(5);
+    expect(inc!.ongoing).toBe(false);
+    expect(inc!.startIsLowerBound).toBe(false);
   });
 
   it("treats Degraded as an incident state", () => {
@@ -158,6 +160,64 @@ describe("lastIncident()", () => {
     const inc = lastIncident(events, FIXED_NOW);
     expect(inc).toBeDefined();
     expect(inc!.state).toBe(MonitorState.Degraded);
+  });
+
+  it("flags a run that reaches the newest event as ongoing and measures it up to now", () => {
+    const events = buildEvents([MonitorState.Down, MonitorState.Down, MonitorState.Up], { stepSec: 10 });
+    const inc = lastIncident(events, FIXED_NOW + 30)!;
+    expect(inc.ongoing).toBe(true);
+    expect(inc.start).toBe(events[1].at);
+    // Not end - start: the incident has not ended.
+    expect(inc.durationSec).toBe(FIXED_NOW + 30 - events[1].at);
+    expect(inc.startIsLowerBound).toBe(false);
+  });
+
+  it("marks the start as a lower bound when the run fills the whole window", () => {
+    const events = buildEvents([MonitorState.Down, MonitorState.Down, MonitorState.Down]);
+    const inc = lastIncident(events, FIXED_NOW)!;
+    expect(inc.ongoing).toBe(true);
+    expect(inc.startIsLowerBound).toBe(true);
+  });
+
+  it("takes an ongoing Down run's start from the backend stats, which span the whole history", () => {
+    // The window says "down since 10s ago"; the backend knows it has been three days.
+    const events = buildEvents([MonitorState.Down, MonitorState.Down, MonitorState.Down]);
+    const since = FIXED_NOW - 3 * 86400;
+    const inc = lastIncident(events, FIXED_NOW, { lastState: MonitorState.Down, since, sinceIsLowerBound: false })!;
+    expect(inc.start).toBe(since);
+    expect(inc.durationSec).toBe(3 * 86400);
+    expect(inc.startIsLowerBound).toBe(false);
+
+    const bounded = lastIncident(events, FIXED_NOW, { lastState: MonitorState.Down, since, sinceIsLowerBound: true })!;
+    expect(bounded.start).toBe(since);
+    expect(bounded.startIsLowerBound).toBe(true);
+  });
+
+  it("ignores the backend stats for a past incident", () => {
+    const events = buildEvents([MonitorState.Up, MonitorState.Down, MonitorState.Down]);
+    // `since` here is the Up run's start; it says nothing about the incident.
+    const inc = lastIncident(events, FIXED_NOW, { lastState: MonitorState.Up, since: FIXED_NOW, sinceIsLowerBound: false })!;
+    expect(inc.ongoing).toBe(false);
+    expect(inc.start).toBe(events[2].at);
+    expect(inc.startIsLowerBound).toBe(true);
+  });
+
+  it("ignores the backend stats for a Degraded run, which the backend counts as available", () => {
+    const events = buildEvents([MonitorState.Degraded, MonitorState.Degraded, MonitorState.Down]);
+    const inc = lastIncident(events, FIXED_NOW, { lastState: MonitorState.Degraded, since: FIXED_NOW - 86400, sinceIsLowerBound: false })!;
+    expect(inc.ongoing).toBe(true);
+    expect(inc.state).toBe(MonitorState.Degraded);
+    expect(inc.start).toBe(events[1].at);
+  });
+
+  it("ignores backend stats that predate the newest event", () => {
+    // GET reads stats and events separately: a probe landing in between leaves
+    // stats describing the previous (Up) run while the window already shows Down.
+    const events = buildEvents([MonitorState.Down, MonitorState.Up, MonitorState.Up]);
+    const inc = lastIncident(events, FIXED_NOW, { lastState: MonitorState.Up, since: FIXED_NOW - 86400, sinceIsLowerBound: false })!;
+    expect(inc.ongoing).toBe(true);
+    expect(inc.start).toBe(events[0].at);
+    expect(inc.startIsLowerBound).toBe(false);
   });
 });
 

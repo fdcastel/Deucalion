@@ -1,8 +1,8 @@
 import { type Component, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
 
 import { MonitorState, type MonitorDto } from "../../services/deucalion-types";
-import { avail, lastIncident } from "../../services/monitor-stats";
-import { fmtAgo, stateName } from "../../services/formatting";
+import { avail, lastIncident, type LastIncident } from "../../services/monitor-stats";
+import { fmtAgo, fmtDateTime, fmtDuration, stateLabel, stateName } from "../../services/formatting";
 
 import { HeartbeatStrip } from "./heartbeat-strip";
 import { LatStats } from "./lat-stats";
@@ -34,7 +34,16 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
     return out;
   });
 
-  const incident = createMemo(() => lastIncident(props.monitor.events));
+  // Re-evaluated on every probe (each one changes `events`), which is what
+  // keeps an ongoing incident's "down for" ticking.
+  const incident = createMemo(() => lastIncident(props.monitor.events, undefined, props.monitor.stats));
+
+  // Hover detail for an ongoing incident: the duration's anchor, and whether
+  // it is exact or only as far back as the stored history reaches.
+  const incidentTitle = (inc: LastIncident): string | undefined =>
+    inc.ongoing
+      ? `${stateLabel(inc.state)} since ${fmtDateTime(inc.start)}${inc.startIsLowerBound ? " or earlier" : ""}`
+      : undefined;
 
   // Flash on update — track top event timestamp, set .flash for ~500ms.
   const [flash, setFlash] = createSignal(false);
@@ -102,10 +111,18 @@ export const MonitorRow: Component<MonitorRowProps> = (props) => {
           fallback={<span class="last-incident">no incident</span>}
         >
           {(inc) => (
-            <span class="last-incident">
-              <span class="last-incident-ago">{fmtAgo(inc().end)}</span>
-              <span class="last-incident-sep"> · </span>
+            <span class="last-incident" title={incidentTitle(inc())}>
+              {/* Ongoing: "down for 3d" -- how long, not when the last probe
+                  was. Over: "down 33m ago" -- past tense, so a recovered
+                  monitor whose availability is still in the red tier does not
+                  read as down now. */}
               <span class="last-incident-state">{stateName(inc().state)}</span>
+              <span class="last-incident-sep">{inc().ongoing ? " for " : " "}</span>
+              <span class="last-incident-ago">
+                {inc().ongoing
+                  ? `${fmtDuration(inc().durationSec)}${inc().startIsLowerBound ? "+" : ""}`
+                  : fmtAgo(inc().end)}
+              </span>
             </span>
           )}
         </Show>

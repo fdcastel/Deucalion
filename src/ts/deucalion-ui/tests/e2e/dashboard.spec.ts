@@ -88,6 +88,24 @@ test.describe("Wire contract", () => {
     // ms -> at least one probe reports a latency (the sample yaml has plenty).
     expect(tips.some((t) => /·\s*\d+(\.\d+)?(ms|s)$/.test(t))).toBe(true);
   });
+
+  test("an ongoing outage is captioned with its duration from stats.since", async ({ page }) => {
+    await page.goto("/");
+    await waitForDashboard(page);
+
+    // chk-test is a check-in monitor nobody checks in to: Down from the first
+    // probe. `since` is the run's start over the whole stored history, and the
+    // flag says whether the run reaches the oldest stored event.
+    const response = await page.request.get("/api/monitors/chk-test");
+    const { stats } = await response.json() as { stats?: { since?: number; sinceIsLowerBound?: boolean } };
+    expect(typeof stats?.since).toBe("number");
+
+    // "down for 12s+", never "down 10s ago": the caption is how long, and the
+    // "+" is the lower-bound flag reaching the UI.
+    const suffix = stats?.sinceIsLowerBound ? "\\+" : "";
+    const caption = page.locator(".row", { hasText: "chk-test" }).locator(".last-incident");
+    await expect(caption).toHaveText(new RegExp(`^down for \\d+[smhd]${suffix}$`), { timeout: 30_000 });
+  });
 });
 
 test.describe("Heartbeat strip", () => {

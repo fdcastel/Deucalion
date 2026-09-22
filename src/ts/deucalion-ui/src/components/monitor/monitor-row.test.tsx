@@ -1,12 +1,20 @@
 import { render } from "@solidjs/testing-library";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildEvents, buildMonitor, buildStats } from "../../test/fixtures";
+import { buildEvents, buildMonitor, buildStats, FIXED_NOW } from "../../test/fixtures";
 import { MonitorState } from "../../services/deucalion-types";
 
 import { MonitorRow } from "./monitor-row";
 
 describe("<MonitorRow>", () => {
+  // The incident caption measures an ongoing outage against the clock, and
+  // the fixtures' timestamps are anchored at FIXED_NOW.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(FIXED_NOW * 1000);
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
   it("renders the monitor name and type badge", () => {
     const monitor = buildMonitor({ name: "ping-google", config: { type: "ping" } });
     const { container, getByText } = render(() => <MonitorRow monitor={monitor} />);
@@ -57,8 +65,45 @@ describe("<MonitorRow>", () => {
       ]),
     });
     const { container } = render(() => <MonitorRow monitor={monitor} />);
-    const text = container.querySelector(".last-incident")?.textContent ?? "";
-    expect(text).toContain("down");
+    // A past incident, in the past tense: what it was, and when.
+    expect(container.querySelector(".last-incident")?.textContent).toBe("down 5s ago");
+    expect(container.querySelector(".last-incident")).not.toHaveAttribute("title");
+  });
+
+  it("captions an ongoing outage with how long it has lasted, not when the last probe was", () => {
+    // The report: monitors at 0.00%, down for days, captioned as if the
+    // outage were ten seconds old.
+    // The window holds thirty seconds of Down probes; the backend's `since`
+    // says three days.
+    const monitor = buildMonitor({
+      stats: buildStats({ lastState: MonitorState.Down, availability: 0, since: FIXED_NOW - 3 * 86400, sinceIsLowerBound: false }),
+      events: buildEvents([MonitorState.Down, MonitorState.Down, MonitorState.Down, MonitorState.Down], { stepSec: 10 }),
+    });
+    const { container } = render(() => <MonitorRow monitor={monitor} />);
+    const caption = container.querySelector(".last-incident");
+    expect(caption?.textContent).toBe("down for 3d");
+    expect(caption?.getAttribute("title")).toMatch(/^Down since .+(?<! or earlier)$/);
+  });
+
+  it("marks the duration as a lower bound when the run predates the stored history", () => {
+    const monitor = buildMonitor({
+      stats: buildStats({ lastState: MonitorState.Down, availability: 0, since: FIXED_NOW - 12 * 86400, sinceIsLowerBound: true }),
+      events: buildEvents([MonitorState.Down, MonitorState.Down], { stepSec: 10 }),
+    });
+    const { container } = render(() => <MonitorRow monitor={monitor} />);
+    const caption = container.querySelector(".last-incident");
+    expect(caption?.textContent).toBe("down for 12d+");
+    expect(caption?.getAttribute("title")).toMatch(/ or earlier$/);
+  });
+
+  it("measures an ongoing outage from the event window when the stats carry no since", () => {
+    const monitor = buildMonitor({
+      stats: buildStats({ lastState: MonitorState.Down, availability: 0 }),
+      events: buildEvents([MonitorState.Down, MonitorState.Down, MonitorState.Down], { stepSec: 10 }),
+    });
+    const { container } = render(() => <MonitorRow monitor={monitor} />);
+    // The run fills the window, so the window can only give a lower bound.
+    expect(container.querySelector(".last-incident")?.textContent).toBe("down for 20s+");
   });
 
   it("prefers backend-computed percentile stats when present", () => {

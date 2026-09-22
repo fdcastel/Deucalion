@@ -309,7 +309,7 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
     public async Task SseStream_BroadcastsMonitorCheckedEvent_ToConnectedClients()
     {
         using var client = _factory.CreateClient();
-        var checkedEventReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var checkedEventReceived = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // The endpoint writes its preamble and flushes as soon as the subscription is
         // registered, so waiting for that block is an exact signal -- no sleeping and guessing.
@@ -338,10 +338,9 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
                 if (item.EventType == "MonitorChecked")
                 {
                     var payload = JsonSerializer.Deserialize<JsonElement>(item.Data);
-                    var monitorName = payload.GetProperty("n").GetString();
-                    if (monitorName == "checkin-main")
+                    if (payload.GetProperty("n").GetString() == "checkin-main")
                     {
-                        checkedEventReceived.TrySetResult(monitorName!);
+                        checkedEventReceived.TrySetResult(payload);
                         return;
                     }
                 }
@@ -358,8 +357,16 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         using var response2 = await client.SendAsync(request, timeout.Token);
         response2.EnsureSuccessStatusCode();
 
-        var monitorName = await checkedEventReceived.Task.WaitAsync(timeout.Token);
-        Assert.Equal("checkin-main", monitorName);
+        var frame = await checkedEventReceived.Task.WaitAsync(timeout.Token);
+        Assert.Equal("checkin-main", frame.GetProperty("n").GetString());
+
+        // The frame's stats carry the run the UI shows as "down for". The startup probe found no
+        // check-in (Down), so this Up probe opens a new run: `since` is this very event, and it
+        // is exact because a Down row precedes it.
+        var stats = frame.GetProperty("ns");
+        Assert.Equal((int)MonitorState.Up, stats.GetProperty("lastState").GetInt32());
+        Assert.Equal(frame.GetProperty("at").GetInt64(), stats.GetProperty("since").GetInt64());
+        Assert.False(stats.GetProperty("sinceIsLowerBound").GetBoolean());
 
         timeout.Cancel();
         try { await sseTask; } catch (OperationCanceledException) { }
@@ -849,6 +856,31 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         Assert.Equal(expectedCount, events.GetProperty("st").GetString()!.Length);
         Assert.Equal(expectedCount, events.GetProperty("ms").GetArrayLength());
         Assert.Equal(expectedCount - 1, events.GetProperty("dt").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task GetMonitors_Stats_CarrySinceFromTheWholeHistory()
+    {
+        // The row's "down for" comes from `stats.since`, not from the event list: with
+        // `?events=5` the list covers five probes, while the seeded outage is a hundred long.
+        using var scope = _factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+        var start = DateTimeOffset.UtcNow.AddMinutes(-200);
+
+        await storage.SaveEventAsync("checkin-open", new StoredEvent(start, MonitorState.Up, TimeSpan.FromMilliseconds(30), null), TestContext.Current.CancellationToken);
+        for (var i = 1; i <= 100; i++)
+        {
+            await storage.SaveEventAsync("checkin-open", new StoredEvent(start.AddMinutes(i), MonitorState.Down, null, null), TestContext.Current.CancellationToken);
+        }
+
+        using var client = _factory.CreateClient();
+        var payload = await client.GetFromJsonAsync<JsonElement>("/api/monitors/checkin-open?events=5", TestContext.Current.CancellationToken);
+        var stats = payload.GetProperty("stats");
+
+        Assert.Equal((int)MonitorState.Down, stats.GetProperty("lastState").GetInt32());
+        Assert.Equal(start.AddMinutes(1).ToUnixTimeSeconds(), stats.GetProperty("since").GetInt64());
+        Assert.False(stats.GetProperty("sinceIsLowerBound").GetBoolean(), "an Up probe precedes the run, so `since` is exact");
+        Assert.Equal(5, payload.GetProperty("events").GetProperty("st").GetString()!.Length);
     }
 
     [Fact]
