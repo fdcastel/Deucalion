@@ -338,7 +338,11 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
                 if (item.EventType == "MonitorChecked")
                 {
                     var payload = JsonSerializer.Deserialize<JsonElement>(item.Data);
-                    if (payload.GetProperty("n").GetString() == "checkin-main")
+                    // The engine's startup probe of checkin-main (Down: nothing has checked in
+                    // yet) may be broadcast after this subscription on a slow runner; the frame
+                    // under test is the check-in's, the only Up one.
+                    if (payload.GetProperty("n").GetString() == "checkin-main"
+                        && payload.GetProperty("st").GetInt32() == (int)MonitorState.Up)
                     {
                         checkedEventReceived.TrySetResult(payload);
                         return;
@@ -352,6 +356,14 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         // #18: the reconnect delay is pinned instead of left to the browser default.
         Assert.Contains("retry: 3000", preamble, StringComparison.Ordinal);
 
+        // A Down row before the check-in, so the Up run below has a boundary whether or not the
+        // startup probe (also Down) has been stored yet: `since` must then be exact.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var storage = scope.ServiceProvider.GetRequiredService<IStorage>();
+            await storage.SaveEventAsync("checkin-main", new StoredEvent(DateTimeOffset.UtcNow.AddMinutes(-1), MonitorState.Down, null, null), timeout.Token);
+        }
+
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitors/checkin-main/checkin");
         request.Headers.Add("deucalion-checkin-secret", "test-secret");
         using var response2 = await client.SendAsync(request, timeout.Token);
@@ -360,9 +372,8 @@ public sealed class ApiIntegrationTests : IAsyncLifetime
         var frame = await checkedEventReceived.Task.WaitAsync(timeout.Token);
         Assert.Equal("checkin-main", frame.GetProperty("n").GetString());
 
-        // The frame's stats carry the run the UI shows as "down for". The startup probe found no
-        // check-in (Down), so this Up probe opens a new run: `since` is this very event, and it
-        // is exact because a Down row precedes it.
+        // The frame's stats carry the run the UI shows as "down for". This Up probe opens a new
+        // run after the Down rows: `since` is this very event, and it is exact.
         var stats = frame.GetProperty("ns");
         Assert.Equal((int)MonitorState.Up, stats.GetProperty("lastState").GetInt32());
         Assert.Equal(frame.GetProperty("at").GetInt64(), stats.GetProperty("since").GetInt64());
