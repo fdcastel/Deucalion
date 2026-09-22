@@ -58,6 +58,24 @@ public class SqliteStorageRunTests : SqliteStorageTestBase
     }
 
     [Fact]
+    public async Task DegradedAfterDown_StartsAnAvailableRun()
+    {
+        // Degraded ("may be down") sits on the available side of the divide, like Warn: the
+        // boundary is then the newest Down row, whatever the newest state itself is.
+        await SaveAsync(0, MonitorState.Down);
+        await SaveAsync(1, MonitorState.Down);
+        await SaveAsync(2, MonitorState.Degraded, 0);
+        await SaveAsync(3, MonitorState.Degraded, 0);
+
+        var run = await Storage.GetCurrentRunAsync(Monitor, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(run);
+        Assert.Equal(MonitorState.Degraded, run.State);
+        Assert.Equal(T0 + Step * 2, run.Since);
+        Assert.False(run.SinceIsLowerBound);
+    }
+
+    [Fact]
     public async Task RunReachingTheOldestRow_IsOnlyALowerBound()
     {
         await SaveAsync(0, MonitorState.Down);
