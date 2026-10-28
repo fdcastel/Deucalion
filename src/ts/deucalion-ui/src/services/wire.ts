@@ -1,4 +1,4 @@
-import type { MonitorDto, MonitorEventDto, MonitorEventsDto, MonitorWireDto } from "./deucalion-types";
+import type { MonitorDto, MonitorEventDto, MonitorEventsDto, MonitorState, MonitorWireDto } from "./deucalion-types";
 
 // GET /api/monitors ships each monitor's events in columnar form (see
 // MonitorEventsDto): a newest timestamp plus second deltas, one state digit
@@ -11,10 +11,10 @@ export const decodeEvents = (wire: MonitorEventsDto | undefined): MonitorEventDt
   const events: MonitorEventDto[] = new Array<MonitorEventDto>(count);
   let at = wire.at;
   for (let i = 0; i < count; i++) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-assignment -- each digit is a MonitorState value by contract
+    const st: MonitorState = Number(wire.st[i]);
     const ms = wire.ms[i];
-    events[i] = ms == null
-      ? { at, st: Number(wire.st[i]) }
-      : { at, st: Number(wire.st[i]), ms };
+    events[i] = ms == null ? { at, st } : { at, st, ms };
     // dt has one entry fewer than st; the last iteration never reads past it.
     if (i < count - 1) at -= wire.dt[i];
   }
