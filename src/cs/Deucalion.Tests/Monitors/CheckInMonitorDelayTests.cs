@@ -62,7 +62,7 @@ public class CheckInMonitorDelayTests
             IntervalWhenDown = interval,
         };
 
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<MonitorEvent>();
         using var stopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         stopCts.CancelAfter(TimeSpan.FromSeconds(10));
 
@@ -107,7 +107,7 @@ public class CheckInMonitorDelayTests
             IntervalWhenDown = interval,
         };
 
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<MonitorEvent>();
         using var stopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         stopCts.CancelAfter(TimeSpan.FromSeconds(10));
 
@@ -156,7 +156,7 @@ public class CheckInMonitorDelayTests
             IntervalWhenDown = TimeSpan.FromMinutes(5),
         };
 
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<MonitorEvent>();
         using var stopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         stopCts.CancelAfter(TimeSpan.FromSeconds(10));
 
@@ -241,7 +241,7 @@ public class CheckInMonitorDelayTests
         Assert.Equal(MonitorState.Up, response.State);
     }
 
-    private static async Task<MonitorChecked> ReadNextCheckedAsync(ChannelReader<IMonitorEvent> reader, CancellationToken cancellationToken)
+    private static async Task<MonitorChecked> ReadNextCheckedAsync(ChannelReader<MonitorEvent> reader, CancellationToken cancellationToken)
     {
         while (true)
         {

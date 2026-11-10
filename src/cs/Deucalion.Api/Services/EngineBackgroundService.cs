@@ -23,7 +23,7 @@ internal class EngineBackgroundService(
         _internalCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var internalToken = _internalCts.Token;
 
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<MonitorEvent>();
 
         // Start the monitoring engine in the background (now as extension method)
         _engineTask = Task.Run(async () =>
@@ -49,18 +49,13 @@ internal class EngineBackgroundService(
             {
                 try
                 {
-                    switch (evt)
+                    // MonitorEvent is closed, so this is exhaustive: a new event kind fails the
+                    // build here (CS8509) instead of being logged and dropped at runtime.
+                    await (evt switch
                     {
-                        case MonitorChecked mc:
-                            await HandleMonitorCheckedAsync(mc, stoppingToken);
-                            break;
-                        case MonitorStateChanged msc:
-                            await HandleMonitorStateChangedAsync(msc, stoppingToken);
-                            break;
-                        default:
-                            logger.LogWarning("Unknown event: {event}.", evt);
-                            break;
-                    }
+                        MonitorChecked mc => HandleMonitorCheckedAsync(mc, stoppingToken),
+                        MonitorStateChanged msc => HandleMonitorStateChangedAsync(msc, stoppingToken),
+                    });
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {

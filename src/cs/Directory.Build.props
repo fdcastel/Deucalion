@@ -3,6 +3,9 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+    <!-- Non-exhaustive switch expression. Over a closed hierarchy (MonitorEvent) this is how
+         an unhandled new kind surfaces, so it must not be a warning. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
   </PropertyGroup>
 
   <!--

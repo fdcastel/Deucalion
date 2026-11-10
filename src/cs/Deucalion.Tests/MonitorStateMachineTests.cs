@@ -28,7 +28,7 @@ public class MonitorStateMachineTests
         monitor.IntervalWhenUp = interval;
         monitor.IntervalWhenDown = interval;
 
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<MonitorEvent>();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(10));
 

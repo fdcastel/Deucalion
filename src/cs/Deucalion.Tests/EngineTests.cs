@@ -22,10 +22,10 @@ public class EngineTests
     /// </summary>
     private sealed class EngineHarness : IAsyncDisposable
     {
-        private readonly Channel<IMonitorEvent> _channel = Channel.CreateUnbounded<IMonitorEvent>();
+        private readonly Channel<MonitorEvent> _channel = Channel.CreateUnbounded<MonitorEvent>();
         private readonly CancellationTokenSource _cts;
         private readonly Task _engineTask;
-        private readonly List<IMonitorEvent> _observed = [];
+        private readonly List<MonitorEvent> _observed = [];
 
         public FakeTimeProvider Time { get; } = new();
 
@@ -52,8 +52,8 @@ public class EngineTests
         /// cost is that virtual time moves by an unknown number of steps, so tests assert on
         /// ordered state sequences rather than on raw event counts.
         /// </remarks>
-        public async Task<IReadOnlyList<IMonitorEvent>> CollectUntilAsync(
-            TimeSpan step, Func<IReadOnlyList<IMonitorEvent>, bool> done)
+        public async Task<IReadOnlyList<MonitorEvent>> CollectUntilAsync(
+            TimeSpan step, Func<IReadOnlyList<MonitorEvent>, bool> done)
         {
             while (true)
             {
@@ -84,7 +84,7 @@ public class EngineTests
             return [.. StatesOf(events, name).Take(count)];
         }
 
-        private static MonitorState[] StatesOf(IReadOnlyList<IMonitorEvent> events, string name) =>
+        private static MonitorState[] StatesOf(IReadOnlyList<MonitorEvent> events, string name) =>
             [.. events.OfType<MonitorStateChanged>().Where(e => e.Name == name).Select(e => e.NewState)];
 
         public async ValueTask DisposeAsync()
