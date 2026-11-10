@@ -1,14 +1,13 @@
 # Reference: https://github.com/dotnet/dotnet-docker/blob/main/samples/aspnetapp/Dockerfile
 
-# build image for .net
-FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build-net
+# build image for .net -- the "-aot" variant ships the native AOT toolchain (clang,
+# zlib1g-dev) preinstalled. Installing it with apt-get on Ubuntu 26.04 pulls ~150 MB of
+# LLVM packages and could exceed the CI job timeout on a slow archive mirror.
+FROM mcr.microsoft.com/dotnet/sdk:11.0-aot AS build-net
 ARG TARGETARCH
 ARG VERSION=0.0.0-dev
 ARG INFORMATIONAL_VERSION=0.0.0-dev
 WORKDIR /source
-
-# Install native AOT prerequisites
-RUN apt-get update && apt-get install -y clang zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
 # Empty, non-root-owned storage directory for the final stage (see below).
 RUN mkdir -p /storage
