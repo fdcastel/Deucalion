@@ -1,7 +1,7 @@
 # Reference: https://github.com/dotnet/dotnet-docker/blob/main/samples/aspnetapp/Dockerfile
 
 # build image for .net
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-net
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build-net
 ARG TARGETARCH
 ARG VERSION=0.0.0-dev
 ARG INFORMATIONAL_VERSION=0.0.0-dev
@@ -46,7 +46,7 @@ RUN npm run build
 # "-extra") variant has no ICU/tzdata; Deucalion.Service sets
 # InvariantGlobalization, so the runtime never asks for them. HEALTHCHECK and ENTRYPOINT use the exec form
 # because there is no shell to interpret anything else.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled
+FROM mcr.microsoft.com/dotnet/runtime-deps:11.0-resolute-chiseled
 WORKDIR /app
 
 ENV DEUCALION__CONFIGURATIONFILE="/app/deucalion.yaml" \

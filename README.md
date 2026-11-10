@@ -34,7 +34,7 @@ Simply create a configuration file, start the service, and you're done.
 # Prerequisites
 
 - Docker (for containerized usage)
-- .NET 10 SDK (for development and building)
+- .NET 11 SDK (for development and building)
 - PowerShell (for build scripts)
 - [Invoke-Build](https://github.com/nightroman/Invoke-Build) (for build automation)
 
