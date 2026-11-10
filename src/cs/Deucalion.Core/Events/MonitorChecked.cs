@@ -5,4 +5,4 @@ public record MonitorChecked(
     DateTimeOffset At,
     MonitorState From,
     MonitorResponse? Response
-) : IMonitorEvent;
+) : MonitorEvent(Name, At);

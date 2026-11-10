@@ -67,7 +67,7 @@ public class CheckInMonitorTests
         var cancellationToken = TestContext.Current.CancellationToken;
         var fakeTime = new FakeTimeProvider();
         var monitor = new CheckInMonitor { IntervalToDown = TimeSpan.FromSeconds(10), TimeProvider = fakeTime };
-        var channel = Channel.CreateUnbounded<IMonitorEvent>();
+        var channel = Channel.CreateUnbounded<MonitorEvent>();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Start the monitor loop

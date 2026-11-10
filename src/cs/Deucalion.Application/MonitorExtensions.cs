@@ -7,7 +7,7 @@ namespace Deucalion.Application;
 
 public static class MonitorExtensions
 {
-    public static async Task RunAllAsync(this IEnumerable<PullMonitor> monitors, ChannelWriter<IMonitorEvent> writer, CancellationToken stopToken)
+    public static async Task RunAllAsync(this IEnumerable<PullMonitor> monitors, ChannelWriter<MonitorEvent> writer, CancellationToken stopToken)
     {
         try
         {
@@ -24,7 +24,7 @@ public static class MonitorExtensions
         }
     }
 
-    private static async Task RunMonitorSafeAsync(PullMonitor monitor, ChannelWriter<IMonitorEvent> writer, CancellationToken stopToken)
+    private static async Task RunMonitorSafeAsync(PullMonitor monitor, ChannelWriter<MonitorEvent> writer, CancellationToken stopToken)
     {
         try
         {
@@ -50,7 +50,7 @@ public static class MonitorExtensions
             ? monitor.IntervalWhenUp
             : monitor.IntervalWhenDown;
 
-    public static async Task RunAsync(this PullMonitor monitor, ChannelWriter<IMonitorEvent> writer, CancellationToken stopToken)
+    public static async Task RunAsync(this PullMonitor monitor, ChannelWriter<MonitorEvent> writer, CancellationToken stopToken)
     {
         var lastKnownState = MonitorState.Unknown;
         var consecutiveFailCount = 0;

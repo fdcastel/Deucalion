@@ -5,4 +5,4 @@ public record MonitorStateChanged(
     DateTimeOffset At,
     MonitorState From,
     MonitorState NewState
-) : IMonitorEvent;
+) : MonitorEvent(Name, At);
