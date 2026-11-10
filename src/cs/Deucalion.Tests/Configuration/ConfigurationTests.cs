@@ -2,7 +2,7 @@
 using Deucalion.Application.Configuration;
 using Deucalion.Configuration;
 using Deucalion.Network.Configuration;
-using DnsClient;
+using Deucalion.Network.Monitors;
 using Xunit;
 
 namespace Deucalion.Tests.Configuration;
@@ -44,7 +44,7 @@ public class ConfigurationTests
         var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitor);
         Assert.Equal("mdns", dnsMonitor.Name);
         Assert.Equal("google.com", dnsMonitor.Host);
-        Assert.Equal(QueryType.A, dnsMonitor.RecordType);
+        Assert.Equal(DnsRecordType.A, dnsMonitor.RecordType);
         Assert.Equal(IPEndPoint.Parse("1.1.1.1"), dnsMonitor.Resolver);
     }
 
@@ -82,8 +82,24 @@ public class ConfigurationTests
 
         var monitor = ReadSingleMonitorFromConfiguration(ConfigurationContent);
         var dnsMonitor = Assert.IsType<DnsMonitorConfiguration>(monitor);
-        Assert.Equal(QueryType.AAAA, dnsMonitor.RecordType);
+        Assert.Equal(DnsRecordType.AAAA, dnsMonitor.RecordType);
         Assert.Equal(IPEndPoint.Parse("8.8.8.8"), dnsMonitor.Resolver);
+    }
+
+    [Theory]
+    [InlineData("SOA")]
+    [InlineData("CAA")]
+    public void DnsMonitor_RejectsUnsupportedRecordType(string recordType)
+    {
+        var configurationContent = $@"
+            monitors:
+              mdns:
+                !dns
+                host: google.com
+                recordType: {recordType}
+        ";
+
+        Assert.Throws<ConfigurationErrorException>(() => ApplicationConfiguration.ReadFromString(configurationContent));
     }
 
     [Fact]
@@ -517,6 +533,24 @@ public class ConfigurationTests
 
         var exception = Assert.Throws<ConfigurationErrorException>(() => configuration.BuildMonitors());
         Assert.Contains("mhttp", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact(Skip = "Only Windows rejects custom DNS ports.", SkipWhen = nameof(TestEnvironment.CustomDnsPortSupported), SkipType = typeof(TestEnvironment))]
+    public void DnsMonitor_CustomResolverPort_ThrowsWhenBuildingMonitors_OnWindows()
+    {
+        const string ConfigurationContent = @"
+            monitors:
+              mdns:
+                !dns
+                host: google.com
+                resolver: 1.1.1.1:5353
+        ";
+
+        var configuration = ApplicationConfiguration.ReadFromString(ConfigurationContent);
+
+        var exception = Assert.Throws<ConfigurationErrorException>(() => configuration.BuildMonitors());
+        Assert.Contains("mdns", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("port other than 53", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,13 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Deucalion.Configuration;
-using DnsClient;
+using Deucalion.Network.Monitors;
 
 namespace Deucalion.Network.Configuration;
 
 public record DnsMonitorOptionalConfiguration : PullMonitorConfiguration
 {
-    public QueryType? RecordType { get; set; }
+    public DnsRecordType? RecordType { get; set; }
 
     public IPEndPoint? Resolver { get; set; }
 }
