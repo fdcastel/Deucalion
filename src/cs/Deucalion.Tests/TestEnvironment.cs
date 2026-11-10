@@ -1,4 +1,4 @@
-namespace Deucalion.Tests;
+﻿namespace Deucalion.Tests;
 
 public static class TestEnvironment
 {
@@ -19,4 +19,10 @@ public static class TestEnvironment
     /// </summary>
     public static bool IcmpEchoAvailable =>
         NetworkTestsEnabled && Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true";
+
+    /// <summary>
+    /// Whether a DNS monitor can query a resolver on a port other than 53. System.Net.DnsResolver
+    /// cannot on Windows, so tests that use a loopback resolver on an ephemeral port skip there.
+    /// </summary>
+    public static bool CustomDnsPortSupported => !OperatingSystem.IsWindows();
 }

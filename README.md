@@ -212,8 +212,9 @@ tcp-example:
 dns-example:
   !dns
   host: google.com                 # Required: The hostname to query.
-  recordType: A                    # Required: The DNS record type (e.g., A, AAAA, MX, CNAME).
-  resolver: 1.1.1.1:53             # Required: The DNS resolver IP address and port.
+  recordType: A                    # Required: The DNS record type: A, AAAA, CNAME, MX, NS, PTR, SRV or TXT.
+                                   #   For PTR, `host` may be an IP address; it is looked up in its reverse zone.
+  resolver: 1.1.1.1:53             # Required: The DNS resolver IP address and port. On Windows the port must be 53.
 ```
 
 
